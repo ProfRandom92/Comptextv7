@@ -187,4 +187,12 @@ def write_report(path: Path, results: Iterable[ForensicAuditResult], title: str)
             "- findings: " + (json.dumps(row["findings"], sort_keys=True) if row["findings"] else "[]"),
             "",
         ])
-    path.write_text("\n".join(body), encoding="utf-8")
+    body.extend([
+        "## Drift classification policy",
+        "",
+        "- LOW: presentation-only difference with no operational meaning change.",
+        "- MEDIUM: context reduction requiring review but not hiding a safety signal.",
+        f"- HIGH: severity, causal context, code, or anomaly semantics weakened. Maximum allowed: {MAX_ALLOWED_HIGH_LOSS}.",
+        f"- CRITICAL: timestamp mutation, alarm disappearance, anchor loss, event suppression, or hallucinated reconstruction. Maximum allowed: {MAX_ALLOWED_CRITICAL_LOSS}.",
+    ])
+    path.write_text("\n".join(body) + "\n", encoding="utf-8")
