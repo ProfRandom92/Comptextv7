@@ -3,3 +3,5 @@ __pycache__/
 .pytest_cache/
 .venv/
 .env
+reports/dashboard_export.json
+reports/dashboard_export.csv

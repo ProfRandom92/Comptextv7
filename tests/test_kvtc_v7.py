@@ -91,7 +91,7 @@ def test_compression_reduces_repetitive_xentry_logs_below_target_budget() -> Non
     assert result.reduction_percent >= 95.0
 
 
-def test_sparse_review_frame_avoids_metadata_expansion_for_tiny_notes() -> None:
+def test_sparse_micro_frame_avoids_metadata_expansion_for_tiny_notes() -> None:
     engine = KVTCV7Engine()
 
     result = engine.compress(
@@ -103,12 +103,9 @@ def test_sparse_review_frame_avoids_metadata_expansion_for_tiny_notes() -> None:
             )
         )
     )
-    payload = json.loads(result.text)
-
-    assert payload["v"] == "KVTC7S"
-    assert payload["q"] == "SPARSE_RAW_REVIEW"
+    assert result.text.startswith("K7m|")
     assert result.compressed_tokens < result.original_tokens
-    assert result.frame.dictionary == {}
+    assert result.frame.dictionary
 
 
 def test_invalid_engine_configuration_is_rejected() -> None:

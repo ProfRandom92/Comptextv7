@@ -1,0 +1,114 @@
+{
+  "passes": [
+    {
+      "compressed_hash": "319fd1a4df0e5229c4f10d4d5918983b9e5b88b3f96ef98300029c8a6aafd459",
+      "dataset": "sparse_alarm_reference.jsonl",
+      "forensic_passed": true,
+      "pass_index": 0,
+      "seed": 1729,
+      "source_hash": "b31dd4ce7678ed1806a51f187a9f6aa5d14c0c598218aebbe021984b01941307",
+      "token_hash": "0b4bb2092e1d6e0142eb7ea5f83a334399dbd3715f6070261d7c936778b09b46"
+    },
+    {
+      "compressed_hash": "b6cc71a30751abad9e99b66f2894f725c8467c06f4c15242c8a0a9f2dd0bcae5",
+      "dataset": "scada_reference.jsonl",
+      "forensic_passed": true,
+      "pass_index": 0,
+      "seed": 1729,
+      "source_hash": "0654ddffea1aec3af2bc4979b0694f52e631edb473b55b9bbf235af2d6d9ca4c",
+      "token_hash": "d13debbb10a67fa4deaa54ae2e2dffc9c261d5e662ff6988b74a87fa1d481c22"
+    },
+    {
+      "compressed_hash": "41528385b969c3c3ec3ef2dba1e57465127732590b9ef356d7fefd1856f83f50",
+      "dataset": "mixed_incident_reference.jsonl",
+      "forensic_passed": true,
+      "pass_index": 0,
+      "seed": 1729,
+      "source_hash": "fa2c2125fcb27ab9c0dc2b08283cbb63aa17890add71684538fefbafb4eaf0ee",
+      "token_hash": "d3d02ecf0ace949069edb5a1e4ab2eaff3fe236033166dc275a6c59e936323dd"
+    },
+    {
+      "compressed_hash": "6dc194071f1217828be12ea4f651d6dcc64fe460390a222dcbda7704543fc2cd",
+      "dataset": "can_bus_reference.jsonl",
+      "forensic_passed": true,
+      "pass_index": 0,
+      "seed": 1729,
+      "source_hash": "b91eebc433d58d3b3da3d1e61c3f8e8542cb0ffdbb84fe823f71adf24231ed4b",
+      "token_hash": "b3ad242752c481bfbe2078d6c3866b1bb909fac4914db9c590fbbe29887be8a9"
+    },
+    {
+      "compressed_hash": "b6cc71a30751abad9e99b66f2894f725c8467c06f4c15242c8a0a9f2dd0bcae5",
+      "dataset": "scada_reference.jsonl",
+      "forensic_passed": true,
+      "pass_index": 1,
+      "seed": 1730,
+      "source_hash": "0654ddffea1aec3af2bc4979b0694f52e631edb473b55b9bbf235af2d6d9ca4c",
+      "token_hash": "d13debbb10a67fa4deaa54ae2e2dffc9c261d5e662ff6988b74a87fa1d481c22"
+    },
+    {
+      "compressed_hash": "6dc194071f1217828be12ea4f651d6dcc64fe460390a222dcbda7704543fc2cd",
+      "dataset": "can_bus_reference.jsonl",
+      "forensic_passed": true,
+      "pass_index": 1,
+      "seed": 1730,
+      "source_hash": "b91eebc433d58d3b3da3d1e61c3f8e8542cb0ffdbb84fe823f71adf24231ed4b",
+      "token_hash": "b3ad242752c481bfbe2078d6c3866b1bb909fac4914db9c590fbbe29887be8a9"
+    },
+    {
+      "compressed_hash": "319fd1a4df0e5229c4f10d4d5918983b9e5b88b3f96ef98300029c8a6aafd459",
+      "dataset": "sparse_alarm_reference.jsonl",
+      "forensic_passed": true,
+      "pass_index": 1,
+      "seed": 1730,
+      "source_hash": "b31dd4ce7678ed1806a51f187a9f6aa5d14c0c598218aebbe021984b01941307",
+      "token_hash": "0b4bb2092e1d6e0142eb7ea5f83a334399dbd3715f6070261d7c936778b09b46"
+    },
+    {
+      "compressed_hash": "41528385b969c3c3ec3ef2dba1e57465127732590b9ef356d7fefd1856f83f50",
+      "dataset": "mixed_incident_reference.jsonl",
+      "forensic_passed": true,
+      "pass_index": 1,
+      "seed": 1730,
+      "source_hash": "fa2c2125fcb27ab9c0dc2b08283cbb63aa17890add71684538fefbafb4eaf0ee",
+      "token_hash": "d3d02ecf0ace949069edb5a1e4ab2eaff3fe236033166dc275a6c59e936323dd"
+    },
+    {
+      "compressed_hash": "b6cc71a30751abad9e99b66f2894f725c8467c06f4c15242c8a0a9f2dd0bcae5",
+      "dataset": "scada_reference.jsonl",
+      "forensic_passed": true,
+      "pass_index": 2,
+      "seed": 1731,
+      "source_hash": "0654ddffea1aec3af2bc4979b0694f52e631edb473b55b9bbf235af2d6d9ca4c",
+      "token_hash": "d13debbb10a67fa4deaa54ae2e2dffc9c261d5e662ff6988b74a87fa1d481c22"
+    },
+    {
+      "compressed_hash": "41528385b969c3c3ec3ef2dba1e57465127732590b9ef356d7fefd1856f83f50",
+      "dataset": "mixed_incident_reference.jsonl",
+      "forensic_passed": true,
+      "pass_index": 2,
+      "seed": 1731,
+      "source_hash": "fa2c2125fcb27ab9c0dc2b08283cbb63aa17890add71684538fefbafb4eaf0ee",
+      "token_hash": "d3d02ecf0ace949069edb5a1e4ab2eaff3fe236033166dc275a6c59e936323dd"
+    },
+    {
+      "compressed_hash": "6dc194071f1217828be12ea4f651d6dcc64fe460390a222dcbda7704543fc2cd",
+      "dataset": "can_bus_reference.jsonl",
+      "forensic_passed": true,
+      "pass_index": 2,
+      "seed": 1731,
+      "source_hash": "b91eebc433d58d3b3da3d1e61c3f8e8542cb0ffdbb84fe823f71adf24231ed4b",
+      "token_hash": "b3ad242752c481bfbe2078d6c3866b1bb909fac4914db9c590fbbe29887be8a9"
+    },
+    {
+      "compressed_hash": "319fd1a4df0e5229c4f10d4d5918983b9e5b88b3f96ef98300029c8a6aafd459",
+      "dataset": "sparse_alarm_reference.jsonl",
+      "forensic_passed": true,
+      "pass_index": 2,
+      "seed": 1731,
+      "source_hash": "b31dd4ce7678ed1806a51f187a9f6aa5d14c0c598218aebbe021984b01941307",
+      "token_hash": "0b4bb2092e1d6e0142eb7ea5f83a334399dbd3715f6070261d7c936778b09b46"
+    }
+  ],
+  "stable": true,
+  "tokenizer_drift_fingerprint": "4ebdf430f4233805f7303d7d459f84cdc872d82de8d7d548ba192dced2422e65"
+}

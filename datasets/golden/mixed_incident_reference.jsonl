@@ -1,0 +1,4 @@
+{"anomaly_anchor":"","code":"CYCLE","event_id":"MIXED-0001","message":"normal station cycle","severity":"INFO","source":"CELL-A","timestamp":"2026-01-01T03:00:00Z","values":{"cycle_s":42}}
+{"anomaly_anchor":"ANOM-MIX-TORQUE-0001","code":"TORQUE-LIMIT","event_id":"MIXED-0002","message":"torque trend warning before stop","severity":"WARN","source":"CELL-A","timestamp":"2026-01-01T03:00:01Z","values":{"torque_nm":31}}
+{"anomaly_anchor":"ANOM-MIX-STOP-0002","code":"ROBOT-STOP","event_id":"MIXED-0003","message":"robot stopped after torque warning","severity":"ERROR","source":"CELL-A","timestamp":"2026-01-01T03:00:02Z","values":{"stop_code":17}}
+{"anomaly_anchor":"","code":"CYCLE","event_id":"MIXED-0004","message":"normal station cycle held for review","severity":"INFO","source":"CELL-A","timestamp":"2026-01-01T03:00:03Z","values":{"cycle_s":43}}

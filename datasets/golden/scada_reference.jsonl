@@ -1,0 +1,4 @@
+{"anomaly_anchor":"","code":"PUMP-RUN","event_id":"SCADA-0001","message":"pump running steady","severity":"INFO","source":"PLC-7","timestamp":"2026-01-01T01:00:00Z","values":{"pressure_bar":4.2}}
+{"anomaly_anchor":"","code":"PUMP-RUN","event_id":"SCADA-0002","message":"pump running steady","severity":"INFO","source":"PLC-7","timestamp":"2026-01-01T01:00:01Z","values":{"pressure_bar":4.2}}
+{"anomaly_anchor":"ANOM-SCADA-VALVE-0001","code":"VALVE-STUCK","event_id":"SCADA-0003","message":"feed valve stuck open alarm","severity":"CRITICAL","source":"PLC-7","timestamp":"2026-01-01T01:00:02Z","values":{"position_pct":100}}
+{"anomaly_anchor":"ANOM-SCADA-PRESS-0002","code":"PRESSURE-HIGH","event_id":"SCADA-0004","message":"pressure high after valve alarm","severity":"WARN","source":"PLC-7","timestamp":"2026-01-01T01:00:03Z","values":{"pressure_bar":8.9}}

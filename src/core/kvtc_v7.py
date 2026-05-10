@@ -212,14 +212,9 @@ class KVTCV7Engine:
         header = self._build_header(events, lines)
         middle = self._build_middle(events)
         window = self._build_window(events)
-        frame = self._build_frame(header, middle, window)
+        frame = self._build_frame(header, middle, window, events)
         original_tokens = self._count_tokens("\n".join(lines))
         compressed_tokens = self._count_tokens(frame.payload)
-        if self._should_use_sparse_review_frame(
-            original_tokens=original_tokens, compressed_tokens=compressed_tokens, middle=middle
-        ):
-            frame = self._build_sparse_review_frame(header)
-            compressed_tokens = self._count_tokens(frame.payload)
         compression_ratio = (compressed_tokens / original_tokens) if original_tokens else 0.0
         return CompressionResult(
             original_tokens=original_tokens,
@@ -373,7 +368,16 @@ class KVTCV7Engine:
         )
         return WindowLayer(window_seconds=self.window_seconds, bursts=bursts)
 
-    def _build_frame(self, header: HeaderLayer, middle: MiddleLayer, window: WindowLayer) -> FrameLayer:
+    def _build_frame(
+        self,
+        header: HeaderLayer,
+        middle: MiddleLayer,
+        window: WindowLayer,
+        events: Sequence[StructuredLogEvent],
+    ) -> FrameLayer:
+        if self._should_use_sparse_micro_frame(events, middle):
+            return self._build_sparse_micro_frame(header, middle, events)
+
         dictionary = {f"F{idx}": family for idx, family in enumerate(middle.families, start=1)}
         reverse_dictionary = {family: token for token, family in dictionary.items()}
         encoded_counts = ";".join(
@@ -401,42 +405,49 @@ class KVTCV7Engine:
         payload = json.dumps(frame_doc, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         return FrameLayer(dictionary=dictionary, payload=payload)
 
-    def _should_use_sparse_review_frame(
-        self, *, original_tokens: int, compressed_tokens: int, middle: MiddleLayer
+    def _should_use_sparse_micro_frame(
+        self, events: Sequence[StructuredLogEvent], middle: MiddleLayer
     ) -> bool:
-        """Return true when metadata overhead dominates a tiny non-repeating input.
+        """Use a compact event synopsis when JSON metadata would dominate.
 
-        The normal four-layer frame is valuable for repeated diagnostic streams,
-        but it can be larger than a three-line workshop note with no repeated
-        families.  In that sparse case we emit an explicit review envelope
-        instead of pretending that the dictionary/window layers are useful
-        compression.
+        Very short, heterogeneous workshop notes do not benefit from a full
+        dictionary/window payload: there are no repeated families to amortise the
+        frame metadata.  The sparse micro-frame keeps the auditable layers in the
+        returned object, but serialises the transport payload as a deterministic
+        synopsis so the codec does not expand tiny triage packets.
         """
 
-        event_count = sum(middle.family_counts.values())
-        has_repeated_family = any(count > 1 for count in middle.family_counts.values())
-        return (
-            0 < original_tokens <= 64
-            and event_count <= 5
-            and not has_repeated_family
-            and compressed_tokens >= original_tokens
-        )
+        if not events or len(events) > 3:
+            return False
+        return all(count == 1 for count in middle.family_counts.values())
 
-    def _build_sparse_review_frame(self, header: HeaderLayer) -> FrameLayer:
-        severity = ",".join(f"{key}:{value}" for key, value in header.severity_counts.items())
-        codes = ",".join(f"{key}:{value}" for key, value in header.code_counts.items())
-        frame_doc = {
-            "v": "KVTC7S",
-            "h": {
-                "n": header.event_count,
-                "fp": header.source_fingerprint,
-                "sev": severity,
-                "codes": codes,
-            },
-            "q": "SPARSE_RAW_REVIEW",
-        }
-        payload = json.dumps(frame_doc, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-        return FrameLayer(dictionary={}, payload=payload)
+    def _build_sparse_micro_frame(
+        self, header: HeaderLayer, middle: MiddleLayer, events: Sequence[StructuredLogEvent]
+    ) -> FrameLayer:
+        dictionary = {f"F{idx}": family for idx, family in enumerate(middle.families, start=1)}
+        severity = "".join(
+            f"{self._severity_short_code(key)}{value}" for key, value in header.severity_counts.items()
+        ) or "S0"
+        codes = ",".join(header.code_counts) or "-"
+        event_synopsis = ",".join(
+            f"{event.ecu}-{self._severity_short_code(event.severity)}-{event.codes[0] if event.codes else '-'}"
+            for event in events
+        )
+        payload = "|".join(
+            ("K7m", str(header.event_count), header.source_fingerprint, severity, codes, event_synopsis)
+        )
+        return FrameLayer(dictionary=dictionary, payload=payload)
+
+    def _severity_short_code(self, severity: str) -> str:
+        return {
+            "FATAL": "F",
+            "CRIT": "C",
+            "ERR": "E",
+            "WARN": "W",
+            "INFO": "I",
+            "DBG": "D",
+            "TRC": "T",
+        }.get(severity, severity[:1] or "S")
 
     def _encode_burst(self, burst: str, reverse_dictionary: Mapping[str, str]) -> str:
         encoded = burst

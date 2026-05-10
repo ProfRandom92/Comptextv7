@@ -1,0 +1,4 @@
+{"anomaly_anchor":"","code":"0x18FEF100","event_id":"CAN-0001","message":"normal engine speed frame","severity":"INFO","source":"PTCAN","timestamp":"2026-01-01T00:00:00Z","values":{"rpm":1200}}
+{"anomaly_anchor":"","code":"0x18FEF100","event_id":"CAN-0002","message":"normal engine speed frame","severity":"INFO","source":"PTCAN","timestamp":"2026-01-01T00:00:01Z","values":{"rpm":1201}}
+{"anomaly_anchor":"ANOM-CAN-WHEEL-0001","code":"C0035","event_id":"CAN-0003","message":"wheel speed intermittent drop","severity":"WARN","source":"ABS","timestamp":"2026-01-01T00:00:02Z","values":{"wheel_speed_kph":0}}
+{"anomaly_anchor":"","code":"0x18FEF100","event_id":"CAN-0004","message":"normal engine speed frame","severity":"INFO","source":"PTCAN","timestamp":"2026-01-01T00:00:03Z","values":{"rpm":1200}}
