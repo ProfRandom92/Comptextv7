@@ -79,14 +79,15 @@ class KVTCV7Engine:
         Technical identifiers, numeric values, and short words remain unchanged so
         fault codes, SPNs, and compact engineering abbreviations stay lossless.
         """
-        compressed_words: list[str] = []
-        for word in text.split():
-            if any(char.isdigit() for char in word) or len(word) < 4:
-                compressed_words.append(word)
-            else:
-                compressed_words.append(self.consonant_regex.sub("", word))
-
-        return " ".join(compressed_words)
+        lines = []
+        for line in text.splitlines():
+            words = [
+                word if any(c.isdigit() for c in word) or len(word) < 4
+                else self.consonant_regex.sub("", word)
+                for word in line.split()
+            ]
+            lines.append(" ".join(words))
+        return "\n".join(lines)
 
     @staticmethod
     def _estimate_tokens(payload: str) -> int:
