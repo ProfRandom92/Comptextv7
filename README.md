@@ -1,49 +1,119 @@
-# Comptextv7
+# CompText V7 — KVTC Cognitive Fabric for Technical Logs
 
-CompText V7 currently contains a deterministic KVTC-V7 prototype for lossy,
-auditable compression of structured technical diagnostic logs.
+CompText V7 is a deterministic, auditable prototype for **lossy token reduction
+of structured vehicle and workshop diagnostics**.  Its core KVTC-V7 engine turns
+XENTRY-/OBD-style logs into a compact four-layer frame before the data is sent to
+an assistant, audit workflow, or downstream analytics service.
 
-## Pull request workflow
+The current build focuses on a Daimler-Truck-style industrial scenario without
+claiming vendor certification or affiliation: repeated diagnostic telemetry,
+production-support evidence packets, local data-sovereignty constraints, and
+operator-readable audit layers.
 
-Use the repository PR template for every change. If duplicate pull requests are
-opened by mistake, keep the one that contains the final combined branch, close or
-mark the accidental PRs as obsolete, and delete only the obsolete branches after
-confirming their changes are present in the kept PR.
+## What changed in this generation
 
-## Benchmarking
+- **95%+ XENTRY target exceeded:** repetitive XENTRY benchmark rows now compress
+  from 33,998 source tokens to 139 frame tokens, a **99.59% token reduction** in
+  the deterministic local benchmark.
+- **Consonant mapping v2:** drifting measurements such as `temperature=97C` and
+  `voltage=23.9V` are converted into family slots (`#C`, `#V`, `#BAR`) for event
+  grouping while the public mapping can still preserve exact diagnostic values
+  when needed.
+- **Cleaner event context:** `ECU=...`, `module=...`, and `source=...` are parsed
+  as structured context instead of being duplicated inside the consonant family
+  signature.
+- **Professional audit surface:** every compression result exposes header,
+  family, window, dictionary, payload, token counts, and reduction percentage.
 
-The benchmark harness is in `benchmarks/run_kvtc_v7_benchmarks.py`. It uses only
-the Python standard library plus the local KVTC-V7 engine, and it deliberately
-includes best-case, middle-case, and weak-case inputs so the reported numbers are
-not cherry-picked.
+## Architecture
 
-Run the full default suite:
+```mermaid
+flowchart LR
+    A[Raw XENTRY / OBD / Workshop Logs] --> B[Line Normalizer]
+    B --> C[Structured Event Parser]
+    C --> C1[Timestamp]
+    C --> C2[Severity]
+    C --> C3[ECU / Module]
+    C --> C4[DTC / SPN / FMI Codes]
+    C --> C5[Key-Value Fields]
+    C --> D[Extreme Consonant Mapping v2]
+    D --> D1[Domain Abbreviations]
+    D --> D2[Measurement Slots]
+    D --> D3[Consonant Skeletons]
+    C1 --> E[KVTC Sandwich]
+    C2 --> E
+    C3 --> E
+    C4 --> E
+    C5 --> E
+    D --> E
+    E --> H[Header Layer]
+    E --> M[Middle Family Layer]
+    E --> W[Window Burst Layer]
+    E --> F[Frame Dictionary + Payload]
+    H --> G[Auditable JSON Frame]
+    M --> G
+    W --> G
+    F --> G
+    G --> I[LLM / Copilot / Audit / Dashboard]
+```
+
+### KVTC four-layer sandwich
+
+| Layer | Purpose | Examples retained |
+| --- | --- | --- |
+| Header | Run-level inventory and provenance. | event count, source fingerprint, first/last timestamp, severity counts, top codes |
+| Middle | Frequency-sorted diagnostic families. | `ECU:severity:primary-code:consonant-signature:field-slots` |
+| Window | Temporal burst shape without raw log replay. | top window buckets and family counts |
+| Frame | Transport representation. | deterministic family dictionary plus compact JSON payload |
+
+## Repository structure
+
+```text
+Comptextv7/
+├── benchmarks/
+│   ├── run_kvtc_v7_benchmarks.py   # deterministic compression benchmark suite
+│   ├── industry_audit.py           # AEI-style industrial readiness gates
+│   └── run_industrial_audit.py     # audit runner wrapper
+├── src/
+│   ├── core/
+│   │   └── kvtc_v7.py              # KVTC-V7 engine and consonant mapping
+│   └── audit/
+│       └── industrial_resilience.py
+├── tests/
+│   ├── test_kvtc_v7.py
+│   ├── test_benchmarks.py
+│   └── test_industrial_audit.py
+├── pyproject.toml
+└── README.md
+```
+
+## Quick start
+
+```bash
+python -m pytest
+```
+
+Run the compression benchmark:
 
 ```bash
 python benchmarks/run_kvtc_v7_benchmarks.py --iterations 5 --warmups 1
 ```
 
-Emit JSON for dashboards or CI artifacts:
+Emit JSON for CI artifacts or dashboards:
 
 ```bash
 python benchmarks/run_kvtc_v7_benchmarks.py --iterations 5 --warmups 1 --json
 ```
 
-### What the columns mean
+Run the industrial audit scorecard:
 
-- **compression ratio / reduction**: token-level size of the KVTC-V7 frame
-  compared with the input token count. Smaller is better.
-- **distinct families**: number of unique diagnostic family fingerprints seen in
-  the parsed events.
-- **top-family coverage**: percentage of input events represented by the top
-  `max_families` families. Low coverage is a warning that an impressive size
-  reduction may be achieved by dropping high-entropy uniqueness rather than by
-  finding reusable diagnostic structure.
-- **peak KiB**: peak memory observed by `tracemalloc` during the measured call.
+```bash
+python benchmarks/run_industrial_audit.py --iterations 3
+```
 
-### Honest local results
+## Benchmark results
 
-The following numbers were measured in this repository on 2026-05-10 with:
+Measured in this repository on **2026-05-10** with:
 
 ```bash
 python benchmarks/run_kvtc_v7_benchmarks.py --iterations 5 --warmups 1
@@ -51,83 +121,60 @@ python benchmarks/run_kvtc_v7_benchmarks.py --iterations 5 --warmups 1
 
 | case | lines | input bytes | payload bytes | original tokens | compressed tokens | reduction | median ms | lines/s | peak KiB | distinct families | top-family coverage | honest expectation |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| repetitive_xentry_2k | 2000 | 345326 | 4051 | 43998 | 489 | 98.89% | 1114.08 | 1795 | 5326.1 | 630 | 2.40% | Best case: repeated families should compress extremely well. |
-| mixed_obd_workshop_1_5k | 1500 | 142738 | 3806 | 17903 | 339 | 98.11% | 574.00 | 2613 | 2573.5 | 1429 | 2.07% | Realistic middle case: several families, noisy measurements, still structured. |
-| high_entropy_json_750 | 750 | 179617 | 2509 | 21000 | 165 | 99.21% | 400.91 | 1871 | 1690.4 | 750 | 1.60% | Weak case: apparent reduction is lossy and misleading; top-family coverage should be low. |
-| short_sparse_3 | 3 | 202 | 412 | 26 | 57 | -119.23% | 1.29 | 2331 | 6.8 | 3 | 100.00% | Weak case: metadata overhead can dominate very small inputs. |
+| repetitive_xentry_2k | 2000 | 345326 | 998 | 33998 | 139 | 99.59% | 1033.28 | 1936 | 4897.8 | 6 | 100.00% | Best case: repeated families should compress extremely well. |
+| mixed_obd_workshop_1_5k | 1500 | 142738 | 1281 | 13804 | 155 | 98.88% | 513.33 | 2922 | 2379.3 | 10 | 100.00% | Realistic middle case: several families, noisy measurements, still structured. |
+| high_entropy_json_750 | 750 | 179617 | 2509 | 21000 | 113 | 99.46% | 455.46 | 1647 | 1675.3 | 750 | 1.60% | Weak case: apparent reduction is lossy and misleading; top-family coverage should be low. |
+| short_sparse_3 | 3 | 202 | 386 | 23 | 50 | -117.39% | 1.21 | 2471 | 6.5 | 3 | 100.00% | Weak case: metadata overhead can dominate very small inputs. |
 
+### How to read the columns
+
+- **reduction** is token-level reduction from source log tokens to the KVTC frame.
+- **distinct families** is the number of unique diagnostic family fingerprints in
+  the parsed event stream.
+- **top-family coverage** is the percentage of events covered by the retained
+  `max_families` families.  High coverage in repetitive XENTRY streams indicates
+  reusable structure; low coverage in random JSON is a quality warning.
+- **peak KiB** is the peak memory observed with `tracemalloc` during the measured
+  compression call.
+
+## Design fusion: Daimler-Truck-style operations × CompText
+
+The design goal is an industrial diagnostic fabric rather than a generic text
+zipper.  The fusion points are:
+
+1. **Workshop semantics first** — severity, ECU/module, DTC/SPN/FMI codes, and
+   measurements are parsed into structured event fields before compression.
+2. **CompText token economy** — natural language is collapsed into domain
+   abbreviations and consonant skeletons, cutting repeated prose while keeping
+   diagnostic anchors.
+3. **Fleet-monitoring burst awareness** — window summaries preserve when fault
+   families cluster, which is essential for triage and production support.
+4. **Data-sovereign edge readiness** — the engine is deterministic and standard
+   library only, so it can run before cloud upload or assistant handoff.
+5. **Honest audit posture** — synthetic benchmarks include strong, middle, weak,
+   and expansion cases; high reduction alone is not treated as proof of semantic
+   fidelity.
 
 ## Industrial economic resilience audit
 
-The AEI-aligned audit harness is in `benchmarks/run_industrial_audit.py`. It
-extends the KVTC-only benchmark with business-facing probes for recursive R&D,
-expertise transfer, industrial reorganization, and air-gapped economic access.
-The audit remains synthetic and deterministic; it is an executable scenario for
-stakeholder review, not Daimler Truck vendor certification.
+The audit harness extends raw KVTC compression with business-facing probes for
+recursive R&D, expertise transfer, industrial reorganization, and air-gapped
+economic access.  It remains synthetic and deterministic; treat it as a
+pilot-readiness scorecard, not vendor certification data.
 
-Run the default audit:
-
-```bash
-python benchmarks/run_industrial_audit.py --iterations 3
-```
-
-Emit JSON for scorecards or CI artifacts:
-
-```bash
-python benchmarks/run_industrial_audit.py --iterations 3 --json
-```
-
-### Audit target map
-
-| AEI category | CompText V7 target | Daimler Truck relevance |
+| AEI category | CompText V7 target | Daimler-Truck-style relevance |
 | --- | --- | --- |
 | Recursive R&D | Reduce manual feature annotation by at least 80% for a new hydrogen fuel-cell component. | Faster rollout of new drivetrain technologies. |
 | Expertise Pipeline | Reach at least 0.90 AV-assisted junior-to-senior decision alignment for eCitaro P1-style faults. | Compensates for scarce senior diagnostic expertise in production. |
 | Industrial Organization | Demonstrate a 60x operational consolidation factor while preserving >=94% token reduction and <320 ms local latency in the probe. | Reduces overhead while preserving fleet-monitoring latency budgets. |
 | Economic Access | Keep a local forensic-audit FVE proxy above 0.78 under air-gapped Ollama/Gemma-style constraints. | Supports data sovereignty, local autonomy, and DSGVO-aligned deployment. |
 
-### Interpretation caveats
+## Caveats
 
-These are synthetic, deterministic benchmarks, not vendor certification data and
-not production fleet telemetry. KVTC-V7 is intentionally lossy: a high reduction
-percentage alone does not prove high reconstruction quality or diagnostic
-fitness. In particular, the `high_entropy_json_750` case shows why the benchmark
-reports family coverage: the payload is small, but every line has a unique family
-fingerprint and only 1.60% of events are covered by the top retained families.
-That should be treated as a quality warning, not as a compression victory.
-
-The `short_sparse_3` case is the expected bad case: fixed frame metadata is
-larger than the tiny input, so the compressor expands the token count by
-119.23%.
-
-## Industrial economic resilience audit
-
-For AEI-style stakeholder reviews, the repository also includes a deterministic
-industry audit that turns the requested **Industrial Economic Resilience &
-Recursive Improvement** scenario into four programmatic gates. It is intentionally
-synthetic and should be treated as a pilot-readiness scorecard, not as Daimler
-Truck production certification data.
-
-Run the full audit:
-
-```bash
-python benchmarks/industry_audit.py
-```
-
-Emit JSON for dashboards or CI artifacts:
-
-```bash
-python benchmarks/industry_audit.py --json
-```
-
-### Audit gates
-
-| AEI category | CompText V7 gate | Target |
-| --- | --- | --- |
-| Recursive R&D | SAE-NLA-style dictionary creation for a new hydrogen fuel-cell component | >= 80% manual feature-annotation reduction in the first 48-hour stream |
-| Expertise Pipeline | Activation Verbalizer support for a junior eCitaro technician during P1 triage | >= 0.90 Junior/Senior decision-quality correlation |
-| Industrial Organization | Fleet monitoring for 10,000 Daimler-Truck-style assets with five analysts | >= 60x consolidation, >= 94% token reduction, < 320 ms compressed-packet latency |
-| Economic Access | Air-gapped local audit using an Ollama/Gemma-style backend assumption | >= 0.78 Fraction of Variance Explained for retained forensic signals |
-
-The audit prints risk notes beside every passing gate so that economic readiness
-is not confused with safety release, legal approval, or field validation.
+- KVTC-V7 is intentionally **lossy**.  It is designed for compact triage and audit
+  packets, not byte-identical reconstruction.
+- The datasets are synthetic and deterministic.  They are useful for regression
+  testing, but they are not production fleet telemetry.
+- High-entropy data can still show a tiny payload because the engine summarizes
+  structure aggressively.  Always inspect family coverage and downstream quality
+  metrics before claiming operational value.

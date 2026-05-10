@@ -50,6 +50,37 @@ def test_extreme_consonant_mapping_preserves_diagnostic_entropy() -> None:
     assert "AE" not in signature
 
 
+def test_family_consonant_mapping_collapses_drifting_measurements() -> None:
+    engine = KVTCV7Engine()
+
+    first = engine.extreme_consonant_map(
+        "ECU=MCM P0301 engine misfire cylinder=1 temperature=97C pressure=2.4bar voltage=23.9V",
+        preserve_measurements=False,
+        family_mode=True,
+    )
+    second = engine.extreme_consonant_map(
+        "ECU=MCM P0301 engine misfire cylinder=1 temperature=103C pressure=2.9bar voltage=24.4V",
+        preserve_measurements=False,
+        family_mode=True,
+    )
+
+    assert first == second
+    assert "P0301" in first
+    assert "#C" in first
+    assert "#BAR" in first
+    assert "97C" not in first
+    assert "103C" not in first
+
+
+def test_ecu_field_value_is_used_as_event_context() -> None:
+    engine = KVTCV7Engine()
+
+    result = engine.compress("2026-05-10T12:00:00Z ERROR ECU=MCM P0301 engine misfire voltage=24V")
+
+    assert result.events[0].ecu == "MCM"
+    assert result.middle.families[0].startswith("MCM:ERR:P0301")
+
+
 def test_compression_reduces_repetitive_xentry_logs_below_target_budget() -> None:
     engine = KVTCV7Engine(window_seconds=60, max_families=4, max_bursts=2)
 

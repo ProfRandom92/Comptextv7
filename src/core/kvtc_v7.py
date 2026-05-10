@@ -34,8 +34,11 @@ _ECU_RE = re.compile(r"\b(?P<ecu>ECU|ACM|CPC|MCM|TCM|ABS|EBS|SCR|ICU|XENTRY|PTCA
 _KV_RE = re.compile(r"\b(?P<key>[A-Za-z][A-Za-z0-9_./-]{1,32})\s*(?:=|:)\s*(?P<value>[^\s,;|]+)")
 _HEX_RE = re.compile(r"\b0x[0-9A-Fa-f]+\b")
 _NUMBER_RE = re.compile(r"(?<![A-Za-z])[-+]?\d+(?:[.,]\d+)?(?:%|[A-Za-z]{1,5})?")
-_TOKEN_RE = re.compile(r"[A-Za-z0-9_.:/+-]+")
+_TOKEN_RE = re.compile(r"[A-Za-z0-9_.:/+=-]+")
 _VOWELS = str.maketrans("", "", "AEIOUÄÖÜaeiouäöü")
+_MEASUREMENT_RE = re.compile(
+    r"(?P<number>[-+]?\d+(?:[.,]\d+)?)(?P<unit>%|[A-Za-z]{1,5})?", re.I
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,22 +139,53 @@ class KVTCV7Engine:
     }
     DOMAIN_TERMS: ClassVar[Mapping[str, str]] = {
         "temperature": "TMP",
+        "temp": "TMP",
         "pressure": "PRS",
         "voltage": "VLT",
         "current": "CUR",
         "misfire": "MSFR",
+        "combustion": "CMB",
+        "irregularity": "IRG",
         "cylinder": "CYL",
         "engine": "ENG",
         "emission": "EMS",
+        "emissions": "EMS",
         "aftertreatment": "AFT",
         "sensor": "SNSR",
+        "plausibility": "PLSB",
+        "latency": "LAT",
         "timeout": "TMOT",
         "torque": "TRQ",
         "brake": "BRK",
         "fault": "FLT",
         "diagnostic": "DGN",
+        "diagnostics": "DGN",
         "xentry": "XTRY",
+        "guided-test": "GDT",
+        "guided": "GDD",
+        "keepalive": "KALV",
     }
+    FAMILY_STOP_WORDS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "a",
+            "an",
+            "and",
+            "by",
+            "detected",
+            "for",
+            "from",
+            "in",
+            "of",
+            "on",
+            "says",
+            "test",
+            "the",
+            "to",
+            "with",
+        }
+    )
+    FAMILY_CONTEXT_KEYS: ClassVar[frozenset[str]] = frozenset({"ecu", "module", "source"})
+    FAMILY_ENUM_KEYS: ClassVar[frozenset[str]] = frozenset({"axle", "cylinder", "cyl", "fmi"})
 
     def __init__(
         self,
@@ -194,34 +228,53 @@ class KVTCV7Engine:
             events=events,
         )
 
-    def extreme_consonant_map(self, value: str) -> str:
+    def extreme_consonant_map(
+        self,
+        value: str,
+        *,
+        preserve_measurements: bool = True,
+        family_mode: bool = False,
+    ) -> str:
         """Map text to an aggressive consonant-only technical signature.
 
-        Codes, hexadecimal values and numeric measurements are preserved because
-        they carry high diagnostic entropy.  Natural-language fragments are
-        reduced to domain abbreviations or consonant skeletons.
+        Codes, hexadecimal values and numeric measurements are preserved by
+        default because they carry high diagnostic entropy.  Family mode is used
+        internally for repeated XENTRY rows: it keeps OBD/DTC codes and domain
+        nouns, but converts drifting measurements to unit slots so one changing
+        temperature or voltage sample does not create a new family.
         """
 
         parts: list[str] = []
         for token in _TOKEN_RE.findall(value):
             lowered = token.lower().strip(".,;|()[]{}")
-            if not lowered:
+            if not lowered or (family_mode and lowered in self.FAMILY_STOP_WORDS):
                 continue
-            if _OBD_RE.fullmatch(token) or _HEX_RE.fullmatch(token) or _NUMBER_RE.fullmatch(token):
+            if _OBD_RE.fullmatch(token):
                 parts.append(token.upper().replace(" ", ""))
+                continue
+            if _HEX_RE.fullmatch(token):
+                parts.append("0x#" if family_mode else token.upper())
+                continue
+            if _NUMBER_RE.fullmatch(token):
+                parts.append(self._measurement_signature(token, preserve=preserve_measurements))
                 continue
             if lowered in self.DOMAIN_TERMS:
                 parts.append(self.DOMAIN_TERMS[lowered])
                 continue
             if "=" in token or ":" in token:
-                parts.append(self._compress_kv_token(token))
+                compressed = self._compress_kv_token(
+                    token, preserve_measurements=preserve_measurements, family_mode=family_mode
+                )
+                if compressed:
+                    parts.append(compressed)
                 continue
             consonants = token.translate(_VOWELS).upper()
             consonants = re.sub(r"([^0-9])\1+", r"\1", consonants)
             consonants = re.sub(r"[^A-Z0-9_.:/+-]", "", consonants)
             if consonants:
-                parts.append(consonants[:10])
-        return ".".join(parts[:16]) or "EMPTY"
+                parts.append(consonants[:8] if family_mode else consonants[:10])
+        limit = 12 if family_mode else 16
+        return ".".join(parts[:limit]) or "EMPTY"
 
     def explain_layers(self, result: CompressionResult) -> Mapping[str, Any]:
         """Return a JSON-serialisable layer summary for audits."""
@@ -258,7 +311,9 @@ class KVTCV7Engine:
         codes = tuple(dict.fromkeys(code.upper().replace(" ", "") for code in _OBD_RE.findall(line)))
         fields = {match.group("key").lower(): match.group("value") for match in _KV_RE.finditer(line)}
         signature_source = self._remove_low_entropy_prefixes(line)
-        consonant_signature = self.extreme_consonant_map(signature_source)
+        consonant_signature = self.extreme_consonant_map(
+            signature_source, preserve_measurements=False, family_mode=True
+        )
         fingerprint_material = "|".join((severity, ecu, ",".join(codes), consonant_signature))
         fingerprint = hashlib.blake2s(fingerprint_material.encode("utf-8"), digest_size=5).hexdigest().upper()
         return StructuredLogEvent(
@@ -356,10 +411,14 @@ class KVTCV7Engine:
         if not fields:
             return "-"
         significant = []
-        for key in sorted(fields)[:5]:
-            key_sig = self.extreme_consonant_map(key)[:6]
+        for key in sorted(fields):
+            if key.lower() in self.FAMILY_CONTEXT_KEYS:
+                continue
+            if len(significant) >= 5:
+                break
+            key_sig = self.extreme_consonant_map(key, family_mode=True)[:6]
             value = fields[key]
-            value_sig = value.upper() if _NUMBER_RE.fullmatch(value) else self.extreme_consonant_map(value)[:8]
+            value_sig = self._field_value_signature(key, value)
             significant.append(f"{key_sig}={value_sig}")
         return ",".join(significant)
 
@@ -387,25 +446,53 @@ class KVTCV7Engine:
         return self.SEVERITY_ALIASES.get(match.group("sev").upper(), "INFO")
 
     def _extract_ecu(self, line: str) -> str:
+        ecu_field = re.search(r"\b(?:module|source|ecu)\s*(?:=|:)\s*([A-Za-z0-9_-]+)", line, re.I)
+        if ecu_field:
+            return ecu_field.group(1).upper()[:12]
         match = _ECU_RE.search(line)
         if not match:
-            ecu_field = re.search(r"\b(?:module|source|ecu)\s*(?:=|:)\s*([A-Za-z0-9_-]+)", line, re.I)
-            if ecu_field:
-                return ecu_field.group(1).upper()[:12]
             return "GEN"
         return match.group("ecu").upper()
 
     def _remove_low_entropy_prefixes(self, line: str) -> str:
         line = _TIMESTAMP_RE.sub("", line)
         line = _SEVERITY_RE.sub("", line)
+        line = re.sub(r"\b(?:ECU|module|source)\s*(?:=|:)\s*[A-Za-z0-9_-]+", "", line, flags=re.I)
         return line.strip(" -|[]")
 
-    def _compress_kv_token(self, token: str) -> str:
+    def _compress_kv_token(
+        self, token: str, *, preserve_measurements: bool = True, family_mode: bool = False
+    ) -> str:
         key, _, value = re.split(r"([=:])", token, maxsplit=1)
+        lowered_key = key.lower()
+        if family_mode and lowered_key in self.FAMILY_CONTEXT_KEYS:
+            return ""
         key_sig = key.translate(_VOWELS).upper()[:6]
         if _NUMBER_RE.fullmatch(value) or _HEX_RE.fullmatch(value):
-            return f"{key_sig}={value.upper()}"
-        return f"{key_sig}={value.translate(_VOWELS).upper()[:8]}"
+            value_sig = self._measurement_signature(value, preserve=preserve_measurements)
+        elif family_mode and lowered_key not in self.FAMILY_ENUM_KEYS:
+            value_sig = self.extreme_consonant_map(value, preserve_measurements=False, family_mode=True)[:6]
+        else:
+            value_sig = value.translate(_VOWELS).upper()[:8]
+        return f"{key_sig}={value_sig}"
+
+    def _field_value_signature(self, key: str, value: str) -> str:
+        if key.lower() in self.FAMILY_ENUM_KEYS:
+            return self.extreme_consonant_map(value, preserve_measurements=True, family_mode=True)[:8]
+        if _NUMBER_RE.fullmatch(value) or _HEX_RE.fullmatch(value):
+            return self._measurement_signature(value, preserve=False)
+        return self.extreme_consonant_map(value, preserve_measurements=False, family_mode=True)[:8]
+
+    def _measurement_signature(self, value: str, *, preserve: bool) -> str:
+        if preserve:
+            return value.upper().replace(" ", "")
+        if _HEX_RE.fullmatch(value):
+            return "0x#"
+        match = _MEASUREMENT_RE.fullmatch(value.strip())
+        if not match:
+            return "#"
+        unit = (match.group("unit") or "N").upper()
+        return f"#{unit}"
 
     def _count_tokens(self, text: str) -> int:
         return len(_TOKEN_RE.findall(text))
