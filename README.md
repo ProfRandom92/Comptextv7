@@ -69,6 +69,22 @@ flowchart LR
 | Window | Temporal burst shape without raw log replay. | top window buckets and family counts |
 | Frame | Transport representation. | deterministic family dictionary plus compact JSON payload, or sparse micro-frame for tiny heterogeneous packets |
 
+
+## Documentation wiki
+
+A structured project wiki is available under [`docs/wiki/`](docs/wiki/README.md). It includes an indexed navigation hub, Mermaid diagrams, architecture and data-flow views, the KVTC engine contract, validation governance, an operations runbook, and roadmap/glossary material for reviewers and contributors.
+
+```mermaid
+flowchart LR
+    Readme[README] --> Wiki[docs/wiki/README.md]
+    Wiki --> Overview[System overview]
+    Wiki --> Architecture[Architecture and dataflow]
+    Wiki --> Engine[KVTC engine]
+    Wiki --> Validation[Validation and governance]
+    Wiki --> Runbook[Operations runbook]
+    Wiki --> Roadmap[Roadmap and glossary]
+```
+
 ## Repository structure
 
 ```text
@@ -77,14 +93,23 @@ Comptextv7/
 │   ├── run_kvtc_v7_benchmarks.py   # deterministic compression benchmark suite
 │   ├── industry_audit.py           # AEI-style industrial readiness gates
 │   └── run_industrial_audit.py     # audit runner wrapper
+├── dashboard/
+│   └── industrial_dashboard.py     # stdlib HTML/JSON/CSV validation dashboard
+├── datasets/
+│   └── golden/                     # immutable JSONL replay fixtures
+├── docs/
+│   └── wiki/                       # indexed project wiki with Mermaid diagrams
+├── scripts/
+│   └── validate.py                 # golden/forensic/replay/token validation entrypoint
 ├── src/
 │   ├── core/
 │   │   └── kvtc_v7.py              # KVTC-V7 engine and consonant mapping
-│   └── audit/
-│       └── industrial_resilience.py
+│   ├── audit/
+│   │   └── industrial_resilience.py
+│   └── validation/                 # golden corpus, forensic, replay, token telemetry
 ├── tests/
 │   ├── test_kvtc_v7.py
-│   ├── test_benchmarks.py
+│   ├── test_validation_hardening.py
 │   └── test_industrial_audit.py
 ├── pyproject.toml
 └── README.md
