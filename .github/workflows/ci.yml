@@ -1,0 +1,29 @@
+name: CompText V7 Industrial Validation
+
+on:
+  pull_request:
+  push:
+    branches: [main, work]
+
+jobs:
+  industrial-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install package
+        run: python -m pip install -e .
+      - name: pytest
+        run: python -m pytest
+      - name: deterministic replay
+        run: python scripts/validate.py replay
+      - name: token telemetry validation
+        run: python scripts/validate.py token
+      - name: semantic forensic validation
+        run: python scripts/validate.py forensic
+      - name: benchmark replay
+        run: python benchmarks/run_kvtc_v7_benchmarks.py --iterations 1 --warmups 0
+      - name: dashboard startup validation
+        run: python dashboard/industrial_dashboard.py --once
