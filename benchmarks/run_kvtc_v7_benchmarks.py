@@ -25,6 +25,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.core.kvtc_v7 import KVTCV7Engine  # noqa: E402
+from src.validation.token_profiler import TokenProfiler  # noqa: E402
 
 
 Generator = Callable[[], str]
@@ -61,6 +62,7 @@ class CaseResult:
     peak_kib: float
     distinct_families: int
     top_family_coverage_percent: float
+    token_telemetry: dict[str, object]
 
     def as_dict(self) -> dict[str, float | int | str]:
         return {
@@ -81,6 +83,7 @@ class CaseResult:
             "peak_kib": round(self.peak_kib, 1),
             "distinct_families": self.distinct_families,
             "top_family_coverage_percent": round(self.top_family_coverage_percent, 2),
+            "token_telemetry": self.token_telemetry,
         }
 
 
@@ -193,9 +196,10 @@ def benchmark_cases() -> tuple[BenchmarkCase, ...]:
     )
 
 
-def run_case(case: BenchmarkCase, *, iterations: int, warmups: int) -> CaseResult:
+def run_case(case: BenchmarkCase, *, iterations: int, warmups: int, encoding_name: str = "cl100k_base") -> CaseResult:
     engine = KVTCV7Engine(window_seconds=60, max_families=12, max_bursts=8)
     text = case.generator()
+    profiler = TokenProfiler(encoding_name=encoding_name)
     line_count = len(text.splitlines())
 
     for _ in range(warmups):
@@ -224,6 +228,7 @@ def run_case(case: BenchmarkCase, *, iterations: int, warmups: int) -> CaseResul
     top_family_total = sum(sorted(family_counts.values(), reverse=True)[: engine.max_families])
 
     median_ms = statistics.median(durations_ms)
+    token_telemetry = profiler.compare_payloads({"original": text, "compressed": last_result.text})
     return CaseResult(
         name=case.name,
         description=case.description,
@@ -242,11 +247,12 @@ def run_case(case: BenchmarkCase, *, iterations: int, warmups: int) -> CaseResul
         peak_kib=max(peaks_kib),
         distinct_families=len(family_counts),
         top_family_coverage_percent=(top_family_total / line_count * 100) if line_count else 0.0,
+        token_telemetry=token_telemetry,
     )
 
 
-def run_benchmarks(*, iterations: int = 5, warmups: int = 1) -> list[CaseResult]:
-    return [run_case(case, iterations=iterations, warmups=warmups) for case in benchmark_cases()]
+def run_benchmarks(*, iterations: int = 5, warmups: int = 1, encoding_name: str = "cl100k_base") -> list[CaseResult]:
+    return [run_case(case, iterations=iterations, warmups=warmups, encoding_name=encoding_name) for case in benchmark_cases()]
 
 
 def print_markdown(results: Iterable[CaseResult]) -> None:
@@ -273,6 +279,7 @@ def main() -> None:
     parser.add_argument("--iterations", type=int, default=5, help="Measured repetitions per case (default: 5).")
     parser.add_argument("--warmups", type=int, default=1, help="Unmeasured warmup repetitions per case (default: 1).")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON instead of Markdown.")
+    parser.add_argument("--encoding", choices=("cl100k_base", "o200k_base"), default="cl100k_base", help="tiktoken encoding for deterministic telemetry.")
     args = parser.parse_args()
 
     if args.iterations <= 0:
@@ -280,7 +287,7 @@ def main() -> None:
     if args.warmups < 0:
         raise SystemExit("--warmups must be non-negative")
 
-    results = run_benchmarks(iterations=args.iterations, warmups=args.warmups)
+    results = run_benchmarks(iterations=args.iterations, warmups=args.warmups, encoding_name=args.encoding)
     if args.json:
         print(json.dumps([result.as_dict() for result in results], indent=2, sort_keys=True))
     else:

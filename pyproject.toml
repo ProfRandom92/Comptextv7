@@ -3,6 +3,12 @@ name = "comptextv7"
 version = "0.1.0"
 description = "CompText V7 Cognitive Fabric prototype"
 requires-python = ">=3.11"
+dependencies = [
+  "tiktoken>=0.12.0",
+]
+
+[project.optional-dependencies]
+dashboard = ["streamlit>=1.35"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
