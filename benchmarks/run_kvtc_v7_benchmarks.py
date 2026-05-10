@@ -186,8 +186,8 @@ def benchmark_cases() -> tuple[BenchmarkCase, ...]:
         ),
         BenchmarkCase(
             name="short_sparse_3",
-            description="Three short heterogeneous notes.",
-            expectation="Weak case: metadata overhead can dominate very small inputs.",
+            description="Three short heterogeneous notes using the sparse micro-frame path.",
+            expectation="Sparse edge case: micro-frame prevents metadata overhead from dominating tiny inputs.",
             generator=short_sparse_log,
         ),
     )

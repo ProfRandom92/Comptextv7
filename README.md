@@ -5,10 +5,10 @@ of structured vehicle and workshop diagnostics**.  Its core KVTC-V7 engine turns
 XENTRY-/OBD-style logs into a compact four-layer frame before the data is sent to
 an assistant, audit workflow, or downstream analytics service.
 
-The current build focuses on a Daimler-Truck-style industrial scenario without
-claiming vendor certification or affiliation: repeated diagnostic telemetry,
-production-support evidence packets, local data-sovereignty constraints, and
-operator-readable audit layers.
+The current build is written for a Daimler-Truck-style industrial review
+without claiming vendor certification or affiliation.  It frames the codec as an
+edge-ready diagnostic fabric for repeated fleet telemetry, production-support
+evidence packets, data-sovereign handoff, and operator-readable audit layers.
 
 ## What changed in this generation
 
@@ -22,6 +22,9 @@ operator-readable audit layers.
 - **Cleaner event context:** `ECU=...`, `module=...`, and `source=...` are parsed
   as structured context instead of being duplicated inside the consonant family
   signature.
+- **Sparse micro-frame fixed:** the three-line `short_sparse_3` edge case now
+  uses a deterministic micro-frame, cutting the triage packet from 23 source
+  tokens to 8 frame tokens instead of expanding under metadata overhead.
 - **Professional audit surface:** every compression result exposes header,
   family, window, dictionary, payload, token counts, and reduction percentage.
 
@@ -50,7 +53,7 @@ flowchart LR
     E --> M[Middle Family Layer]
     E --> W[Window Burst Layer]
     E --> F[Frame Dictionary + Payload]
-    H --> G[Auditable JSON Frame]
+    H --> G[Auditable Transport Frame]
     M --> G
     W --> G
     F --> G
@@ -64,7 +67,7 @@ flowchart LR
 | Header | Run-level inventory and provenance. | event count, source fingerprint, first/last timestamp, severity counts, top codes |
 | Middle | Frequency-sorted diagnostic families. | `ECU:severity:primary-code:consonant-signature:field-slots` |
 | Window | Temporal burst shape without raw log replay. | top window buckets and family counts |
-| Frame | Transport representation. | deterministic family dictionary plus compact JSON payload |
+| Frame | Transport representation. | deterministic family dictionary plus compact JSON payload, or sparse micro-frame for tiny heterogeneous packets |
 
 ## Repository structure
 
@@ -121,10 +124,10 @@ python benchmarks/run_kvtc_v7_benchmarks.py --iterations 5 --warmups 1
 
 | case | lines | input bytes | payload bytes | original tokens | compressed tokens | reduction | median ms | lines/s | peak KiB | distinct families | top-family coverage | honest expectation |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| repetitive_xentry_2k | 2000 | 345326 | 998 | 33998 | 139 | 99.59% | 1033.28 | 1936 | 4897.8 | 6 | 100.00% | Best case: repeated families should compress extremely well. |
-| mixed_obd_workshop_1_5k | 1500 | 142738 | 1281 | 13804 | 155 | 98.88% | 513.33 | 2922 | 2379.3 | 10 | 100.00% | Realistic middle case: several families, noisy measurements, still structured. |
-| high_entropy_json_750 | 750 | 179617 | 2509 | 21000 | 113 | 99.46% | 455.46 | 1647 | 1675.3 | 750 | 1.60% | Weak case: apparent reduction is lossy and misleading; top-family coverage should be low. |
-| short_sparse_3 | 3 | 202 | 386 | 23 | 50 | -117.39% | 1.21 | 2471 | 6.5 | 3 | 100.00% | Weak case: metadata overhead can dominate very small inputs. |
+| repetitive_xentry_2k | 2000 | 345326 | 998 | 33998 | 139 | 99.59% | 1070.06 | 1869 | 4899.7 | 6 | 100.00% | Best case: repeated families should compress extremely well. |
+| mixed_obd_workshop_1_5k | 1500 | 142738 | 1281 | 13804 | 155 | 98.88% | 555.42 | 2701 | 2379.4 | 10 | 100.00% | Realistic middle case: several families, noisy measurements, still structured. |
+| high_entropy_json_750 | 750 | 179617 | 2509 | 21000 | 113 | 99.46% | 501.40 | 1496 | 1684.6 | 750 | 1.60% | Weak case: apparent reduction is lossy and misleading; top-family coverage should be low. |
+| short_sparse_3 | 3 | 202 | 61 | 23 | 8 | 65.22% | 1.16 | 2593 | 5.9 | 3 | 100.00% | Sparse edge case: micro-frame prevents metadata overhead from dominating tiny inputs. |
 
 ### How to read the columns
 
@@ -136,6 +139,9 @@ python benchmarks/run_kvtc_v7_benchmarks.py --iterations 5 --warmups 1
   reusable structure; low coverage in random JSON is a quality warning.
 - **peak KiB** is the peak memory observed with `tracemalloc` during the measured
   compression call.
+- **short_sparse_3** exercises the sparse micro-frame path: it keeps the full
+  in-memory audit layers while using a concise transport synopsis for tiny,
+  heterogeneous workshop notes.
 
 ## Design fusion: Daimler-Truck-style operations × CompText
 
@@ -151,9 +157,22 @@ zipper.  The fusion points are:
    families cluster, which is essential for triage and production support.
 4. **Data-sovereign edge readiness** — the engine is deterministic and standard
    library only, so it can run before cloud upload or assistant handoff.
-5. **Honest audit posture** — synthetic benchmarks include strong, middle, weak,
-   and expansion cases; high reduction alone is not treated as proof of semantic
-   fidelity.
+5. **Executive audit posture** — synthetic benchmarks include strong, middle,
+   weak, and sparse edge cases; high reduction alone is not treated as proof of
+   semantic fidelity.
+
+### Daimler-level readiness lens
+
+- **Traceability:** every result keeps event counts, source fingerprint,
+  severity/code inventory, family fingerprints, and burst windows for audit
+  review before data leaves the edge node.
+- **Operational fit:** the benchmark suite separates repetitive fleet telemetry,
+  mixed workshop diagnostics, high-entropy free-form payloads, and tiny triage
+  notes so reviewers see where KVTC creates value and where quality gates remain
+  necessary.
+- **Governance:** the repository avoids production-data claims, keeps the engine
+  deterministic and dependency-free, and documents lossy behavior explicitly for
+  safety, compliance, and data-sovereignty conversations.
 
 ## Industrial economic resilience audit
 
