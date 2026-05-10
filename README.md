@@ -3,6 +3,13 @@
 CompText V7 currently contains a deterministic KVTC-V7 prototype for lossy,
 auditable compression of structured technical diagnostic logs.
 
+## Pull request workflow
+
+Use the repository PR template for every change. If duplicate pull requests are
+opened by mistake, keep the one that contains the final combined branch, close or
+mark the accidental PRs as obsolete, and delete only the obsolete branches after
+confirming their changes are present in the kept PR.
+
 ## Benchmarking
 
 The benchmark harness is in `benchmarks/run_kvtc_v7_benchmarks.py`. It uses only
