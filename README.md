@@ -69,3 +69,35 @@ That should be treated as a quality warning, not as a compression victory.
 The `short_sparse_3` case is the expected bad case: fixed frame metadata is
 larger than the tiny input, so the compressor expands the token count by
 119.23%.
+
+## Industrial economic resilience audit
+
+For AEI-style stakeholder reviews, the repository also includes a deterministic
+industry audit that turns the requested **Industrial Economic Resilience &
+Recursive Improvement** scenario into four programmatic gates. It is intentionally
+synthetic and should be treated as a pilot-readiness scorecard, not as Daimler
+Truck production certification data.
+
+Run the full audit:
+
+```bash
+python benchmarks/industry_audit.py
+```
+
+Emit JSON for dashboards or CI artifacts:
+
+```bash
+python benchmarks/industry_audit.py --json
+```
+
+### Audit gates
+
+| AEI category | CompText V7 gate | Target |
+| --- | --- | --- |
+| Recursive R&D | SAE-NLA-style dictionary creation for a new hydrogen fuel-cell component | >= 80% manual feature-annotation reduction in the first 48-hour stream |
+| Expertise Pipeline | Activation Verbalizer support for a junior eCitaro technician during P1 triage | >= 0.90 Junior/Senior decision-quality correlation |
+| Industrial Organization | Fleet monitoring for 10,000 Daimler-Truck-style assets with five analysts | >= 60x consolidation, >= 94% token reduction, < 320 ms compressed-packet latency |
+| Economic Access | Air-gapped local audit using an Ollama/Gemma-style backend assumption | >= 0.78 Fraction of Variance Explained for retained forensic signals |
+
+The audit prints risk notes beside every passing gate so that economic readiness
+is not confused with safety release, legal approval, or field validation.
