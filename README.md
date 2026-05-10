@@ -94,7 +94,8 @@ Comptextv7/
 │   ├── industry_audit.py           # AEI-style industrial readiness gates
 │   └── run_industrial_audit.py     # audit runner wrapper
 ├── dashboard/
-│   └── industrial_dashboard.py     # stdlib HTML/JSON/CSV validation dashboard
+│   ├── industrial_dashboard.py     # stdlib API/export backend and static bundle host
+│   └── app/                        # React SRE/ML-Ops operations console
 ├── datasets/
 │   └── golden/                     # immutable JSONL replay fixtures
 ├── docs/
@@ -138,6 +139,28 @@ Run the industrial audit scorecard:
 ```bash
 python benchmarks/run_industrial_audit.py --iterations 3
 ```
+
+Run the industrial operations dashboard API/export backend:
+
+```bash
+python dashboard/industrial_dashboard.py --host 127.0.0.1 --port 8765
+```
+
+Build or develop the React SRE/ML-Ops console:
+
+```bash
+cd dashboard/app
+npm install
+npm run dev
+# or: npm run build
+```
+
+The dashboard uses a feature-based React architecture, typed mock/API contracts,
+TanStack Query server-state management, virtualized data tables, reusable SVG
+chart primitives, centralized design tokens, and a keyboard command palette.
+See [`dashboard/app/README.md`](dashboard/app/README.md) for frontend
+architecture decisions.
+
 
 ## Benchmark results
 
