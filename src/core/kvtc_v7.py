@@ -30,7 +30,7 @@ class KVTCV7Engine:
 
     def __init__(self, target_reduction: float = 0.95) -> None:
         self.target_reduction = target_reduction
-        self.consonant_regex = re.compile(r"[aeiouAEIOU]")
+        self.vowel_regex = re.compile(r"[aeiouAEIOU]")
 
     def compress(self, raw_log: str, log_data: dict[str, Any]) -> CompressionResult:
         """Process a technical log through hierarchical KVTC-V7 compression."""
