@@ -91,6 +91,26 @@ def test_compression_reduces_repetitive_xentry_logs_below_target_budget() -> Non
     assert result.reduction_percent >= 95.0
 
 
+def test_sparse_review_frame_avoids_metadata_expansion_for_tiny_notes() -> None:
+    engine = KVTCV7Engine()
+
+    result = engine.compress(
+        "\n".join(
+            (
+                "2026-05-10T15:00:00Z INFO ECU=MCM startup complete voltage=24.1V",
+                "2026-05-10T15:00:03Z WARN ECU=ABS C0035 intermittent wheel speed sensor",
+                "manual note: customer reports rare vibration after pothole impact",
+            )
+        )
+    )
+    payload = json.loads(result.text)
+
+    assert payload["v"] == "KVTC7S"
+    assert payload["q"] == "SPARSE_RAW_REVIEW"
+    assert result.compressed_tokens < result.original_tokens
+    assert result.frame.dictionary == {}
+
+
 def test_invalid_engine_configuration_is_rejected() -> None:
     with pytest.raises(ValueError):
         KVTCV7Engine(window_seconds=0)

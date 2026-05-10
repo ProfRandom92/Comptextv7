@@ -18,5 +18,6 @@ def test_benchmark_results_are_structured_and_honest_about_expansion() -> None:
     assert by_name["repetitive_xentry_2k"].reduction_percent > 95.0
     assert by_name["high_entropy_json_750"].distinct_families == by_name["high_entropy_json_750"].lines
     assert by_name["high_entropy_json_750"].top_family_coverage_percent < 5.0
-    assert by_name["short_sparse_3"].compressed_tokens >= by_name["short_sparse_3"].original_tokens
+    assert by_name["short_sparse_3"].compressed_tokens < by_name["short_sparse_3"].original_tokens
+    assert by_name["short_sparse_3"].reduction_percent > 0.0
     assert all(result.median_ms > 0 for result in results)
