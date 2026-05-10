@@ -1,14 +1,14 @@
 # CompText V7 — KVTC Cognitive Fabric for Technical Logs
 
 CompText V7 is a deterministic, auditable prototype for **lossy token reduction
-of structured vehicle and workshop diagnostics**.  Its core KVTC-V7 engine turns
-XENTRY-/OBD-style logs into a compact four-layer frame before the data is sent to
-an assistant, audit workflow, or downstream analytics service.
+of structured vehicle and workshop diagnostics**. Its core KVTC-V7 engine turns
+XENTRY-/OBD-style logs into compact, quality-gated evidence packets before the
+data is handed to an assistant, audit workflow, or downstream analytics service.
 
-The current build focuses on a Daimler-Truck-style industrial scenario without
+The current build is written for a Daimler-Truck-style industrial bar without
 claiming vendor certification or affiliation: repeated diagnostic telemetry,
-production-support evidence packets, local data-sovereignty constraints, and
-operator-readable audit layers.
+production-support evidence packets, local data-sovereignty constraints,
+operator-readable audit layers, and honest weak-case reporting.
 
 ## What changed in this generation
 
@@ -22,6 +22,9 @@ operator-readable audit layers.
 - **Cleaner event context:** `ECU=...`, `module=...`, and `source=...` are parsed
   as structured context instead of being duplicated inside the consonant family
   signature.
+- **Sparse-note guardrail:** the `short_sparse_3` case now uses an explicit
+  `KVTC7S` review envelope when metadata overhead would otherwise expand a tiny,
+  non-repeating workshop note.
 - **Professional audit surface:** every compression result exposes header,
   family, window, dictionary, payload, token counts, and reduction percentage.
 
@@ -64,7 +67,7 @@ flowchart LR
 | Header | Run-level inventory and provenance. | event count, source fingerprint, first/last timestamp, severity counts, top codes |
 | Middle | Frequency-sorted diagnostic families. | `ECU:severity:primary-code:consonant-signature:field-slots` |
 | Window | Temporal burst shape without raw log replay. | top window buckets and family counts |
-| Frame | Transport representation. | deterministic family dictionary plus compact JSON payload |
+| Frame | Transport representation. | deterministic family dictionary plus compact JSON payload; `KVTC7S` sparse-review envelope for tiny non-repeating notes |
 
 ## Repository structure
 
@@ -121,10 +124,10 @@ python benchmarks/run_kvtc_v7_benchmarks.py --iterations 5 --warmups 1
 
 | case | lines | input bytes | payload bytes | original tokens | compressed tokens | reduction | median ms | lines/s | peak KiB | distinct families | top-family coverage | honest expectation |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| repetitive_xentry_2k | 2000 | 345326 | 998 | 33998 | 139 | 99.59% | 1033.28 | 1936 | 4897.8 | 6 | 100.00% | Best case: repeated families should compress extremely well. |
-| mixed_obd_workshop_1_5k | 1500 | 142738 | 1281 | 13804 | 155 | 98.88% | 513.33 | 2922 | 2379.3 | 10 | 100.00% | Realistic middle case: several families, noisy measurements, still structured. |
-| high_entropy_json_750 | 750 | 179617 | 2509 | 21000 | 113 | 99.46% | 455.46 | 1647 | 1675.3 | 750 | 1.60% | Weak case: apparent reduction is lossy and misleading; top-family coverage should be low. |
-| short_sparse_3 | 3 | 202 | 386 | 23 | 50 | -117.39% | 1.21 | 2471 | 6.5 | 3 | 100.00% | Weak case: metadata overhead can dominate very small inputs. |
+| repetitive_xentry_2k | 2000 | 345326 | 998 | 33998 | 139 | 99.59% | 1015.11 | 1970 | 4898.2 | 6 | 100.00% | Best case: repeated families should compress extremely well. |
+| mixed_obd_workshop_1_5k | 1500 | 142738 | 1281 | 13804 | 155 | 98.88% | 519.45 | 2888 | 2379.2 | 10 | 100.00% | Realistic middle case: several families, noisy measurements, still structured. |
+| high_entropy_json_750 | 750 | 179617 | 2509 | 21000 | 113 | 99.46% | 471.93 | 1589 | 1684.0 | 750 | 1.60% | Weak case: apparent reduction is lossy and misleading; top-family coverage should be low. |
+| short_sparse_3 | 3 | 202 | 114 | 23 | 20 | 13.04% | 1.36 | 2198 | 6.5 | 3 | 100.00% | Weak case guardrail: route tiny non-repeating notes to explicit raw review. |
 
 ### How to read the columns
 
@@ -136,6 +139,10 @@ python benchmarks/run_kvtc_v7_benchmarks.py --iterations 5 --warmups 1
   reusable structure; low coverage in random JSON is a quality warning.
 - **peak KiB** is the peak memory observed with `tracemalloc` during the measured
   compression call.
+- **`KVTC7S` sparse review** means the engine detected a tiny, non-repeating note
+  where the normal dictionary/window metadata would be operationally noisy; the
+  compact envelope keeps provenance, severity/code inventory, and an explicit raw
+  review instruction instead of overstating compression value.
 
 ## Design fusion: Daimler-Truck-style operations × CompText
 
@@ -152,8 +159,21 @@ zipper.  The fusion points are:
 4. **Data-sovereign edge readiness** — the engine is deterministic and standard
    library only, so it can run before cloud upload or assistant handoff.
 5. **Honest audit posture** — synthetic benchmarks include strong, middle, weak,
-   and expansion cases; high reduction alone is not treated as proof of semantic
-   fidelity.
+   high-entropy, and sparse-note cases; high reduction alone is not treated as
+   proof of semantic fidelity.
+
+### Industrial acceptance criteria
+
+A benchmark result should be treated as Daimler-Truck-style pilot material only
+when the following checks are visible in the evidence packet:
+
+| Control | Required evidence | Why it matters |
+| --- | --- | --- |
+| Determinism | fixed generators, stable frame schema, source fingerprint | Repeatable audits across workshops, CI, and edge devices. |
+| Traceability | retained timestamps, severity counts, DTC/SPN/FMI inventory | Operators can link assistant output back to diagnostic evidence. |
+| Compression honesty | top-family coverage plus weak-case notes | Prevents claiming value on high-entropy or sparse inputs without quality context. |
+| Edge readiness | standard-library implementation and low memory footprint | Supports local-first deployments before cloud or copilot handoff. |
+| Human escalation | `KVTC7S` review envelope for tiny sparse notes | Avoids burying one-off customer reports behind unnecessary metadata. |
 
 ## Industrial economic resilience audit
 
@@ -178,3 +198,5 @@ pilot-readiness scorecard, not vendor certification data.
 - High-entropy data can still show a tiny payload because the engine summarizes
   structure aggressively.  Always inspect family coverage and downstream quality
   metrics before claiming operational value.
+- The `KVTC7S` sparse-review frame is intentionally a triage envelope, not a
+  replacement for reading the original workshop note.

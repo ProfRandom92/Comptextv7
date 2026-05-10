@@ -215,6 +215,11 @@ class KVTCV7Engine:
         frame = self._build_frame(header, middle, window)
         original_tokens = self._count_tokens("\n".join(lines))
         compressed_tokens = self._count_tokens(frame.payload)
+        if self._should_use_sparse_review_frame(
+            original_tokens=original_tokens, compressed_tokens=compressed_tokens, middle=middle
+        ):
+            frame = self._build_sparse_review_frame(header)
+            compressed_tokens = self._count_tokens(frame.payload)
         compression_ratio = (compressed_tokens / original_tokens) if original_tokens else 0.0
         return CompressionResult(
             original_tokens=original_tokens,
@@ -395,6 +400,43 @@ class KVTCV7Engine:
         }
         payload = json.dumps(frame_doc, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         return FrameLayer(dictionary=dictionary, payload=payload)
+
+    def _should_use_sparse_review_frame(
+        self, *, original_tokens: int, compressed_tokens: int, middle: MiddleLayer
+    ) -> bool:
+        """Return true when metadata overhead dominates a tiny non-repeating input.
+
+        The normal four-layer frame is valuable for repeated diagnostic streams,
+        but it can be larger than a three-line workshop note with no repeated
+        families.  In that sparse case we emit an explicit review envelope
+        instead of pretending that the dictionary/window layers are useful
+        compression.
+        """
+
+        event_count = sum(middle.family_counts.values())
+        has_repeated_family = any(count > 1 for count in middle.family_counts.values())
+        return (
+            0 < original_tokens <= 64
+            and event_count <= 5
+            and not has_repeated_family
+            and compressed_tokens >= original_tokens
+        )
+
+    def _build_sparse_review_frame(self, header: HeaderLayer) -> FrameLayer:
+        severity = ",".join(f"{key}:{value}" for key, value in header.severity_counts.items())
+        codes = ",".join(f"{key}:{value}" for key, value in header.code_counts.items())
+        frame_doc = {
+            "v": "KVTC7S",
+            "h": {
+                "n": header.event_count,
+                "fp": header.source_fingerprint,
+                "sev": severity,
+                "codes": codes,
+            },
+            "q": "SPARSE_RAW_REVIEW",
+        }
+        payload = json.dumps(frame_doc, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        return FrameLayer(dictionary={}, payload=payload)
 
     def _encode_burst(self, burst: str, reverse_dictionary: Mapping[str, str]) -> str:
         encoded = burst
