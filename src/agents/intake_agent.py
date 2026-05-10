@@ -16,7 +16,7 @@ class SanitizedLog:
 class IntakeAgent:
     """Masks vehicle identifiers before cloud or model inference."""
 
-    fin_regex = re.compile(r"\b(?:FIN|VIN)[_-]?[A-HJ-NPR-Z0-9]{6,17}\b", re.IGNORECASE)
+    fin_regex = re.compile(r"\b(?:FIN|VIN)[_-]?[A-HJ-NPR-Z0-9]{17}\b", re.IGNORECASE)
 
     def sanitize(self, raw_log: str) -> SanitizedLog:
         """Replace FIN/VIN-like identifiers with stable SHA-256 pseudonyms."""
