@@ -5,3 +5,8 @@ __pycache__/
 .env
 reports/dashboard_export.json
 reports/dashboard_export.csv
+node_modules/
+dashboard/app/dist/
+*.tsbuildinfo
+dashboard/app/vite.config.js
+dashboard/app/vite.config.d.ts
