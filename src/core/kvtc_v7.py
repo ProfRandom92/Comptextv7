@@ -430,7 +430,7 @@ class KVTCV7Engine:
         ) or "S0"
         codes = ",".join(header.code_counts) or "-"
         event_synopsis = ",".join(
-            f"{event.ecu}-{self._severity_short_code(event.severity)}-{event.codes[0] if event.codes else '-'}"
+            f"{event.ecu}.{self._severity_short_code(event.severity)}.{event.codes[0] if event.codes else '-'}.{event.consonant_signature}"
             for event in events
         )
         payload = "|".join(

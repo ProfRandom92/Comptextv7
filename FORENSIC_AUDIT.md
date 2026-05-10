@@ -43,6 +43,13 @@ MAX_ALLOWED_HIGH_LOSS = 0
 - anchor_retention: 1.0
 - safety_critical_retention: 1.0
 - source_sha256: `b31dd4ce7678ed1806a51f187a9f6aa5d14c0c598218aebbe021984b01941307`
-- compressed_sha256: `319fd1a4df0e5229c4f10d4d5918983b9e5b88b3f96ef98300029c8a6aafd459`
+- compressed_sha256: `572997b801b903d669ac6b7d99d94fb3843f7c54342cad16585c41b594685e28`
 - reconstruction_sha256: `ee97e2846663ccbd0d6d12a4ddb65cb573f691e42e5450908a9b010e748919a5`
 - findings: []
+
+## Drift classification policy
+
+- LOW: presentation-only difference with no operational meaning change.
+- MEDIUM: context reduction requiring review but not hiding a safety signal.
+- HIGH: severity, causal context, code, or anomaly semantics weakened. Maximum allowed: 0.
+- CRITICAL: timestamp mutation, alarm disappearance, anchor loss, event suppression, or hallucinated reconstruction. Maximum allowed: 0.
