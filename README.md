@@ -56,6 +56,36 @@ python benchmarks/run_kvtc_v7_benchmarks.py --iterations 5 --warmups 1
 | high_entropy_json_750 | 750 | 179617 | 2509 | 21000 | 165 | 99.21% | 400.91 | 1871 | 1690.4 | 750 | 1.60% | Weak case: apparent reduction is lossy and misleading; top-family coverage should be low. |
 | short_sparse_3 | 3 | 202 | 412 | 26 | 57 | -119.23% | 1.29 | 2331 | 6.8 | 3 | 100.00% | Weak case: metadata overhead can dominate very small inputs. |
 
+
+## Industrial economic resilience audit
+
+The AEI-aligned audit harness is in `benchmarks/run_industrial_audit.py`. It
+extends the KVTC-only benchmark with business-facing probes for recursive R&D,
+expertise transfer, industrial reorganization, and air-gapped economic access.
+The audit remains synthetic and deterministic; it is an executable scenario for
+stakeholder review, not Daimler Truck vendor certification.
+
+Run the default audit:
+
+```bash
+python benchmarks/run_industrial_audit.py --iterations 3
+```
+
+Emit JSON for scorecards or CI artifacts:
+
+```bash
+python benchmarks/run_industrial_audit.py --iterations 3 --json
+```
+
+### Audit target map
+
+| AEI category | CompText V7 target | Daimler Truck relevance |
+| --- | --- | --- |
+| Recursive R&D | Reduce manual feature annotation by at least 80% for a new hydrogen fuel-cell component. | Faster rollout of new drivetrain technologies. |
+| Expertise Pipeline | Reach at least 0.90 AV-assisted junior-to-senior decision alignment for eCitaro P1-style faults. | Compensates for scarce senior diagnostic expertise in production. |
+| Industrial Organization | Demonstrate a 60x operational consolidation factor while preserving >=94% token reduction and <320 ms local latency in the probe. | Reduces overhead while preserving fleet-monitoring latency budgets. |
+| Economic Access | Keep a local forensic-audit FVE proxy above 0.78 under air-gapped Ollama/Gemma-style constraints. | Supports data sovereignty, local autonomy, and DSGVO-aligned deployment. |
+
 ### Interpretation caveats
 
 These are synthetic, deterministic benchmarks, not vendor certification data and
