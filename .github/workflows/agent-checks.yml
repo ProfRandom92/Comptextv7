@@ -1,0 +1,34 @@
+name: Agent Workflow Checks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  agent-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile helper scripts
+        run: python -m py_compile scripts/repo_intake.py scripts/run_checks.py
+
+      - name: Generate repository intake report
+        run: python scripts/repo_intake.py
+
+      - name: Run safe local checks
+        run: python scripts/run_checks.py
+
+      - name: Upload agent reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-check-reports
+          path: docs/reports/
+          if-no-files-found: ignore

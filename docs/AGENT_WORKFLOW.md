@@ -40,6 +40,30 @@ git checkout -b agent/benchmark-integration-docs
 If a local clone does not have a `main` branch or remote, note that limitation in
 the final response and still ensure work happens on the requested feature branch.
 
+
+## Safe workflow helper scripts
+
+Use the new deterministic helper scripts before making or reviewing agent-authored
+changes:
+
+1. Run `python scripts/repo_intake.py` as the first safe discovery step. It
+   records repository structure, project files, tests, workflows, and likely
+   API/dashboard/report areas in `docs/reports/repo-intake-report.md` without
+   reading sensitive payloads or requiring network access.
+2. Run `python scripts/run_checks.py` as the local validation step. It compiles
+   Python helper scripts, runs pytest only when tests and pytest are available,
+   and runs Node test/lint scripts only when package scripts exist. Missing
+   optional tools or tests are reported as skips instead of false failures.
+3. Let `.github/workflows/agent-checks.yml` provide the PR CI guardrail by
+   compiling the helper scripts, regenerating intake evidence, and running the
+   same safe checks on Python 3.11.
+
+These checks complement benchmark, regression, sanitization, and forensic replay
+reports from `ProfRandom92/Comptext-Daimler-Experiment-`. They do not replace
+benchmark review and do not introduce runtime coupling between repositories. Use
+only sanitized summaries or synthetic examples when connecting those reports to
+Comptextv7 PR evidence.
+
 ## How to consume experiment repo reports
 
 Agents may use these sanitized report types as review inputs:
