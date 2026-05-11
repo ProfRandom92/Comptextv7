@@ -68,6 +68,7 @@ python scripts/run_checks.py
 python scripts/validate_contracts.py
 python scripts/generate_contract_fixtures.py
 python scripts/validate_api_exports.py
+python scripts/generate_project_health_report.py
 ```
 
 If a command cannot run because of an environment limitation, document the exact
@@ -83,6 +84,9 @@ Promotion may proceed only when all of these statements are true:
 - The report contract validation passes in the experiment repository.
 - Comptextv7 local checks pass.
 - API/export contract validation passes.
+- The generated project health report exists at
+  `docs/reports/project-health-report.md` and reflects the current validation
+  and promotion-readiness snapshot.
 - The PR is small and reversible.
 - The change has clear ownership in Comptextv7.
 - The PR uses synthetic examples only and avoids runtime coupling to the
@@ -101,6 +105,8 @@ PR, when any of these conditions apply:
 - Report contract validation fails.
 - Comptextv7 checks fail.
 - API/export contract validation fails.
+- Project health report generation fails or records missing required local
+  validation evidence without an accepted explanation.
 - Ownership between the experiment repository and runtime repository is unclear.
 - The proposed PR requires runtime coupling to the experiment repository without a
   separate approved issue.
@@ -116,6 +122,8 @@ conditions appear after merge:
 - New sanitizer findings.
 - Unexpected runtime failures.
 - Missing report artifacts.
+- Stale or missing project health report after validation, promotion, or release
+  readiness changes.
 - Evidence that sensitive material entered the repository, dashboard, exports, or
   documentation.
 
@@ -140,6 +148,8 @@ conditions appear after merge:
 - [ ] Required experiment artifacts are listed and reviewed.
 - [ ] Required Comptextv7 validation commands are run or explicitly documented as
       not required because of a safe environment limitation.
+- [ ] `python scripts/generate_project_health_report.py` has refreshed
+      `docs/reports/project-health-report.md` for the current PR.
 - [ ] Go/no-go decision is documented.
 - [ ] Rollback criteria are understood and noted when relevant.
 - [ ] PR scope is small, reviewable, and reversible.
@@ -157,9 +167,12 @@ before creating a Comptextv7 implementation PR. Agents should:
 3. Create a Comptextv7 issue when ownership, safety, or release impact is unclear.
 4. Keep promotion PRs narrow and avoid unrelated refactors.
 5. Run the required Comptextv7 validation commands for implementation PRs.
-6. Use documentation-only updates when the finding only changes review policy or
+6. Generate and review `docs/reports/project-health-report.md` when release
+   readiness, validation evidence, API/export contracts, or cross-repo promotion
+   status changes.
+7. Use documentation-only updates when the finding only changes review policy or
    release criteria.
-7. Never introduce imports, generated vendor folders, submodules, or CI coupling
+8. Never introduce imports, generated vendor folders, submodules, or CI coupling
    to the experiment repository as part of this checklist.
 
 ## Example synthetic promotion record
@@ -184,6 +197,7 @@ required_comptextv7_commands:
   - python scripts/validate_contracts.py
   - python scripts/generate_contract_fixtures.py
   - python scripts/validate_api_exports.py
+  - python scripts/generate_project_health_report.py
 security_review:
   synthetic_only: true
   real_daimler_data_present: false

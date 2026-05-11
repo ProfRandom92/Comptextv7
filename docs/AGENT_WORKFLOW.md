@@ -63,10 +63,15 @@ changes:
    API/dashboard/export fixture against `contracts/api-dashboard.schema.json`. It
    writes `docs/reports/api-export-validation-report.md` and requires no live
    server.
-5. Let `.github/workflows/agent-checks.yml` provide the PR CI guardrail by
+5. Run `python scripts/generate_project_health_report.py` before release-readiness
+   review or cross-repo promotion review. It writes
+   `docs/reports/project-health-report.md` as a deterministic snapshot of agent
+   workflow readiness, contract/API validation surfaces, existing reports, and
+   promotion checklist status without reading raw payload contents.
+6. Let `.github/workflows/agent-checks.yml` provide the PR CI guardrail by
    compiling the helper scripts, regenerating intake evidence, generating
-   contract fixtures, validating API/export payload shapes, and running the same
-   safe checks on Python 3.11.
+   contract fixtures, validating API/export payload shapes, generating the
+   project health report, and running the same safe checks on Python 3.11.
 
 These checks complement benchmark, regression, sanitization, and forensic replay
 reports from `ProfRandom92/Comptext-Daimler-Experiment-`. They do not replace

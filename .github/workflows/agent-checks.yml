@@ -17,7 +17,7 @@ jobs:
           python-version: '3.11'
 
       - name: Compile helper scripts
-        run: python -m py_compile scripts/repo_intake.py scripts/run_checks.py scripts/validate_contracts.py scripts/generate_contract_fixtures.py scripts/validate_api_exports.py
+        run: python -m py_compile scripts/repo_intake.py scripts/run_checks.py scripts/validate_contracts.py scripts/generate_contract_fixtures.py scripts/validate_api_exports.py scripts/generate_project_health_report.py
 
       - name: Generate repository intake report
         run: python scripts/repo_intake.py
@@ -33,6 +33,9 @@ jobs:
 
       - name: Validate API export contract fixtures
         run: python scripts/validate_api_exports.py
+
+      - name: Generate project health report
+        run: python scripts/generate_project_health_report.py
 
       - name: Upload agent reports
         if: always()
