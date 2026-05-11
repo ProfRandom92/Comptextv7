@@ -1,66 +1,69 @@
 # CompText V7 — KVTC Cognitive Fabric for Technical Logs
 
-CompText V7 is a deterministic, auditable prototype for **lossy token reduction
-of structured vehicle and workshop diagnostics**.  Its core KVTC-V7 engine turns
-XENTRY-/OBD-style logs into a compact four-layer frame before the data is sent to
-an assistant, audit workflow, or downstream analytics service.
+[![Industrial Validation](https://github.com/ProfRandom92/Comptextv7/actions/workflows/ci.yml/badge.svg)](https://github.com/ProfRandom92/Comptextv7/actions/workflows/ci.yml)
+[![Agent Workflow Checks](https://github.com/ProfRandom92/Comptextv7/actions/workflows/agent-checks.yml/badge.svg)](https://github.com/ProfRandom92/Comptextv7/actions/workflows/agent-checks.yml)
 
-The current build is written for a Daimler-Truck-style industrial review
-without claiming vendor certification or affiliation.  It frames the codec as an
-edge-ready diagnostic fabric for repeated fleet telemetry, production-support
-evidence packets, data-sovereign handoff, and operator-readable audit layers.
+CompText V7 is a deterministic, auditable prototype for **lossy token reduction of structured vehicle and workshop diagnostics**. Its core KVTC-V7 engine converts synthetic XENTRY-, OBD-, and workshop-style logs into compact transport frames for assistant handoff, audit workflows, dashboards, and downstream validation.
 
-## What changed in this generation
+The project is written for a Daimler-Truck-style industrial review posture without claiming vendor certification or affiliation. All benchmark, dashboard, and release-readiness examples in this repository are synthetic/static unless explicitly stated otherwise.
 
-- **95%+ XENTRY target exceeded:** repetitive XENTRY benchmark rows now compress
-  from 33,998 source tokens to 139 frame tokens, a **99.59% token reduction** in
-  the deterministic local benchmark.
-- **Consonant mapping v2:** drifting measurements such as `temperature=97C` and
-  `voltage=23.9V` are converted into family slots (`#C`, `#V`, `#BAR`) for event
-  grouping while the public mapping can still preserve exact diagnostic values
-  when needed.
-- **Cleaner event context:** `ECU=...`, `module=...`, and `source=...` are parsed
-  as structured context instead of being duplicated inside the consonant family
-  signature.
-- **Sparse micro-frame fixed:** the three-line `short_sparse_3` edge case now
-  uses a deterministic micro-frame, cutting the triage packet from 23 source
-  tokens to 8 frame tokens instead of expanding under metadata overhead.
-- **Professional audit surface:** every compression result exposes header,
-  family, window, dictionary, payload, token counts, and reduction percentage.
+## Executive snapshot
 
-## Architecture
+| Area | Status | Notes |
+| --- | --- | --- |
+| KVTC compression engine | Active | Deterministic four-layer frame: header, middle family layer, temporal window, compact payload. |
+| Validation pipeline | Active | Pytest, deterministic replay, token telemetry, forensic validation, benchmark replay, dashboard startup validation. |
+| Dashboard | Active | React SRE/ML-Ops console plus stdlib backend for API/export and static bundle hosting. |
+| Contract layer | Active | Machine-readable JSON handoff contracts, generated fixtures, API/export validation, and report summaries. |
+| Release health | Active | Generated Markdown/JSON reports, dashboard health panel, smoke test, and CI integration. |
+| Data posture | Synthetic-only | No real Daimler payloads, secrets, raw production logs, or proprietary customer data should be committed. |
+
+## System architecture
 
 ```mermaid
 flowchart LR
-    A[Raw XENTRY / OBD / Workshop Logs] --> B[Line Normalizer]
-    B --> C[Structured Event Parser]
-    C --> C1[Timestamp]
-    C --> C2[Severity]
-    C --> C3[ECU / Module]
-    C --> C4[DTC / SPN / FMI Codes]
-    C --> C5[Key-Value Fields]
-    C --> D[Extreme Consonant Mapping v2]
-    D --> D1[Domain Abbreviations]
-    D --> D2[Measurement Slots]
-    D --> D3[Consonant Skeletons]
-    C1 --> E[KVTC Sandwich]
-    C2 --> E
-    C3 --> E
-    C4 --> E
-    C5 --> E
-    D --> E
-    E --> H[Header Layer]
-    E --> M[Middle Family Layer]
-    E --> W[Window Burst Layer]
-    E --> F[Frame Dictionary + Payload]
-    H --> G[Auditable Transport Frame]
-    M --> G
-    W --> G
-    F --> G
-    G --> I[LLM / Copilot / Audit / Dashboard]
+    Logs["Synthetic XENTRY / OBD / Workshop Logs"] --> Parse["Structured Event Parser"]
+    Parse --> KVTC["KVTC-V7 Compression Engine"]
+    KVTC --> Frame["Auditable Transport Frame"]
+    Frame --> Validation["Validation & Regression Gates"]
+    Validation --> Reports["docs/reports Artifacts"]
+    Reports --> Dashboard["Release Health Dashboard"]
+    Dashboard --> CI["GitHub Actions Smoke & Industrial Checks"]
+
+    Experiment["Comptext-Daimler-Experiment-\nSynthetic benchmark summaries"] --> Contracts["Contract-compatible JSON handoff"]
+    Contracts --> Validation
+
+    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
+    classDef core fill:#e3f2fd,stroke:#1565c0,stroke-width:1px;
+    classDef ci fill:#fff8e1,stroke:#f9a825,stroke-width:1px;
+    class Logs,Experiment safe;
+    class Parse,KVTC,Frame,Contracts core;
+    class Validation,Reports,Dashboard,CI ci;
 ```
 
-### KVTC four-layer sandwich
+## KVTC processing model
+
+```mermaid
+flowchart TB
+    A["Input diagnostics"] --> B["Normalize lines"]
+    B --> C["Parse structured events"]
+    C --> D1["Severity inventory"]
+    C --> D2["ECU / module context"]
+    C --> D3["DTC / SPN / FMI anchors"]
+    C --> D4["Measurement slots"]
+    D1 --> E["KVTC sandwich frame"]
+    D2 --> E
+    D3 --> E
+    D4 --> E
+    E --> F1["Header layer"]
+    E --> F2["Middle family layer"]
+    E --> F3["Temporal window layer"]
+    E --> F4["Frame dictionary + payload"]
+    F1 --> G["Auditable output"]
+    F2 --> G
+    F3 --> G
+    F4 --> G
+```
 
 | Layer | Purpose | Examples retained |
 | --- | --- | --- |
@@ -69,54 +72,69 @@ flowchart LR
 | Window | Temporal burst shape without raw log replay. | top window buckets and family counts |
 | Frame | Transport representation. | deterministic family dictionary plus compact JSON payload, or sparse micro-frame for tiny heterogeneous packets |
 
-
-## Documentation wiki
-
-A structured project wiki is available under [`docs/wiki/`](docs/wiki/README.md). It includes an indexed navigation hub, Mermaid diagrams, architecture and data-flow views, the KVTC engine contract, validation governance, an operations runbook, and roadmap/glossary material for reviewers and contributors.
+## Validation and release-health pipeline
 
 ```mermaid
-flowchart LR
-    Readme[README] --> Wiki[docs/wiki/README.md]
-    Wiki --> Overview[System overview]
-    Wiki --> Architecture[Architecture and dataflow]
-    Wiki --> Engine[KVTC engine]
-    Wiki --> Validation[Validation and governance]
-    Wiki --> Runbook[Operations runbook]
-    Wiki --> Roadmap[Roadmap and glossary]
+sequenceDiagram
+    participant Dev as Developer / Agent
+    participant CI as GitHub Actions
+    participant Py as Python validation
+    participant UI as Dashboard smoke test
+    participant Reports as docs/reports
+    participant Main as main branch
+
+    Dev->>CI: Open pull request
+    CI->>Py: Run industrial validation
+    CI->>Py: Run agent workflow checks
+    CI->>UI: npm run smoke:release-health
+    Py->>Reports: Generate health and contract reports
+    UI->>Reports: Validate dashboard summary rendering
+    Reports-->>CI: Markdown/JSON artifacts
+    CI-->>Dev: pass/fail signal
+    Dev->>Main: Squash merge when green
 ```
 
-## Repository structure
+Release readiness is generated from synthetic/static project health artifacts. It does not include real Daimler data, secrets, customer data, or raw production logs.
+
+| Surface | Entrypoint |
+| --- | --- |
+| Machine-readable release health source | [`docs/reports/dashboard-health-summary.json`](docs/reports/dashboard-health-summary.json) |
+| Human-readable release health report | [`docs/reports/dashboard-health-summary.md`](docs/reports/dashboard-health-summary.md) |
+| Dashboard panel | `Release Health Summary` |
+| Local smoke test | `cd dashboard/app && npm run smoke:release-health` |
+| CI workflow | [`.github/workflows/agent-checks.yml`](.github/workflows/agent-checks.yml) |
+| Agent workflow | [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) |
+| Cross-repo promotion checklist | [`docs/CROSS_REPO_RELEASE_CHECKLIST.md`](docs/CROSS_REPO_RELEASE_CHECKLIST.md) |
+
+## Repository map
 
 ```text
 Comptextv7/
-├── benchmarks/
-│   ├── run_kvtc_v7_benchmarks.py   # deterministic compression benchmark suite
-│   ├── industry_audit.py           # AEI-style industrial readiness gates
-│   └── run_industrial_audit.py     # audit runner wrapper
+├── benchmarks/                     # deterministic compression and audit runners
+├── contracts/                      # machine-readable API/report handoff contracts
 ├── dashboard/
 │   ├── industrial_dashboard.py     # stdlib API/export backend and static bundle host
 │   └── app/                        # React SRE/ML-Ops operations console
-├── datasets/
-│   └── golden/                     # immutable JSONL replay fixtures
+├── datasets/golden/                # immutable synthetic replay fixtures
 ├── docs/
-│   └── wiki/                       # indexed project wiki with Mermaid diagrams
-├── scripts/
-│   └── validate.py                 # golden/forensic/replay/token validation entrypoint
-├── src/
-│   ├── core/
-│   │   └── kvtc_v7.py              # KVTC-V7 engine and consonant mapping
-│   ├── audit/
-│   │   └── industrial_resilience.py
-│   └── validation/                 # golden corpus, forensic, replay, token telemetry
-├── tests/
-│   ├── test_kvtc_v7.py
-│   ├── test_validation_hardening.py
-│   └── test_industrial_audit.py
+│   ├── reports/                    # generated validation and release-health reports
+│   └── wiki/                       # indexed architecture, governance, and runbook docs
+├── scripts/                        # validation, fixture generation, health/report tooling
+├── src/                            # KVTC engine, audit, and validation modules
+├── tests/                          # Python regression and validation tests
 ├── pyproject.toml
 └── README.md
 ```
 
 ## Quick start
+
+Install the package with test dependencies:
+
+```bash
+python -m pip install -e ".[test]"
+```
+
+Run the Python validation suite:
 
 ```bash
 python -m pytest
@@ -155,35 +173,45 @@ npm run dev
 # or: npm run build
 ```
 
-The dashboard uses a feature-based React architecture, typed mock/API contracts,
-TanStack Query server-state management, virtualized data tables, reusable SVG
-chart primitives, centralized design tokens, and a keyboard command palette.
-See [`dashboard/app/README.md`](dashboard/app/README.md) for frontend
-architecture decisions.
+Run the release-health dashboard smoke test:
 
-## Release readiness
+```bash
+cd dashboard/app
+npm run smoke:release-health
+```
 
-**Status badge:** Release readiness is generated from synthetic/static project
-health artifacts. It does not include real Daimler data, secrets, customer data,
-or raw production logs.
+## Agent and contract commands
 
-Use these entrypoints when reviewing current dashboard health without digging
-through generated reports:
+These commands are designed to be CI-friendly, deterministic, and safe for future agents:
 
-| Surface | Entrypoint |
+```bash
+python scripts/repo_intake.py
+python scripts/run_checks.py
+python scripts/validate_contracts.py
+python scripts/generate_contract_fixtures.py
+python scripts/validate_api_exports.py
+python scripts/generate_project_health_report.py
+python scripts/generate_dashboard_health_summary.py
+```
+
+Generated reports are written under [`docs/reports/`](docs/reports/) and are intended for review, release gating, and dashboard consumption.
+
+## Cross-repo experiment handoff
+
+CompText V7 consumes only **contract-compatible, sanitized, synthetic summaries** from [`ProfRandom92/Comptext-Daimler-Experiment-`](https://github.com/ProfRandom92/Comptext-Daimler-Experiment-). The experiment repository owns benchmark, regression, sanitization, and forensic replay outputs. This runtime repository owns API contracts, dashboard presentation, validation gates, and release-readiness summaries.
+
+Required experiment-side artifacts for promotion review:
+
+| Artifact | Purpose |
 | --- | --- |
-| Machine-readable release health source | [`docs/reports/dashboard-health-summary.json`](docs/reports/dashboard-health-summary.json) |
-| Human-readable release health report | [`docs/reports/dashboard-health-summary.md`](docs/reports/dashboard-health-summary.md) |
-| Dashboard panel | `Release Health Summary` |
-| Local smoke test | `cd dashboard/app && npm run smoke:release-health` |
-| CI workflow | [`.github/workflows/agent-checks.yml`](.github/workflows/agent-checks.yml) |
-| Agent workflow | [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) |
-| Cross-repo promotion checklist | [`docs/CROSS_REPO_RELEASE_CHECKLIST.md`](docs/CROSS_REPO_RELEASE_CHECKLIST.md) |
+| `benchmark-summary.json` | Synthetic benchmark result summary. |
+| `regression-summary.json` | Conservative regression decision summary. |
+| `sanitization-summary.json` | Fixture/report sanitization summary. |
+| `report-contract-validation-report.md` | Structural validation of report contracts. |
 
-This entrypoint is documentation-only: it adds no runtime coupling, dependencies,
-or live-data requirements.
+Promotion rules are documented in [`docs/CROSS_REPO_RELEASE_CHECKLIST.md`](docs/CROSS_REPO_RELEASE_CHECKLIST.md). No runtime coupling to the experiment repository is required.
 
-## Benchmark results
+## Benchmark snapshot
 
 Measured in this repository on **2026-05-10** with:
 
@@ -191,78 +219,50 @@ Measured in this repository on **2026-05-10** with:
 python benchmarks/run_kvtc_v7_benchmarks.py --iterations 5 --warmups 1
 ```
 
-| case | lines | input bytes | payload bytes | original tokens | compressed tokens | reduction | median ms | lines/s | peak KiB | distinct families | top-family coverage | honest expectation |
+| case | lines | input bytes | payload bytes | original tokens | compressed tokens | reduction | median ms | lines/s | peak KiB | distinct families | top-family coverage | interpretation |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| repetitive_xentry_2k | 2000 | 345326 | 998 | 33998 | 139 | 99.59% | 1070.06 | 1869 | 4899.7 | 6 | 100.00% | Best case: repeated families should compress extremely well. |
+| repetitive_xentry_2k | 2000 | 345326 | 998 | 33998 | 139 | 99.59% | 1070.06 | 1869 | 4899.7 | 6 | 100.00% | Best case: repeated families compress extremely well. |
 | mixed_obd_workshop_1_5k | 1500 | 142738 | 1281 | 13804 | 155 | 98.88% | 555.42 | 2701 | 2379.4 | 10 | 100.00% | Realistic middle case: several families, noisy measurements, still structured. |
-| high_entropy_json_750 | 750 | 179617 | 2509 | 21000 | 113 | 99.46% | 501.40 | 1496 | 1684.6 | 750 | 1.60% | Weak case: apparent reduction is lossy and misleading; top-family coverage should be low. |
+| high_entropy_json_750 | 750 | 179617 | 2509 | 21000 | 113 | 99.46% | 501.40 | 1496 | 1684.6 | 750 | 1.60% | Weak case: apparent reduction is lossy and requires quality gates. |
 | short_sparse_3 | 3 | 202 | 61 | 23 | 8 | 65.22% | 1.16 | 2593 | 5.9 | 3 | 100.00% | Sparse edge case: micro-frame prevents metadata overhead from dominating tiny inputs. |
 
-### How to read the columns
+Read benchmark results conservatively. High compression is not proof of semantic fidelity; top-family coverage, forensic replay, regression summaries, and downstream validation must be reviewed together.
 
-- **reduction** is token-level reduction from source log tokens to the KVTC frame.
-- **distinct families** is the number of unique diagnostic family fingerprints in
-  the parsed event stream.
-- **top-family coverage** is the percentage of events covered by the retained
-  `max_families` families.  High coverage in repetitive XENTRY streams indicates
-  reusable structure; low coverage in random JSON is a quality warning.
-- **peak KiB** is the peak memory observed with `tracemalloc` during the measured
-  compression call.
-- **short_sparse_3** exercises the sparse micro-frame path: it keeps the full
-  in-memory audit layers while using a concise transport synopsis for tiny,
-  heterogeneous workshop notes.
+## Design posture
 
-## Design fusion: Daimler-Truck-style operations × CompText
+CompText V7 is an industrial diagnostic fabric rather than a generic text zipper:
 
-The design goal is an industrial diagnostic fabric rather than a generic text
-zipper.  The fusion points are:
+1. **Workshop semantics first** — severity, ECU/module, DTC/SPN/FMI codes, and measurements are parsed before compression.
+2. **Token economy** — repeated language is collapsed into domain abbreviations and consonant skeletons while diagnostic anchors remain reviewable.
+3. **Burst awareness** — temporal windows preserve when fault families cluster for triage and production support.
+4. **Data-sovereign edge readiness** — deterministic local execution supports review before cloud upload or assistant handoff.
+5. **Governance by artifacts** — reports, schemas, fixtures, and smoke tests provide reviewable release evidence.
 
-1. **Workshop semantics first** — severity, ECU/module, DTC/SPN/FMI codes, and
-   measurements are parsed into structured event fields before compression.
-2. **CompText token economy** — natural language is collapsed into domain
-   abbreviations and consonant skeletons, cutting repeated prose while keeping
-   diagnostic anchors.
-3. **Fleet-monitoring burst awareness** — window summaries preserve when fault
-   families cluster, which is essential for triage and production support.
-4. **Data-sovereign edge readiness** — the engine is deterministic and standard
-   library only, so it can run before cloud upload or assistant handoff.
-5. **Executive audit posture** — synthetic benchmarks include strong, middle,
-   weak, and sparse edge cases; high reduction alone is not treated as proof of
-   semantic fidelity.
+## Documentation hub
 
-### Daimler-level readiness lens
+| Document | Purpose |
+| --- | --- |
+| [`docs/API_SURFACE.md`](docs/API_SURFACE.md) | Dashboard/API/export route and payload boundaries. |
+| [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) | Safe branch, PR, and validation workflow for future agents. |
+| [`docs/BENCHMARK_INTEGRATION.md`](docs/BENCHMARK_INTEGRATION.md) | How benchmark/regression findings flow into CompText V7. |
+| [`docs/CROSS_REPO_RELEASE_CHECKLIST.md`](docs/CROSS_REPO_RELEASE_CHECKLIST.md) | Go/no-go and rollback criteria for experiment-to-runtime promotion. |
+| [`docs/wiki/README.md`](docs/wiki/README.md) | Structured wiki navigation for architecture, governance, runbook, and roadmap material. |
+| [`dashboard/app/README.md`](dashboard/app/README.md) | Frontend architecture and dashboard implementation notes. |
 
-- **Traceability:** every result keeps event counts, source fingerprint,
-  severity/code inventory, family fingerprints, and burst windows for audit
-  review before data leaves the edge node.
-- **Operational fit:** the benchmark suite separates repetitive fleet telemetry,
-  mixed workshop diagnostics, high-entropy free-form payloads, and tiny triage
-  notes so reviewers see where KVTC creates value and where quality gates remain
-  necessary.
-- **Governance:** the repository avoids production-data claims, keeps the engine
-  deterministic and dependency-free, and documents lossy behavior explicitly for
-  safety, compliance, and data-sovereignty conversations.
+## Safety boundaries
 
-## Industrial economic resilience audit
+Never commit:
 
-The audit harness extends raw KVTC compression with business-facing probes for
-recursive R&D, expertise transfer, industrial reorganization, and air-gapped
-economic access.  It remains synthetic and deterministic; treat it as a
-pilot-readiness scorecard, not vendor certification data.
+- real Daimler payloads or proprietary customer data
+- secrets, API keys, tokens, cookies, or credentials
+- raw production logs
+- unsanitized replay fixtures
+- private deployment credentials or environment dumps
 
-| AEI category | CompText V7 target | Daimler-Truck-style relevance |
-| --- | --- | --- |
-| Recursive R&D | Reduce manual feature annotation by at least 80% for a new hydrogen fuel-cell component. | Faster rollout of new drivetrain technologies. |
-| Expertise Pipeline | Reach at least 0.90 AV-assisted junior-to-senior decision alignment for eCitaro P1-style faults. | Compensates for scarce senior diagnostic expertise in production. |
-| Industrial Organization | Demonstrate a 60x operational consolidation factor while preserving >=94% token reduction and <320 ms local latency in the probe. | Reduces overhead while preserving fleet-monitoring latency budgets. |
-| Economic Access | Keep a local forensic-audit FVE proxy above 0.78 under air-gapped Ollama/Gemma-style constraints. | Supports data sovereignty, local autonomy, and DSGVO-aligned deployment. |
+Synthetic fixtures and generated summaries are acceptable when they are deterministic, sanitized, and safe to review.
 
 ## Caveats
 
-- KVTC-V7 is intentionally **lossy**.  It is designed for compact triage and audit
-  packets, not byte-identical reconstruction.
-- The datasets are synthetic and deterministic.  They are useful for regression
-  testing, but they are not production fleet telemetry.
-- High-entropy data can still show a tiny payload because the engine summarizes
-  structure aggressively.  Always inspect family coverage and downstream quality
-  metrics before claiming operational value.
+- KVTC-V7 is intentionally **lossy**. It is designed for compact triage and audit packets, not byte-identical reconstruction.
+- The datasets are synthetic and deterministic. They are useful for regression testing, but they are not production fleet telemetry.
+- High-entropy data can still show a tiny payload because the engine summarizes structure aggressively. Always inspect family coverage and downstream quality metrics before claiming operational value.
