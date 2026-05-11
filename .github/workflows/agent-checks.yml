@@ -48,7 +48,7 @@ jobs:
           path: docs/reports/
           if-no-files-found: ignore
 
-  release-health-smoke:
+  dashboard-validation:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -67,6 +67,14 @@ jobs:
           else
             npm install
           fi
+
+      - name: Typecheck dashboard frontend
+        working-directory: dashboard/app
+        run: npm run typecheck
+
+      - name: Build dashboard frontend
+        working-directory: dashboard/app
+        run: npm run build
 
       - name: Run release health dashboard smoke test
         working-directory: dashboard/app

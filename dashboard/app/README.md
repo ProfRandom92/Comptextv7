@@ -31,6 +31,18 @@ Local smoke coverage lives in `scripts/release-health-smoke.mjs` and is runnable
 npm run smoke:release-health
 ```
 
+## Validation commands
+
+Use these commands before dashboard-facing PRs:
+
+```bash
+npm run typecheck
+npm run build
+npm run smoke:release-health
+```
+
+GitHub Actions runs the same dashboard validation sequence in `.github/workflows/agent-checks.yml`.
+
 ## Local development
 
 ```bash
