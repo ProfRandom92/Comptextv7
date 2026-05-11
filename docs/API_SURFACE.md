@@ -17,9 +17,11 @@ CSV summaries only.
 API, dashboard, and export contract changes should start with
 `python scripts/repo_intake.py` so reviewers can see the detected repository
 shape and likely API/dashboard/report areas before implementation. After making
-changes, run `python scripts/run_checks.py` and `python scripts/validate_contracts.py`
-to perform deterministic local validation without installing dependencies or
-requiring network access.
+changes, run `python scripts/run_checks.py`, `python scripts/validate_contracts.py`,
+`python scripts/generate_contract_fixtures.py`, and
+`python scripts/validate_api_exports.py` to perform deterministic local validation
+without installing dependencies, using real Daimler data, or requiring network
+access.
 
 The `.github/workflows/agent-checks.yml` workflow mirrors these steps for pull
 requests on Python 3.11 and uploads the generated `docs/reports/` artifacts when
@@ -110,6 +112,7 @@ without adding runtime dependencies:
 
 Synthetic examples live under `contracts/examples/`:
 
+- `contracts/examples/api-dashboard.example.json`
 - `contracts/examples/benchmark-summary.example.json`
 - `contracts/examples/regression-summary.example.json`
 - `contracts/examples/sanitization-summary.example.json`
@@ -125,6 +128,26 @@ simple structural types, and writes
 `docs/reports/contract-validation-report.md` for review artifacts. The examples
 are synthetic only and must not be replaced with real Daimler payloads, customer
 data, secrets, raw production logs, or proprietary documents.
+
+### API/export fixture enforcement
+
+API/dashboard/export payload shapes are enforced with deterministic synthetic
+fixtures rather than a live server. Run:
+
+```bash
+python scripts/generate_contract_fixtures.py
+python scripts/validate_api_exports.py
+```
+
+`scripts/generate_contract_fixtures.py` writes
+`contracts/examples/api-dashboard.example.json` and records generation evidence in
+`docs/reports/contract-fixture-generation-report.md`.
+`scripts/validate_api_exports.py` loads `contracts/api-dashboard.schema.json` and
+the generated example, checks required fields, simple field types, the
+`synthetic: true` marker, and array-shaped API/export collections, then writes
+`docs/reports/api-export-validation-report.md`. These checks use only the Python
+standard library, require no live server, and must remain limited to synthetic
+values.
 
 ## Compatibility with benchmark/regression reports
 
