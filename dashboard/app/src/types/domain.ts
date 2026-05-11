@@ -135,4 +135,4 @@ export interface DashboardPayload {
   services: ServiceHealth[];
 }
 
-export type RouteId = 'overview' | 'forensics' | 'benchmarks' | 'replay' | 'incidents';
+export type RouteId = 'overview' | 'forensics' | 'benchmarks' | 'replay' | 'incidents' | 'release-health';

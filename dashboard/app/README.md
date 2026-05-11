@@ -9,7 +9,27 @@ This frontend is intentionally structured as an internal platform/SRE/ML-Ops too
 - **React Query state model:** server state is owned by TanStack Query with refresh, retry, stale-time, and abort-signal behavior configured in `src/lib/queryClient.ts`.
 - **Data-heavy UX:** tables use TanStack Virtual and column-level search to keep large benchmark, forensic, and incident lists responsive.
 - **Operational UX:** the shell has scalable navigation, CSV/JSON export links, explicit loading/error/empty states, and a keyboard-accessible command palette (`Ctrl/⌘+K`).
+- **Release-health UX:** the dedicated Release Health route renders readiness status, required artifacts, missing artifacts, next actions, and safety notes from the generated dashboard health summary contract.
 - **Reusable visualization and theme:** charts are abstract SVG components, and design tokens are centralized in `src/styles/tokens.css`.
+
+## Release health route
+
+The dashboard exposes a first-class `Release Health` route for reviewers and future agents. It consumes `/dashboard-health-summary.json` through `src/lib/releaseHealth.ts` and falls back to synthetic metadata from `src/mocks/releaseHealthSummary.ts` if the summary cannot be loaded.
+
+The page renders:
+
+- overall release-readiness status
+- required local validation artifacts
+- missing required/optional artifacts
+- next recommended actions
+- safety notes
+- fallback/unavailable state
+
+Local smoke coverage lives in `scripts/release-health-smoke.mjs` and is runnable with:
+
+```bash
+npm run smoke:release-health
+```
 
 ## Local development
 

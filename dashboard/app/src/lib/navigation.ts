@@ -1,8 +1,9 @@
-import { Activity, AlertTriangle, BarChart3, GitCompareArrows, ShieldCheck } from 'lucide-react';
+import { Activity, AlertTriangle, BarChart3, GitCompareArrows, HeartPulse, ShieldCheck } from 'lucide-react';
 import type { RouteId } from '../types/domain';
 
 export const navigation = [
   { id: 'overview', label: 'Operations', description: 'Fleet health and SLO posture', icon: Activity },
+  { id: 'release-health', label: 'Release Health', description: 'Readiness gates and promotion evidence', icon: HeartPulse },
   { id: 'forensics', label: 'Forensics', description: 'Safety and retention gates', icon: ShieldCheck },
   { id: 'benchmarks', label: 'Benchmarks', description: 'Compression and throughput lanes', icon: BarChart3 },
   { id: 'replay', label: 'Replay', description: 'Determinism and drift controls', icon: GitCompareArrows },

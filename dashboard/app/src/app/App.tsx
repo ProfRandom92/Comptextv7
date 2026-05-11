@@ -8,12 +8,15 @@ import { BenchmarksPage } from '../features/benchmarks/BenchmarksPage';
 import { ForensicsPage } from '../features/forensics/ForensicsPage';
 import { IncidentsPage } from '../features/incidents/IncidentsPage';
 import { OverviewPage } from '../features/overview/OverviewPage';
+import { ReleaseHealthPage } from '../features/release-health/ReleaseHealthPage';
 import { ReplayPage } from '../features/replay/ReplayPage';
 import type { RouteId } from '../types/domain';
 
+const routes: RouteId[] = ['overview', 'release-health', 'forensics', 'benchmarks', 'replay', 'incidents'];
+
 function routeFromHash(): RouteId {
   const route = window.location.hash.replace('#/', '') as RouteId;
-  return ['overview', 'forensics', 'benchmarks', 'replay', 'incidents'].includes(route) ? route : 'overview';
+  return routes.includes(route) ? route : 'overview';
 }
 
 export function App() {
@@ -38,8 +41,11 @@ export function App() {
   };
 
   let content = <LoadingState />;
-  if (dashboard.isError) content = <ErrorState message={dashboard.error.message} onRetry={() => void dashboard.refetch()} />;
-  if (dashboard.data) {
+  if (route === 'release-health') {
+    content = <ReleaseHealthPage state={releaseHealth.data} isLoading={releaseHealth.isLoading} />;
+  } else if (dashboard.isError) {
+    content = <ErrorState message={dashboard.error.message} onRetry={() => void dashboard.refetch()} />;
+  } else if (dashboard.data) {
     content = route === 'overview' ? <OverviewPage payload={dashboard.data} releaseHealth={releaseHealth.data} />
       : route === 'forensics' ? <ForensicsPage payload={dashboard.data} />
       : route === 'benchmarks' ? <BenchmarksPage payload={dashboard.data} />
