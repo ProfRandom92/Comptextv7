@@ -75,8 +75,9 @@ changes:
 7. Let `.github/workflows/agent-checks.yml` provide the PR CI guardrail by
    compiling the helper scripts, regenerating intake evidence, generating
    contract fixtures, validating API/export payload shapes, generating the
-   project health report, generating the dashboard health summary, and running
-   the same safe checks on Python 3.11.
+   project health report, generating the dashboard health summary, running the
+   release health dashboard smoke test from `dashboard/app`, and running the
+   same safe checks on Python 3.11.
 
 These checks complement benchmark, regression, sanitization, and forensic replay
 reports from `ProfRandom92/Comptext-Daimler-Experiment-`. They do not replace
