@@ -161,6 +161,27 @@ chart primitives, centralized design tokens, and a keyboard command palette.
 See [`dashboard/app/README.md`](dashboard/app/README.md) for frontend
 architecture decisions.
 
+## Release readiness
+
+**Status badge:** Release readiness is generated from synthetic/static project
+health artifacts. It does not include real Daimler data, secrets, customer data,
+or raw production logs.
+
+Use these entrypoints when reviewing current dashboard health without digging
+through generated reports:
+
+| Surface | Entrypoint |
+| --- | --- |
+| Machine-readable release health source | [`docs/reports/dashboard-health-summary.json`](docs/reports/dashboard-health-summary.json) |
+| Human-readable release health report | [`docs/reports/dashboard-health-summary.md`](docs/reports/dashboard-health-summary.md) |
+| Dashboard panel | `Release Health Summary` |
+| Local smoke test | `cd dashboard/app && npm run smoke:release-health` |
+| CI workflow | [`.github/workflows/agent-checks.yml`](.github/workflows/agent-checks.yml) |
+| Agent workflow | [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) |
+| Cross-repo promotion checklist | [`docs/CROSS_REPO_RELEASE_CHECKLIST.md`](docs/CROSS_REPO_RELEASE_CHECKLIST.md) |
+
+This entrypoint is documentation-only: it adds no runtime coupling, dependencies,
+or live-data requirements.
 
 ## Benchmark results
 
