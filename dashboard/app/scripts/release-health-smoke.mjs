@@ -14,7 +14,7 @@ const overviewSnippets = [
   'Synthetic/static fixtures only.',
 ];
 
-const fallbackSnippets = [
+const overviewFallbackSnippets = [
   'Release health summary',
   'Health summary unavailable. Expected docs/reports/dashboard-health-summary.json.',
   'unknown',
@@ -34,6 +34,16 @@ const releasePageSnippets = [
   'Next recommended actions',
   'Safety notes',
   'Review the synthetic release checklist before tagging.',
+];
+
+const releasePageFallbackSnippets = [
+  'Release readiness',
+  'Fallback mode: dashboard is rendering synthetic release-health metadata because the summary artifact is unavailable.',
+  'Health summary unavailable. Expected docs/reports/dashboard-health-summary.json.',
+  'unknown',
+  'unavailable',
+  'Generate docs/reports/dashboard-health-summary.json before release review.',
+  'No real Daimler data, customer payloads, secrets, cookies, tokens, raw production logs, or proprietary documents are included.',
 ];
 
 function assertIncludes(markup, snippets, label) {
@@ -112,13 +122,13 @@ try {
       releaseHealth: fallbackState,
     }),
   );
-  assertIncludes(fallbackMarkup, fallbackSnippets, 'fallback release health overview smoke');
+  assertIncludes(fallbackMarkup, overviewFallbackSnippets, 'fallback release health overview smoke');
 
   const releasePageMarkup = renderToStaticMarkup(React.createElement(ReleaseHealthPage, { state: healthyState }));
   assertIncludes(releasePageMarkup, releasePageSnippets, 'release health page smoke');
 
   const releaseFallbackMarkup = renderToStaticMarkup(React.createElement(ReleaseHealthPage, { state: fallbackState }));
-  assertIncludes(releaseFallbackMarkup, fallbackSnippets, 'release health page fallback smoke');
+  assertIncludes(releaseFallbackMarkup, releasePageFallbackSnippets, 'release health page fallback smoke');
 
   console.log('Release health dashboard smoke checks passed.');
 } catch (error) {
