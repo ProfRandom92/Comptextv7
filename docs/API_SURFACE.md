@@ -11,6 +11,26 @@ Comptextv7 should remain the main runtime/dashboard/API repository. Experiment
 outputs should influence review decisions through lightweight Markdown, JSON, or
 CSV summaries only.
 
+
+## Agent workflow guardrails
+
+API, dashboard, and export contract changes should start with
+`python scripts/repo_intake.py` so reviewers can see the detected repository
+shape and likely API/dashboard/report areas before implementation. After making
+changes, run `python scripts/run_checks.py` to perform deterministic local
+validation without installing dependencies or requiring network access.
+
+The `.github/workflows/agent-checks.yml` workflow mirrors these steps for pull
+requests on Python 3.11 and uploads the generated `docs/reports/` artifacts when
+available. This guardrail is intentionally lightweight: it validates helper
+scripts and available local checks while benchmark/regression evidence remains a
+sanitized report handoff from `ProfRandom92/Comptext-Daimler-Experiment-`, not a
+runtime dependency of Comptextv7.
+
+Branch discipline remains part of the API contract process: create a feature
+branch from `main` when available, open a PR, request review, and never push
+directly to `main`.
+
 ## Stable API routes
 
 The stdlib dashboard backend currently treats these routes as stable review
