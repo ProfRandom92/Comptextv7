@@ -17,15 +17,17 @@ CSV summaries only.
 API, dashboard, and export contract changes should start with
 `python scripts/repo_intake.py` so reviewers can see the detected repository
 shape and likely API/dashboard/report areas before implementation. After making
-changes, run `python scripts/run_checks.py` to perform deterministic local
-validation without installing dependencies or requiring network access.
+changes, run `python scripts/run_checks.py` and `python scripts/validate_contracts.py`
+to perform deterministic local validation without installing dependencies or
+requiring network access.
 
 The `.github/workflows/agent-checks.yml` workflow mirrors these steps for pull
 requests on Python 3.11 and uploads the generated `docs/reports/` artifacts when
 available. This guardrail is intentionally lightweight: it validates helper
-scripts and available local checks while benchmark/regression evidence remains a
-sanitized report handoff from `ProfRandom92/Comptext-Daimler-Experiment-`, not a
-runtime dependency of Comptextv7.
+scripts, available local checks, and contract examples while
+benchmark/regression evidence remains a sanitized report handoff from
+`ProfRandom92/Comptext-Daimler-Experiment-`, not a runtime dependency of
+Comptextv7.
 
 Branch discipline remains part of the API contract process: create a feature
 branch from `main` when available, open a PR, request review, and never push
@@ -90,35 +92,39 @@ Accepted report summaries should be:
 - Focused on p50, p95, p99, RPS, error rate, payload size, route name, review
   status, and remediation notes.
 
-### Future machine-readable JSON contract
+### Machine-readable contract files
 
-```json
-{
-  "contract_version": "0.1-synthetic",
-  "source_repo": "ProfRandom92/Comptext-Daimler-Experiment-",
-  "target_repo": "ProfRandom92/Comptextv7",
-  "report_type": "benchmark_summary",
-  "synthetic": true,
-  "endpoint": "/api/dashboard",
-  "metrics": {
-    "p50_ms": 12,
-    "p95_ms": 95,
-    "p99_ms": 180,
-    "rps": 105.4,
-    "error_rate": 0.0,
-    "payload_size_bytes": 2048
-  },
-  "status": "pass",
-  "notes": "Synthetic benchmark example only."
-}
+Machine-readable contract schemas now live under `contracts/` and are written as
+lightweight JSON Schema-like documents that future agents and CI can inspect
+without adding runtime dependencies:
+
+- `contracts/api-dashboard.schema.json` describes Comptextv7 API routes,
+  dashboard views, export formats, sanitized report integration points, and
+  security notes.
+- `contracts/benchmark-summary.schema.json` describes synthetic benchmark
+  handoff summaries for p50/p95/p99, RPS, error rate, and payload size.
+- `contracts/regression-summary.schema.json` describes baseline/candidate
+  comparison summaries, thresholds, decisions, and notes.
+- `contracts/sanitization-summary.schema.json` describes sanitization scan
+  summaries for handoff artifacts.
+
+Synthetic examples live under `contracts/examples/`:
+
+- `contracts/examples/benchmark-summary.example.json`
+- `contracts/examples/regression-summary.example.json`
+- `contracts/examples/sanitization-summary.example.json`
+
+Validate the schema files and examples with:
+
+```bash
+python scripts/validate_contracts.py
 ```
 
-### Future machine-readable CSV contract
-
-```csv
-contract_version,timestamp,source_repo,target_repo,report_type,endpoint,p50_ms,p95_ms,p99_ms,rps,error_rate,payload_size_bytes,status,synthetic
-0.1-synthetic,2026-01-01T00:00:00Z,ProfRandom92/Comptext-Daimler-Experiment-,ProfRandom92/Comptextv7,benchmark_summary,/api/dashboard,12,95,180,105.4,0.0,2048,pass,true
-```
+The validator uses only the Python standard library, checks required fields and
+simple structural types, and writes
+`docs/reports/contract-validation-report.md` for review artifacts. The examples
+are synthetic only and must not be replaced with real Daimler payloads, customer
+data, secrets, raw production logs, or proprietary documents.
 
 ## Compatibility with benchmark/regression reports
 
@@ -128,7 +134,7 @@ Benchmark summaries should map to Comptextv7 review surfaces this way:
 | --- | --- |
 | `benchmark_summary` | Compare p50/p95/p99, RPS, error rate, and payload size for dashboard/API routes. |
 | `regression_summary` | Decide whether a PR should merge, require remediation, or split into smaller changes. |
-| `sanitization_report` | Prove that attached benchmark evidence excludes secrets, raw logs, customer data, and proprietary documents. |
+| `sanitization_summary` | Prove that attached benchmark evidence excludes secrets, raw logs, customer data, and proprietary documents. |
 | `forensic_replay_note` | Identify semantic retention, determinism, replay, or export-contract findings for follow-up fixes. |
 
 Reviewers should block or request changes when summaries show unexplained tail
