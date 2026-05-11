@@ -1,0 +1,145 @@
+# API Surface
+
+## Purpose
+
+This document describes the stable Comptextv7 API, dashboard, export, and report
+surfaces that future benchmark/regression summaries can reference. It also
+records integration expectations for sanitized outputs from
+`ProfRandom92/Comptext-Daimler-Experiment-` without introducing runtime coupling.
+
+Comptextv7 should remain the main runtime/dashboard/API repository. Experiment
+outputs should influence review decisions through lightweight Markdown, JSON, or
+CSV summaries only.
+
+## Stable API routes
+
+The stdlib dashboard backend currently treats these routes as stable review
+surfaces:
+
+| Route | Format | Stability | Purpose |
+| --- | --- | --- | --- |
+| `GET /api/dashboard` | JSON | Stable | Primary operations payload containing audit summary, benchmark rows, forensic findings, replay summary, incidents, and service health. |
+| `GET /export.json` | JSON | Stable | Machine-readable export of the same dashboard evidence for CI or air-gapped review. |
+| `GET /export.csv` | CSV | Stable | Spreadsheet-friendly review artifact with benchmark and forensic rows. |
+| `GET /replay` | JSON | Stable | Replay-oriented evidence view using the dashboard payload shape. |
+| `GET /` | HTML or React app | Stable | Human dashboard entry point; falls back to a stdlib HTML view when the React build is unavailable. |
+
+All stable routes should preserve no-store cache headers, avoid exposing raw
+sensitive inputs, and remain usable without heavy runtime dependencies.
+
+## Dashboard routes/views
+
+The dashboard boundary has two layers:
+
+1. Backend API/export routes provide sanitized operational evidence.
+2. The React or fallback HTML dashboard renders that evidence for review.
+
+Dashboard views that should be compatible with benchmark and regression
+summaries include:
+
+- Audit summary cards for latency, replay determinism, tokenizer state,
+  forensic failures, and active incidents.
+- Service health tables for compression, replay, and validation components.
+- Incident/finding views for high and critical regression or forensic blockers.
+- Benchmark tables or charts for p50, p95, p99, RPS, error rate, and payload
+  size.
+- Export links for JSON and CSV evidence handoff.
+
+## Export/report endpoints
+
+`/export.json` and `/export.csv` are the primary report handoff endpoints inside
+Comptextv7. They should remain deterministic enough for review, small enough for
+PR artifacts, and explicit about any schema changes.
+
+Future report endpoints such as `/reports/benchmark-summary`,
+`/reports/regression-summary`, or `/reports/sanitization-summary` should not be
+added until a schema, security review, and issue scope approve them. If added,
+they should consume sanitized summaries only and should not execute experiment
+repository workloads from the Comptextv7 runtime.
+
+## Payload and report contract expectations
+
+Accepted report summaries should be:
+
+- Synthetic in documentation examples.
+- Sanitized before being copied into Comptextv7.
+- Small enough to review in a pull request.
+- Text-based: Markdown, JSON, or CSV.
+- Explicit about `source_repo`, `target_repo`, `report_type`, status, timestamp
+  or baseline/candidate references, and whether the content is synthetic.
+- Focused on p50, p95, p99, RPS, error rate, payload size, route name, review
+  status, and remediation notes.
+
+### Future machine-readable JSON contract
+
+```json
+{
+  "contract_version": "0.1-synthetic",
+  "source_repo": "ProfRandom92/Comptext-Daimler-Experiment-",
+  "target_repo": "ProfRandom92/Comptextv7",
+  "report_type": "benchmark_summary",
+  "synthetic": true,
+  "endpoint": "/api/dashboard",
+  "metrics": {
+    "p50_ms": 12,
+    "p95_ms": 95,
+    "p99_ms": 180,
+    "rps": 105.4,
+    "error_rate": 0.0,
+    "payload_size_bytes": 2048
+  },
+  "status": "pass",
+  "notes": "Synthetic benchmark example only."
+}
+```
+
+### Future machine-readable CSV contract
+
+```csv
+contract_version,timestamp,source_repo,target_repo,report_type,endpoint,p50_ms,p95_ms,p99_ms,rps,error_rate,payload_size_bytes,status,synthetic
+0.1-synthetic,2026-01-01T00:00:00Z,ProfRandom92/Comptext-Daimler-Experiment-,ProfRandom92/Comptextv7,benchmark_summary,/api/dashboard,12,95,180,105.4,0.0,2048,pass,true
+```
+
+## Compatibility with benchmark/regression reports
+
+Benchmark summaries should map to Comptextv7 review surfaces this way:
+
+| Report type | Expected Comptextv7 use |
+| --- | --- |
+| `benchmark_summary` | Compare p50/p95/p99, RPS, error rate, and payload size for dashboard/API routes. |
+| `regression_summary` | Decide whether a PR should merge, require remediation, or split into smaller changes. |
+| `sanitization_report` | Prove that attached benchmark evidence excludes secrets, raw logs, customer data, and proprietary documents. |
+| `forensic_replay_note` | Identify semantic retention, determinism, replay, or export-contract findings for follow-up fixes. |
+
+Reviewers should block or request changes when summaries show unexplained tail
+latency growth, payload-size growth, error-rate increases, determinism failures,
+or high/critical forensic findings.
+
+## Dashboard/API boundaries
+
+Comptextv7 may:
+
+- Display sanitized benchmark/regression status.
+- Export local dashboard evidence as JSON or CSV.
+- Document future report contracts.
+- Add small schema-version fields in future PRs.
+
+Comptextv7 should not yet:
+
+- Import code from `ProfRandom92/Comptext-Daimler-Experiment-`.
+- Run experiment repository workloads as part of normal dashboard/API startup.
+- Store real Daimler payloads, customer data, raw production logs, cookies,
+  tokens, or proprietary documents.
+- Treat benchmark pass/fail as a replacement for forensic replay and semantic
+  retention review.
+
+## Security and data handling notes
+
+- Treat Daimler-related context as sensitive even when the repository uses
+  public or synthetic examples.
+- Prefer synthetic examples in documentation and tests.
+- Redact VIN/FIN, customer identifiers, employee names, plant identifiers,
+  account IDs, tokens, cookies, and proprietary terms before handoff.
+- Keep report artifacts small and human-reviewable.
+- Do not add heavy dependencies for report parsing unless a future issue approves
+  them.
