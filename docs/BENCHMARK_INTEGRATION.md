@@ -48,6 +48,40 @@ flowchart LR
 5. Use findings to decide whether Comptextv7 dashboard/API changes can merge,
    need follow-up work, or belong in the experiment repository instead.
 
+## Promotion gate
+
+Use `docs/CROSS_REPO_RELEASE_CHECKLIST.md` as the go/no-go release gate before an
+experiment finding becomes a Comptextv7 implementation PR. The decision flow is:
+
+```text
+validated experiment artifacts -> security review -> go/no-go decision ->
+Comptextv7 issue/PR -> local validation -> release or rollback
+```
+
+Required experiment repository artifacts:
+
+- `docs/reports/benchmark-summary.json`
+- `docs/reports/regression-summary.json`
+- `docs/reports/sanitization-summary.json`
+- `docs/reports/report-contract-validation-report.md`
+
+Required Comptextv7 validation commands:
+
+```bash
+python scripts/repo_intake.py
+python scripts/run_checks.py
+python scripts/validate_contracts.py
+python scripts/generate_contract_fixtures.py
+python scripts/validate_api_exports.py
+```
+
+Proceed only when the benchmark summary is contract-compatible, regression
+summary has no unresolved blocker, sanitization summary has no unmasked sensitive
+findings, report contract validation passes, Comptextv7 checks pass, API/export
+contract validation passes, and the PR is small and reversible. Stop when real
+Daimler data, secrets, raw production logs, unexplained benchmark regressions,
+failing validation, or unclear repository ownership appears.
+
 ## Important metrics
 
 Benchmark summaries should use consistent names for the following metrics:
