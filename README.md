@@ -21,24 +21,36 @@ The project is written for a Daimler-Truck-style industrial review posture witho
 ## System architecture
 
 ```mermaid
-flowchart LR
-    Logs["Synthetic XENTRY / OBD / Workshop Logs"] --> Parse["Structured Event Parser"]
-    Parse --> KVTC["KVTC-V7 Compression Engine"]
-    KVTC --> Frame["Auditable Transport Frame"]
-    Frame --> Validation["Validation & Regression Gates"]
-    Validation --> Reports["docs/reports Artifacts"]
-    Reports --> Dashboard["Release Health Dashboard"]
-    Dashboard --> CI["GitHub Actions Smoke & Industrial Checks"]
+flowchart TB
+    subgraph Input["Synthetic input layer"]
+        A["XENTRY / OBD / workshop-style fixtures"]
+        B["Experiment repo benchmark summaries"]
+    end
 
-    Experiment["Comptext-Daimler-Experiment-\nSynthetic benchmark summaries"] --> Contracts["Contract-compatible JSON handoff"]
-    Contracts --> Validation
+    subgraph Core["CompText V7 core"]
+        C["Structured parser"]
+        D["KVTC-V7 compression engine"]
+        E["Auditable transport frame"]
+    end
 
-    classDef safe fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
-    classDef core fill:#e3f2fd,stroke:#1565c0,stroke-width:1px;
-    classDef ci fill:#fff8e1,stroke:#f9a825,stroke-width:1px;
-    class Logs,Experiment safe;
-    class Parse,KVTC,Frame,Contracts core;
-    class Validation,Reports,Dashboard,CI ci;
+    subgraph Evidence["Evidence and contracts"]
+        F["Contract-compatible JSON"]
+        G["Validation reports"]
+        H["Release-health summary"]
+    end
+
+    subgraph Delivery["Reviewer surfaces"]
+        I["Dashboard panel"]
+        J["GitHub Actions checks"]
+        K["Cross-repo promotion checklist"]
+    end
+
+    A --> C --> D --> E --> F
+    B --> F
+    F --> G --> H
+    H --> I
+    H --> J
+    H --> K
 ```
 
 ## KVTC processing model
