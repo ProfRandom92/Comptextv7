@@ -68,16 +68,24 @@ changes:
    `docs/reports/project-health-report.md` as a deterministic snapshot of agent
    workflow readiness, contract/API validation surfaces, existing reports, and
    promotion checklist status without reading raw payload contents.
-6. Let `.github/workflows/agent-checks.yml` provide the PR CI guardrail by
+6. Run `python scripts/generate_dashboard_health_summary.py` after the local
+   reports are current. It writes `docs/reports/dashboard-health-summary.md` and
+   `docs/reports/dashboard-health-summary.json` as compact dashboard-facing
+   release-readiness artifacts from file-existence and simple metadata checks.
+7. Let `.github/workflows/agent-checks.yml` provide the PR CI guardrail by
    compiling the helper scripts, regenerating intake evidence, generating
    contract fixtures, validating API/export payload shapes, generating the
-   project health report, and running the same safe checks on Python 3.11.
+   project health report, generating the dashboard health summary, and running
+   the same safe checks on Python 3.11.
 
 These checks complement benchmark, regression, sanitization, and forensic replay
 reports from `ProfRandom92/Comptext-Daimler-Experiment-`. They do not replace
 benchmark review and do not introduce runtime coupling between repositories. Use
 only sanitized summaries or synthetic examples when connecting those reports to
-Comptextv7 PR evidence.
+Comptextv7 PR evidence. Future dashboard/UI work should consume
+`docs/reports/dashboard-health-summary.json` as a static status source for
+release-readiness cards, missing-artifact lists, and safety notes instead of
+requiring a live server, network access, or real Daimler data.
 
 ## Cross-repo promotion gate
 
@@ -170,6 +178,9 @@ Before opening a Comptextv7 PR, agents should verify:
       issues.
 - [ ] Tests or validation steps are documented, or the PR states why no code
       execution was required.
+- [ ] Release-readiness changes run `python scripts/generate_dashboard_health_summary.py`
+      and update `docs/reports/dashboard-health-summary.md` plus
+      `docs/reports/dashboard-health-summary.json` when generated.
 - [ ] API/dashboard/export changes run `python scripts/generate_contract_fixtures.py`
       and `python scripts/validate_api_exports.py`, with reports checked in under
       `docs/reports/contract-fixture-generation-report.md` and
