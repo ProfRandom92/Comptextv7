@@ -74,6 +74,29 @@ benchmark review and do not introduce runtime coupling between repositories. Use
 only sanitized summaries or synthetic examples when connecting those reports to
 Comptextv7 PR evidence.
 
+## Cross-repo promotion gate
+
+Use `docs/CROSS_REPO_RELEASE_CHECKLIST.md` after experiment validation and before
+creating a Comptextv7 implementation PR. The checklist is the practical release
+gate for deciding whether an experiment result is safe to promote through this
+flow:
+
+```text
+experiment result -> review -> Comptextv7 issue/PR -> validation -> release
+```
+
+Agents should apply the checklist when a benchmark, regression, sanitization, or
+forensic replay finding from `ProfRandom92/Comptext-Daimler-Experiment-` might
+change Comptextv7 runtime behavior, API/dashboard contracts, exports, validation
+logic, or release documentation. If the checklist produces a no-go decision,
+create or update an issue with sanitized evidence instead of opening an
+implementation PR.
+
+The checklist fits between the experiment repository's validation evidence and
+Comptextv7 implementation work: first confirm the experiment artifacts and
+contract validation, then make the go/no-go decision, and only then open a small,
+reversible Comptextv7 PR with the required local validation results.
+
 ## How to consume experiment repo reports
 
 Agents may use these sanitized report types as review inputs:
