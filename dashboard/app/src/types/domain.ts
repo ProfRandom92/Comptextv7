@@ -94,6 +94,37 @@ export interface ServiceHealth {
   dependencies: string[];
 }
 
+
+export type ReleaseHealthStatus = 'green' | 'yellow' | 'red' | 'unknown' | string;
+
+export interface ReleaseHealthCheck {
+  description?: string;
+  key?: string;
+  path?: string;
+  present?: boolean;
+  required?: boolean;
+  size_bytes?: number;
+  status?: string;
+}
+
+export interface ReleaseHealthMissingArtifacts {
+  optional_cross_repo?: string[];
+  required_local?: string[];
+  [key: string]: string[] | undefined;
+}
+
+export interface ReleaseHealthSummary {
+  overall_status?: ReleaseHealthStatus;
+  checks?: Record<string, ReleaseHealthCheck>;
+  required_artifacts_present?: string[];
+  missing_artifacts?: ReleaseHealthMissingArtifacts;
+  next_recommended_actions?: string[];
+  safety_notes?: string[];
+  generated_at?: string;
+  synthetic?: boolean;
+  summary_type?: string;
+}
+
 export interface DashboardPayload {
   audit_summary: AuditSummary;
   benchmarks: BenchmarkResult[];

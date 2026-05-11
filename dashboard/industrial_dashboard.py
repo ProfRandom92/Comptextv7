@@ -29,6 +29,7 @@ from src.validation.replay import replay_summary, run_replay
 from src.validation.token_telemetry import drift_fingerprint, tokenizer_version
 
 APP_DIST = Path(__file__).resolve().parent / "app" / "dist"
+RELEASE_HEALTH_SUMMARY = ROOT / "docs" / "reports" / "dashboard-health-summary.json"
 
 
 def _now() -> datetime:
@@ -249,6 +250,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == "/dashboard-health-summary.json":
+            if RELEASE_HEALTH_SUMMARY.exists():
+                self._send(200, RELEASE_HEALTH_SUMMARY.read_bytes(), "application/json")
+                return
+            self._send(404, b'{"error":"dashboard health summary not found"}', "application/json")
+            return
         if parsed.path.startswith("/api/") or parsed.path in {"/export.json", "/export.csv", "/replay"}:
             data = dashboard_data()
             if parsed.path in {"/api/dashboard", "/export.json", "/replay"}:
