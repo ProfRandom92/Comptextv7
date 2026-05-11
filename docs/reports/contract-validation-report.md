@@ -3,7 +3,7 @@
 - generated_at: deterministic-contract-validation
 - status: pass
 - schema_count: 4
-- example_count: 3
+- example_count: 4
 
 ## Schemas
 
@@ -18,6 +18,7 @@
 
 | File | Schema | Status | Notes |
 | --- | --- | --- | --- |
+| `contracts/examples/api-dashboard.example.json` | `api-dashboard.schema.json` | pass | valid synthetic example structure |
 | `contracts/examples/benchmark-summary.example.json` | `benchmark-summary.schema.json` | pass | valid synthetic example structure |
 | `contracts/examples/regression-summary.example.json` | `regression-summary.schema.json` | pass | valid synthetic example structure |
 | `contracts/examples/sanitization-summary.example.json` | `sanitization-summary.schema.json` | pass | valid synthetic example structure |

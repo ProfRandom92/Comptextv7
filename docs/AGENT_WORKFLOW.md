@@ -54,9 +54,19 @@ changes:
    Python helper scripts, runs pytest only when tests and pytest are available,
    and runs Node test/lint scripts only when package scripts exist. Missing
    optional tools or tests are reported as skips instead of false failures.
-3. Let `.github/workflows/agent-checks.yml` provide the PR CI guardrail by
-   compiling the helper scripts, regenerating intake evidence, and running the
-   same safe checks on Python 3.11.
+3. Run `python scripts/generate_contract_fixtures.py` when API/dashboard/export
+   contracts are touched. It regenerates
+   `contracts/examples/api-dashboard.example.json` and writes
+   `docs/reports/contract-fixture-generation-report.md` using deterministic
+   synthetic values only.
+4. Run `python scripts/validate_api_exports.py` to validate the generated
+   API/dashboard/export fixture against `contracts/api-dashboard.schema.json`. It
+   writes `docs/reports/api-export-validation-report.md` and requires no live
+   server.
+5. Let `.github/workflows/agent-checks.yml` provide the PR CI guardrail by
+   compiling the helper scripts, regenerating intake evidence, generating
+   contract fixtures, validating API/export payload shapes, and running the same
+   safe checks on Python 3.11.
 
 These checks complement benchmark, regression, sanitization, and forensic replay
 reports from `ProfRandom92/Comptext-Daimler-Experiment-`. They do not replace
@@ -109,7 +119,8 @@ Prefer:
 - Synthetic examples.
 - Sanitized summaries.
 - Small Markdown/JSON/CSV contracts.
-- Explicit `synthetic: true` flags in examples.
+- Explicit `synthetic: true` flags in examples, including
+  `contracts/examples/api-dashboard.example.json`.
 - Redacted finding IDs and endpoint names.
 
 ## Review checklist
@@ -131,6 +142,10 @@ Before opening a Comptextv7 PR, agents should verify:
       issues.
 - [ ] Tests or validation steps are documented, or the PR states why no code
       execution was required.
+- [ ] API/dashboard/export changes run `python scripts/generate_contract_fixtures.py`
+      and `python scripts/validate_api_exports.py`, with reports checked in under
+      `docs/reports/contract-fixture-generation-report.md` and
+      `docs/reports/api-export-validation-report.md` when generated.
 
 ## Synthetic PR evidence example
 
