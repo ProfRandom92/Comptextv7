@@ -17,13 +17,16 @@ jobs:
           python-version: '3.11'
 
       - name: Compile helper scripts
-        run: python -m py_compile scripts/repo_intake.py scripts/run_checks.py
+        run: python -m py_compile scripts/repo_intake.py scripts/run_checks.py scripts/validate_contracts.py
 
       - name: Generate repository intake report
         run: python scripts/repo_intake.py
 
       - name: Run safe local checks
         run: python scripts/run_checks.py
+
+      - name: Validate contract schemas
+        run: python scripts/validate_contracts.py
 
       - name: Upload agent reports
         if: always()

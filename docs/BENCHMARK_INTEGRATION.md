@@ -9,11 +9,10 @@ replay guidance.
 
 The integration is documentation-first. Comptextv7 remains the main runtime,
 dashboard, API, and review surface. The experiment repository remains the place
-where benchmark/regression experiments can evolve independently. Until a future
-machine-readable contract is approved, Comptextv7 should consume only reviewed,
-sanitized summaries and synthetic examples; it should not import experiment repo
-code, raw payloads, proprietary documents, customer data, cookies, tokens, or
-production logs.
+where benchmark/regression experiments can evolve independently. Comptextv7
+should consume only reviewed, sanitized summaries and synthetic examples; it
+should not import experiment repo code, raw payloads, proprietary documents,
+customer data, cookies, tokens, or production logs.
 
 ## Repository roles
 
@@ -116,113 +115,39 @@ Benchmark findings should influence dashboard/API review decisions as follows:
 
 ## Report handoff contracts
 
-The contracts below are examples for future automation. They are intentionally
-small, text-based, and synthetic. They do not add runtime coupling.
+Machine-readable contract schemas live under `contracts/` and provide a
+lightweight, JSON Schema-like foundation for future agents and CI. They do not
+add runtime coupling to `ProfRandom92/Comptext-Daimler-Experiment-` and should be
+used only for sanitized report handoffs and synthetic examples.
 
-### Synthetic Markdown summary
+| Contract file | Purpose |
+| --- | --- |
+| `contracts/benchmark-summary.schema.json` | Defines benchmark summaries with `source_repo`, `target_repo`, `report_type`, `synthetic`, `generated_at`, `endpoint`, metrics, `status`, and `notes`. |
+| `contracts/regression-summary.schema.json` | Defines baseline availability, regression decisions, compared runs, thresholds, and review notes. |
+| `contracts/sanitization-summary.schema.json` | Defines scanned paths, masked finding counts, status, and sanitization notes. |
+| `contracts/api-dashboard.schema.json` | Defines the Comptextv7 API/dashboard surface, export formats, report integration points, and security notes. |
 
-```markdown
-# Synthetic Benchmark Summary
+Synthetic example files live under `contracts/examples/`:
 
-- source_repo: ProfRandom92/Comptext-Daimler-Experiment-
-- target_repo: ProfRandom92/Comptextv7
-- report_type: benchmark_summary
-- synthetic: true
-- endpoint: /api/dashboard
-- p50_ms: 12
-- p95_ms: 95
-- p99_ms: 180
-- rps: 105.4
-- error_rate: 0.0
-- payload_size_bytes: 2048
-- status: pass
-- notes: Synthetic benchmark example only.
+- `contracts/examples/benchmark-summary.example.json`
+- `contracts/examples/regression-summary.example.json`
+- `contracts/examples/sanitization-summary.example.json`
+
+Validate contract structure before attaching or reviewing handoff artifacts:
+
+```bash
+python scripts/validate_contracts.py
 ```
 
-### Synthetic JSON summary
+The validator uses only the Python standard library, checks valid JSON, required
+fields, simple JSON types, and practical nested object requirements such as the
+benchmark `metrics` object. It writes
+`docs/reports/contract-validation-report.md` so pull requests and agent CI can
+upload a deterministic validation artifact.
 
-```json
-{
-  "source_repo": "ProfRandom92/Comptext-Daimler-Experiment-",
-  "target_repo": "ProfRandom92/Comptextv7",
-  "report_type": "benchmark_summary",
-  "synthetic": true,
-  "metrics": {
-    "p50_ms": 12,
-    "p95_ms": 95,
-    "p99_ms": 180,
-    "rps": 105.4,
-    "error_rate": 0.0,
-    "payload_size_bytes": 2048
-  },
-  "status": "pass",
-  "notes": "Synthetic benchmark example only."
-}
-```
-
-### Synthetic CSV summary
-
-```csv
-timestamp,source_repo,target_repo,endpoint,p50_ms,p95_ms,p99_ms,rps,error_rate,payload_size_bytes,status
-2026-01-01T00:00:00Z,ProfRandom92/Comptext-Daimler-Experiment-,ProfRandom92/Comptextv7,/analyze,12,95,180,105.4,0.0,2048,pass
-```
-
-### Synthetic regression summary
-
-```json
-{
-  "source_repo": "ProfRandom92/Comptext-Daimler-Experiment-",
-  "target_repo": "ProfRandom92/Comptextv7",
-  "report_type": "regression_summary",
-  "synthetic": true,
-  "baseline_ref": "synthetic-baseline-2026-01-01",
-  "candidate_ref": "synthetic-candidate-2026-01-02",
-  "endpoint": "/api/dashboard",
-  "delta": {
-    "p95_ms": 4,
-    "p99_ms": 9,
-    "rps": -1.2,
-    "error_rate": 0.0,
-    "payload_size_bytes": 128
-  },
-  "status": "review",
-  "notes": "Synthetic regression example only."
-}
-```
-
-### Synthetic sanitization report
-
-```json
-{
-  "source_repo": "ProfRandom92/Comptext-Daimler-Experiment-",
-  "target_repo": "ProfRandom92/Comptextv7",
-  "report_type": "sanitization_report",
-  "synthetic": true,
-  "checks": {
-    "contains_real_customer_data": false,
-    "contains_tokens_or_cookies": false,
-    "contains_raw_production_logs": false,
-    "contains_proprietary_documents": false
-  },
-  "status": "pass",
-  "notes": "Synthetic sanitization example only."
-}
-```
-
-### Synthetic forensic replay note
-
-```markdown
-# Synthetic Forensic Replay Note
-
-- source_repo: ProfRandom92/Comptext-Daimler-Experiment-
-- target_repo: ProfRandom92/Comptextv7
-- replay_scope: dashboard export contract
-- finding_id: SYN-FR-001
-- severity: medium
-- affected_surface: /export.json
-- recommendation: Add a future schema-version field before enabling automation.
-- synthetic: true
-```
+All committed examples must remain synthetic. Do not commit real Daimler
+payloads, customer data, raw production logs, cookies, tokens, proprietary
+documents, or other sensitive material.
 
 ## Review policy
 
@@ -243,12 +168,12 @@ Before merging performance-sensitive Comptextv7 changes, reviewers should:
 
 ## Future automation roadmap
 
-- Add `contract_version` and `schema_version` fields to all report summaries.
-- Publish JSON Schema files for benchmark, regression, sanitization, and forensic
-  replay summaries.
+- Add optional `contract_version` and `schema_version` fields to report summaries
+  after the initial schema foundation settles.
+- Extend contract coverage to forensic replay summaries when a future issue
+  approves that scope.
 - Add optional dashboard import of sanitized summary artifacts from a local
   directory, disabled by default.
-- Add CI validation for synthetic contract examples only.
 - Add dashboard trend views once report contracts are stable.
 - Keep experiment execution outside Comptextv7 until runtime coupling is
   explicitly approved.
