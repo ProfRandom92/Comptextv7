@@ -47,3 +47,27 @@ jobs:
           name: agent-check-reports
           path: docs/reports/
           if-no-files-found: ignore
+
+  release-health-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        working-directory: dashboard/app
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Run release health dashboard smoke test
+        working-directory: dashboard/app
+        run: npm run smoke:release-health
