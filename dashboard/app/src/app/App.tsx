@@ -20,6 +20,7 @@ export function App() {
   const [route, setRoute] = useState<RouteId>(routeFromHash);
   const [commandOpen, setCommandOpen] = useState(false);
   const dashboard = useQuery({ queryKey: ['dashboard'], queryFn: ({ signal }) => api.dashboard(signal) });
+  const releaseHealth = useQuery({ queryKey: ['release-health'], queryFn: ({ signal }) => api.releaseHealth(signal) });
 
   useEffect(() => {
     const onHash = () => setRoute(routeFromHash());
@@ -39,7 +40,7 @@ export function App() {
   let content = <LoadingState />;
   if (dashboard.isError) content = <ErrorState message={dashboard.error.message} onRetry={() => void dashboard.refetch()} />;
   if (dashboard.data) {
-    content = route === 'overview' ? <OverviewPage payload={dashboard.data} />
+    content = route === 'overview' ? <OverviewPage payload={dashboard.data} releaseHealth={releaseHealth.data} />
       : route === 'forensics' ? <ForensicsPage payload={dashboard.data} />
       : route === 'benchmarks' ? <BenchmarksPage payload={dashboard.data} />
       : route === 'replay' ? <ReplayPage payload={dashboard.data} />
