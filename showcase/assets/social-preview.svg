@@ -1,87 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
   <title id="title">Comptextv7 social preview</title>
-  <desc id="desc">Dark enterprise social preview for Industrial AI Token Compression with cloud validation, artifacts, and dashboard layers.</desc>
+  <desc id="desc">Minimal OpenGraph social preview with bold Comptextv7 typography, a central enterprise validation card, and deterministic cloud-first messaging.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#071827"/>
-      <stop offset="0.48" stop-color="#0a1021"/>
-      <stop offset="1" stop-color="#190b32"/>
-    </linearGradient>
-    <radialGradient id="auraCyan" cx="12%" cy="8%" r="70%">
-      <stop offset="0" stop-color="#1ad8ff" stop-opacity="0.22"/>
-      <stop offset="0.48" stop-color="#1ad8ff" stop-opacity="0.06"/>
-      <stop offset="1" stop-color="#1ad8ff" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="auraViolet" cx="92%" cy="12%" r="62%">
-      <stop offset="0" stop-color="#7c3cff" stop-opacity="0.22"/>
-      <stop offset="0.52" stop-color="#7c3cff" stop-opacity="0.06"/>
-      <stop offset="1" stop-color="#7c3cff" stop-opacity="0"/>
-    </radialGradient>
-    <pattern id="grid" width="54" height="54" patternUnits="userSpaceOnUse" patternTransform="skewX(-12)">
-      <path d="M 54 0 L 0 0 0 54" fill="none" stroke="#75a7d8" stroke-opacity="0.15" stroke-width="1"/>
-    </pattern>
-    <filter id="softShadow" x="-30%" y="-40%" width="160%" height="180%">
-      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000814" flood-opacity="0.5"/>
-    </filter>
-    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="6" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <linearGradient id="bar" x1="0" x2="1">
-      <stop offset="0" stop-color="#68f3ff"/>
-      <stop offset="1" stop-color="#2cc8f0"/>
-    </linearGradient>
     <style>
-      .sans{font-family:Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif}
-      .mono{font-family:"SFMono-Regular", "JetBrains Mono", Consolas, monospace}
-      .muted{fill:#9eb0c7}.body{fill:#d8e3f2}.bright{fill:#f7fbff}.cyan{fill:#85edff}.stroke{stroke:#5f83ae;stroke-opacity:.62}
-      .node{fill:#0e1728;stroke:#5c87b7;stroke-opacity:.78}.card{fill:#080f1d;stroke:#6188b6;stroke-opacity:.72}
+      .sans{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif}.mono{font-family:&quot;SFMono-Regular&quot;,&quot;JetBrains Mono&quot;,Consolas,monospace}
+      .bg{fill:#f5f7fa}.ink{fill:#101723}.muted{fill:#5f6b7d}.panel{fill:#ffffff;stroke:#d9dfe9;stroke-width:1.2}.rule{stroke:#e7ebf1;stroke-width:1}.green{fill:#17803d}.green-bg{fill:#e8f5ee}.blue{fill:#245fe8}.blue-bg{fill:#edf3ff}.amber{fill:#9a6400}.amber-bg{fill:#fff4dc}
     </style>
   </defs>
-  <rect width="1280" height="640" fill="url(#bg)"/>
-  <rect width="1280" height="640" fill="url(#auraCyan)"/>
-  <rect width="1280" height="640" fill="url(#auraViolet)"/>
-  <rect width="1280" height="640" fill="url(#grid)" opacity="0.9"/>
-
-  <g opacity="0.74" fill="none" stroke="#4acfff" stroke-width="2">
-    <path d="M752 151 L971 211 L851 360 L1081 431" stroke-opacity="0.35"/>
-    <path d="M752 151 L651 461 L851 360" stroke-opacity="0.43"/>
-  </g>
-  <g class="sans" font-weight="700" font-size="13" text-anchor="middle">
-    <g transform="translate(752 151)"><rect class="node" x="-56" y="-22" width="112" height="44" rx="12"/><circle r="4" fill="#60eaff" filter="url(#glow)"/><text y="5" fill="#cbd9eb">Actions</text></g>
-    <g transform="translate(971 211)"><rect class="node" x="-56" y="-22" width="112" height="44" rx="12"/><circle r="4" fill="#60eaff" filter="url(#glow)"/><text y="5" fill="#cbd9eb">Artifacts</text></g>
-    <g transform="translate(851 360)"><rect class="node" x="-56" y="-22" width="112" height="44" rx="12"/><circle r="4" fill="#60eaff" filter="url(#glow)"/><text y="5" fill="#cbd9eb">Dashboard</text></g>
-    <g transform="translate(1081 431)"><rect class="node" x="-56" y="-22" width="112" height="44" rx="12"/><circle r="4" fill="#60eaff" filter="url(#glow)"/><text y="5" fill="#cbd9eb">Consumer</text></g>
-  </g>
-
+  <rect width="1280" height="640" class="bg"/>
+  <rect x="0" y="0" width="1280" height="12" fill="#101723"/>
   <g class="sans">
-    <rect x="82" y="78" width="254" height="28" rx="14" fill="#071321" stroke="#61e8ff"/>
-    <text x="96" y="97" font-size="13" font-weight="800" letter-spacing="1" fill="#6beeff">CLOUD-FIRST / DETERMINISTIC</text>
-    <text x="80" y="221" font-size="76" font-weight="850" class="bright">Comptextv7</text>
-    <text x="86" y="274" font-size="34" font-weight="800" class="cyan">Industrial AI Token Compression</text>
-    <text x="86" y="323" font-size="25" class="body">Cloud-first validation + deterministic artifacts</text>
-    <text x="86" y="362" font-size="18" class="muted">Synthetic diagnostic logs → compact KVTC-V7 frames → evidence surfaces</text>
+    <text x="76" y="122" font-size="22" font-weight="850" class="muted">COMPTEXTV7</text>
+    <text x="72" y="214" font-size="72" font-weight="900" class="ink">Industrial AI</text>
+    <text x="72" y="292" font-size="72" font-weight="900" class="ink">Token Compression</text>
+    <text x="78" y="346" font-size="26" class="muted">Cloud-first validation with deterministic artifacts.</text>
   </g>
-
-  <g filter="url(#softShadow)" class="sans">
-    <g transform="translate(78 425)">
-      <rect class="card" width="312" height="141" rx="18"/><text x="22" y="31" font-size="16" font-weight="800" fill="#eef5ff">CI Authority</text>
-      <text class="mono" x="22" y="45" font-size="13" fill="#b7c6d9">pytest</text><rect x="18" y="48" width="262" height="8" rx="4" fill="#20324c"/><rect x="18" y="48" width="286" height="8" rx="4" fill="url(#bar)"/>
-      <text class="mono" x="22" y="82" font-size="13" fill="#b7c6d9">replay</text><rect x="18" y="83" width="262" height="8" rx="4" fill="#20324c"/><rect x="18" y="83" width="215" height="8" rx="4" fill="url(#bar)"/>
-    </g>
-    <g transform="translate(418 425)">
-      <rect class="card" width="312" height="141" rx="18"/><text x="22" y="31" font-size="16" font-weight="800" fill="#eef5ff">Artifact Model</text>
-      <text class="mono" x="22" y="45" font-size="13" fill="#b7c6d9">contracts</text><rect x="18" y="48" width="262" height="8" rx="4" fill="#20324c"/><rect x="18" y="48" width="246" height="8" rx="4" fill="url(#bar)"/>
-      <text class="mono" x="22" y="82" font-size="13" fill="#b7c6d9">summary.json</text><rect x="18" y="83" width="262" height="8" rx="4" fill="#20324c"/><rect x="18" y="83" width="190" height="8" rx="4" fill="url(#bar)"/>
-    </g>
-    <g transform="translate(758 425)">
-      <rect class="card" width="312" height="141" rx="18"/><text x="22" y="31" font-size="16" font-weight="800" fill="#eef5ff">Dashboard Layer</text>
-      <text class="mono" x="22" y="45" font-size="13" fill="#b7c6d9">validation</text><rect x="18" y="48" width="262" height="8" rx="4" fill="#20324c"/><rect x="18" y="48" width="260" height="8" rx="4" fill="url(#bar)"/>
-      <text class="mono" x="22" y="82" font-size="13" fill="#b7c6d9">compression</text><rect x="18" y="83" width="262" height="8" rx="4" fill="#20324c"/><rect x="18" y="83" width="224" height="8" rx="4" fill="url(#bar)"/>
+  <g class="sans" transform="translate(730 116)">
+    <rect width="438" height="372" rx="18" class="panel"/>
+    <rect x="0" y="0" width="438" height="54" rx="18" fill="#101723"/>
+    <text x="26" y="35" fill="#ffffff" font-size="17" font-weight="850">Validation evidence</text>
+    <circle cx="388" cy="27" r="6" fill="#3fb950"/>
+    <text x="26" y="92" font-size="13" font-weight="850" class="muted">CURRENT CLOUD RUN</text>
+    <text x="26" y="130" font-size="34" font-weight="900" class="ink">128 / 128 checks</text>
+    <line x1="26" y1="158" x2="412" y2="158" class="rule"/>
+    <g class="mono" font-size="15">
+      <rect x="26" y="184" width="386" height="44" rx="9" class="green-bg"/><text x="48" y="212" class="green" font-weight="850">✓ deterministic replay passed</text>
+      <rect x="26" y="244" width="386" height="44" rx="9" class="blue-bg"/><text x="48" y="272" class="blue" font-weight="850">● CI artifacts published</text>
+      <rect x="26" y="304" width="386" height="44" rx="9" class="amber-bg"/><text x="48" y="332" class="amber" font-weight="850">! local runner is degraded-only</text>
     </g>
   </g>
-  <g class="mono" text-anchor="start">
-    <text x="1120" y="103" font-size="17" font-weight="800" fill="#6eeeff">KVTC-V7</text>
-    <text x="1120" y="128" font-size="14" fill="#99a7bd">artifact rail</text>
+  <g class="sans">
+    <rect x="76" y="438" width="188" height="46" rx="23" fill="#101723"/><text x="100" y="468" fill="#ffffff" font-size="15" font-weight="850">KVTC-V7 FRAMES</text>
+    <rect x="286" y="438" width="224" height="46" rx="23" fill="#ffffff" stroke="#d9dfe9"/><text x="312" y="468" class="ink" font-size="15" font-weight="850">FORENSIC REPLAY</text>
+    <rect x="532" y="438" width="138" height="46" rx="23" fill="#ffffff" stroke="#d9dfe9"/><text x="558" y="468" class="ink" font-size="15" font-weight="850">CI PROOF</text>
   </g>
+  <text x="76" y="566" class="mono" font-size="16" fill="#6b7586">Synthetic diagnostic logs → compact validated evidence surfaces</text>
 </svg>
