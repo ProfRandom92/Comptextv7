@@ -118,6 +118,14 @@ Release readiness is generated from synthetic/static project health artifacts. I
 | Agent workflow | [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) |
 | Cross-repo promotion checklist | [`docs/CROSS_REPO_RELEASE_CHECKLIST.md`](docs/CROSS_REPO_RELEASE_CHECKLIST.md) |
 
+## Showcase readiness
+
+For reviewer/demo readiness, start with the documentation-only, cloud-first showcase pack:
+
+- [`docs/SHOWCASE_READINESS.md`](docs/SHOWCASE_READINESS.md) — executive overview, validation/CI model, CFI artifact flow, enterprise-readiness boundaries, limits, and next steps.
+- [`docs/DEMO_WALKTHROUGH.md`](docs/DEMO_WALKTHROUGH.md) — no-local-execution reviewer path and demo script.
+- [`docs/BENCHMARK_EXPLANATION.md`](docs/BENCHMARK_EXPLANATION.md) — conservative guidance for token-reduction and benchmark interpretation.
+
 ## Repository map
 
 ```text
