@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Comptextv7 dashboard preview</title>
+  <desc id="desc">Synthetic dark enterprise operations dashboard with benchmark tables, artifact summaries, and validation states.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#071827"/><stop offset=".52" stop-color="#090f20"/><stop offset="1" stop-color="#180b30"/></linearGradient>
+    <radialGradient id="cyan" cx="10%" cy="0" r="80%"><stop offset="0" stop-color="#1ad8ff" stop-opacity=".2"/><stop offset="1" stop-color="#1ad8ff" stop-opacity="0"/></radialGradient>
+    <pattern id="grid" width="58" height="58" patternUnits="userSpaceOnUse" patternTransform="skewX(-10)"><path d="M58 0H0V58" fill="none" stroke="#75a7d8" stroke-opacity=".14"/></pattern>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#000814" flood-opacity=".55"/></filter>
+    <linearGradient id="bar" x1="0" x2="1"><stop offset="0" stop-color="#78f1ff"/><stop offset="1" stop-color="#5be0f0"/></linearGradient>
+    <style>.sans{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.mono{font-family:"SFMono-Regular","JetBrains Mono",Consolas,monospace}.panel{fill:#070e1c;stroke:#5f83ae;stroke-opacity:.75}.card{fill:#0b1323;stroke:#6188b6;stroke-opacity:.76}.muted{fill:#9dafc7}.text{fill:#edf5ff}.cyan{fill:#80efff}.ok{fill:#57e5a6}.warn{fill:#ffc46a}</style>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/><rect width="1600" height="900" fill="url(#cyan)"/><rect width="1600" height="900" fill="url(#grid)"/>
+  <g filter="url(#shadow)" class="sans">
+    <rect x="58" y="54" width="1484" height="792" rx="28" class="panel"/>
+    <path d="M86 54h1428a28 28 0 0 1 28 28v36H58V82a28 28 0 0 1 28-28Z" fill="#0b1323" stroke="#5f83ae" stroke-opacity=".7"/>
+    <text x="92" y="104" font-size="27" font-weight="850" class="text">Comptextv7 Operations Console</text>
+    <text x="1320" y="97" font-size="15" font-weight="800" fill="#8cf7ff">synthetic preview</text>
+    <g font-size="14" font-weight="800" letter-spacing=".6">
+      <rect x="92" y="145" width="84" height="29" rx="15" fill="#071a18" stroke="#42e69b"/><text x="108" y="164" class="ok">CI PASS</text>
+      <rect x="256" y="145" width="143" height="29" rx="15" fill="#071a22" stroke="#68eaff"/><text x="272" y="164" class="cyan">CONTRACTS OK</text>
+      <rect x="420" y="145" width="162" height="29" rx="15" fill="#201611" stroke="#ffc46a"/><text x="435" y="164" class="warn">LOCAL DEGRADED</text>
+    </g>
+    <g>
+      <g transform="translate(92 190)"><rect width="326" height="140" rx="18" class="card"/><text x="24" y="40" font-size="16" font-weight="800" class="muted">Token reduction</text><text x="24" y="92" font-size="42" font-weight="850" class="text">72.4%</text><text x="24" y="119" font-size="15" class="muted">conservative synthetic median</text></g>
+      <g transform="translate(450 190)"><rect width="326" height="140" rx="18" class="card"/><text x="24" y="40" font-size="16" font-weight="800" class="muted">Replay stability</text><text x="24" y="92" font-size="42" font-weight="850" class="text">100%</text><text x="24" y="119" font-size="15" class="muted">deterministic fixture pass</text></g>
+      <g transform="translate(808 190)"><rect width="326" height="140" rx="18" class="card"/><text x="24" y="40" font-size="16" font-weight="800" class="muted">Artifact freshness</text><text x="24" y="92" font-size="42" font-weight="850" class="text">cloud</text><text x="24" y="119" font-size="15" class="muted">GitHub Actions authority</text></g>
+      <g transform="translate(1166 190)"><rect width="326" height="140" rx="18" class="card"/><text x="24" y="40" font-size="16" font-weight="800" class="muted">Schema coverage</text><text x="24" y="92" font-size="42" font-weight="850" class="text">5/5</text><text x="24" y="119" font-size="15" class="muted">contract surfaces valid</text></g>
+    </g>
+    <g transform="translate(92 365)"><rect width="780" height="439" rx="18" class="card"/><text x="22" y="33" font-size="17" font-weight="850" class="text">Benchmark replay summary</text>
+      <g class="mono" font-size="12" font-weight="800" fill="#83f3ff"><text x="34" y="63">SURFACE</text><text x="268" y="63">STATUS</text><text x="446" y="63">COMPRESSION</text><text x="628" y="63">EVIDENCE</text></g>
+      <g font-size="16"><g transform="translate(24 78)"><rect width="724" height="44" rx="10" fill="#0d1729" stroke="#45658f"/><text x="10" y="28" class="text">golden replay</text><text x="244" y="28" class="ok" font-weight="800">pass</text><text x="422" y="28" class="text">74.1%</text><text x="604" y="28" class="text">replay_summary.json</text></g>
+      <g transform="translate(24 140)"><rect width="724" height="44" rx="10" fill="#0a1324" stroke="#45658f"/><text x="10" y="28" class="text">forensic audit</text><text x="244" y="28" class="ok" font-weight="800">pass</text><text x="422" y="28" class="text">68.7%</text><text x="604" y="28" class="text">FORENSIC_AUDIT.md</text></g>
+      <g transform="translate(24 202)"><rect width="724" height="44" rx="10" fill="#0d1729" stroke="#45658f"/><text x="10" y="28" class="text">dashboard smoke</text><text x="244" y="28" class="ok" font-weight="800">pass</text><text x="422" y="28" class="text">n/a</text><text x="604" y="28" class="text">dashboard health</text></g>
+      <g transform="translate(24 264)"><rect width="724" height="44" rx="10" fill="#0a1324" stroke="#45658f"/><text x="10" y="28" class="text">contract export</text><text x="244" y="28" class="ok" font-weight="800">pass</text><text x="422" y="28" class="text">n/a</text><text x="604" y="28" class="text">schema validation</text></g>
+      <g transform="translate(24 326)"><rect width="724" height="44" rx="10" fill="#0d1729" stroke="#45658f"/><text x="10" y="28" class="text">local runner</text><text x="244" y="28" class="warn" font-weight="800">degraded</text><text x="422" y="28" class="text">n/a</text><text x="604" y="28" class="text">cloud handoff</text></g></g>
+      <polyline points="34,373 148,351 262,359 376,335 490,317 604,305 718,289" fill="none" stroke="#66e8ff" stroke-width="4"/><text x="34" y="412" font-size="14" class="muted">compression trend across synthetic benchmark suites</text>
+    </g>
+    <g transform="translate(908 365)"><rect width="600" height="205" rx="18" class="card"/><text x="22" y="33" font-size="17" font-weight="850" class="text">Artifact rail</text>
+      <g class="mono" font-size="15"><g transform="translate(32 35)"><rect width="536" height="46" rx="12" fill="#0d1729" stroke="#45658f"/><text x="26" y="30" class="text">hash-chilli-cloud-ci-result.json</text><text x="398" y="30" class="ok" font-weight="800">validated</text></g><g transform="translate(32 81)"><rect width="536" height="46" rx="12" fill="#0d1729" stroke="#45658f"/><text x="26" y="30" class="text">benchmark-summary.schema.json</text><text x="398" y="30" class="ok" font-weight="800">validated</text></g><g transform="translate(32 127)"><rect width="536" height="46" rx="12" fill="#0d1729" stroke="#45658f"/><text x="26" y="30" class="text">dashboard-health-summary.json</text><text x="398" y="30" class="ok" font-weight="800">published</text></g></g>
+    </g>
+    <g transform="translate(908 600)"><rect width="600" height="204" rx="18" class="card"/><text x="22" y="33" font-size="17" font-weight="850" class="text">Validation states</text>
+      <g font-size="16" font-weight="800"><text x="38" y="60" class="text">pytest</text><rect x="212" y="50" width="338" height="15" rx="8" fill="#20324c"/><rect x="212" y="50" width="324" height="15" rx="8" fill="#57e5a6"/><text x="566" y="62" class="muted">96%</text>
+      <text x="38" y="102" class="text">determinism</text><rect x="212" y="92" width="338" height="15" rx="8" fill="#20324c"/><rect x="212" y="92" width="338" height="15" rx="8" fill="url(#bar)"/><text x="566" y="104" class="muted">100%</text>
+      <text x="38" y="144" class="text">contracts</text><rect x="212" y="134" width="338" height="15" rx="8" fill="#20324c"/><rect x="212" y="134" width="297" height="15" rx="8" fill="url(#bar)"/><text x="566" y="146" class="muted">88%</text>
+      <text x="38" y="186" class="text">local handoff</text><rect x="212" y="176" width="338" height="15" rx="8" fill="#20324c"/><rect x="212" y="176" width="142" height="15" rx="8" fill="#ffc46a"/><text x="566" y="188" class="muted">42%</text></g>
+    </g>
+  </g>
+</svg>
