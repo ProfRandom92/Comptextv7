@@ -115,25 +115,20 @@ The local fallback response should use this shape:
 
 ## CI result contract
 
-Cloud/GitHub CI should publish enough metadata for the local UI and manifest to
-render validation state without running local checks:
+Cloud/GitHub CI publishes authoritative result metadata for the local UI and
+manifest through the CFI-01 contract in
+[`cloud-ci-result-contract.md`](cloud-ci-result-contract.md) and the
+machine-readable schema at
+`contracts/hash-chilli-cloud-ci-result.schema.json`. The local UI consumes this
+payload as display state only; it must not run local validation, retries, builds,
+tests, formatters, cleanup, reset, generated-output updates, or process-isolated
+tasks to interpret a CI result.
 
-```json
-{
-  "runner": "validation_runner",
-  "execution_target": "cloud_ci",
-  "provider": "github_actions",
-  "workflow": "hash-companion-validation",
-  "status": "queued|in_progress|passed|failed|cancelled|degraded",
-  "commit_sha": "<sha>",
-  "branch": "<branch>",
-  "run_url": "<url>",
-  "artifact_url": "<url>",
-  "requested_at": "<iso-8601>",
-  "completed_at": "<iso-8601|null>",
-  "summary": "<short result summary>"
-}
-```
+The CFI-01 field set is deterministic and compact: `contract`,
+`contract_version`, `result_id`, optional `request_id`, `runner`,
+`execution_target`, `provider`, `workflow`, `status`, `commit_sha`, `branch`,
+`run_url`, `artifact_url`, `requested_at`, `completed_at`, `summary`, and
+`local_execution`.
 
 ## Re-enable criteria for local execution
 
