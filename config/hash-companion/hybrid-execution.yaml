@@ -1,0 +1,67 @@
+# Hash/chilli hybrid execution configuration.
+# This file is documentation/config only; it does not enable local execution.
+version: 1
+model: hybrid
+status: degraded_local_runner
+
+local:
+  chilli_hatch_pet_ui:
+    enabled: true
+    responsibility: status_and_request_ui
+  hash_companion_manifest:
+    location: local
+    responsibility: capability_status_and_request_metadata
+  hash_companion_runner:
+    responsibility: status_request_layer_only
+    execution_enabled: false
+    fallback_behavior: report_degraded_status_only
+  hard_stop_conditions:
+    - code: windows_create_process_as_user_access_denied
+      message: "CreateProcessAsUserW failed: 5"
+      effect: disable_local_execution
+      retry_locally: false
+
+validation_runner:
+  default_execution_target: cloud_ci
+  local_fallback:
+    mode: degraded
+    status_only: true
+    execute: false
+    retry_locally: false
+    reason: "CreateProcessAsUserW failed: 5"
+    message: "Local validation is disabled; use Cloud/GitHub CI for authoritative validation."
+
+cloud_ci:
+  provider: github_actions
+  authoritative: true
+  responsibilities:
+    - validation_runner
+    - tests
+    - builds
+    - companion_checks
+    - sandboxed_process_tasks
+  publish_result_fields:
+    - runner
+    - execution_target
+    - provider
+    - workflow
+    - status
+    - commit_sha
+    - branch
+    - run_url
+    - artifact_url
+    - requested_at
+    - completed_at
+    - summary
+
+prohibited_local_actions:
+  - validation
+  - execution_retries
+  - builds
+  - tests
+  - formatters
+  - cleanup
+  - reset
+  - generated_output_mutation
+  - chilli_pet_asset_mutation
+  - comptextv7_source_behavior_mutation
