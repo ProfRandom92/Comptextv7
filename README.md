@@ -57,13 +57,19 @@ Comptextv7 does **not** claim production Daimler integration, certification, fle
 
 ---
 
-## Showcase
+## Showcase Preview
 
-> **Screenshot placeholder**
->
-> Add the current Vercel showcase screenshot here when the UI settles:
->
-> `docs/assets/showcase-home.png`
+Premium static showcase assets are included for GitHub social preview, README review, and OpenGraph-ready demo surfaces.
+
+![Comptextv7 social preview](showcase/assets/social-preview.svg)
+
+| Dashboard preview | Architecture preview |
+| --- | --- |
+| ![Comptextv7 dashboard preview](showcase/assets/dashboard-preview.svg) | ![Comptextv7 architecture preview](showcase/assets/architecture-preview.svg) |
+
+---
+
+## Showcase
 
 | Reviewer path | Link |
 | --- | --- |
