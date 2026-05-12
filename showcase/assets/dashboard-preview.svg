@@ -1,48 +1,119 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
   <title id="title">Comptextv7 dashboard preview</title>
-  <desc id="desc">Synthetic dark enterprise operations dashboard with benchmark tables, artifact summaries, and validation states.</desc>
+  <desc id="desc">Realistic enterprise operations console showing cloud-first CI authority, deterministic artifact validation, replay traces, compression comparisons, and forensic audit indicators.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#071827"/><stop offset=".52" stop-color="#090f20"/><stop offset="1" stop-color="#180b30"/></linearGradient>
-    <radialGradient id="cyan" cx="10%" cy="0" r="80%"><stop offset="0" stop-color="#1ad8ff" stop-opacity=".2"/><stop offset="1" stop-color="#1ad8ff" stop-opacity="0"/></radialGradient>
-    <pattern id="grid" width="58" height="58" patternUnits="userSpaceOnUse" patternTransform="skewX(-10)"><path d="M58 0H0V58" fill="none" stroke="#75a7d8" stroke-opacity=".14"/></pattern>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#000814" flood-opacity=".55"/></filter>
-    <linearGradient id="bar" x1="0" x2="1"><stop offset="0" stop-color="#78f1ff"/><stop offset="1" stop-color="#5be0f0"/></linearGradient>
-    <style>.sans{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.mono{font-family:"SFMono-Regular","JetBrains Mono",Consolas,monospace}.panel{fill:#070e1c;stroke:#5f83ae;stroke-opacity:.75}.card{fill:#0b1323;stroke:#6188b6;stroke-opacity:.76}.muted{fill:#9dafc7}.text{fill:#edf5ff}.cyan{fill:#80efff}.ok{fill:#57e5a6}.warn{fill:#ffc46a}</style>
+    <style>
+      .sans{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif}
+      .mono{font-family:&quot;SFMono-Regular&quot;,&quot;JetBrains Mono&quot;,Consolas,monospace}
+      .bg{fill:#f5f7fa}.panel{fill:#ffffff;stroke:#d8dee8;stroke-width:1.2}.panel-soft{fill:#fbfcfe;stroke:#d8dee8;stroke-width:1.2}
+      .ink{fill:#17202e}.muted{fill:#647084}.subtle{fill:#8a94a6}.line{stroke:#d8dee8;stroke-width:1}.rule{stroke:#e8ecf2;stroke-width:1}
+      .green{fill:#17803d}.green-bg{fill:#e8f5ee}.amber{fill:#a86408}.amber-bg{fill:#fff5df}.red{fill:#b42318}.red-bg{fill:#feeceb}.blue{fill:#235ee8}.blue-bg{fill:#edf3ff}
+      .chip{font-size:13px;font-weight:750;letter-spacing:.3px}.h1{font-size:34px;font-weight:850}.h2{font-size:17px;font-weight:800}.small{font-size:13px}.micro{font-size:11px;letter-spacing:.45px}.mono12{font-size:12px}.mono13{font-size:13px}
+    </style>
   </defs>
-  <rect width="1600" height="900" fill="url(#bg)"/><rect width="1600" height="900" fill="url(#cyan)"/><rect width="1600" height="900" fill="url(#grid)"/>
-  <g filter="url(#shadow)" class="sans">
-    <rect x="58" y="54" width="1484" height="792" rx="28" class="panel"/>
-    <path d="M86 54h1428a28 28 0 0 1 28 28v36H58V82a28 28 0 0 1 28-28Z" fill="#0b1323" stroke="#5f83ae" stroke-opacity=".7"/>
-    <text x="92" y="104" font-size="27" font-weight="850" class="text">Comptextv7 Operations Console</text>
-    <text x="1320" y="97" font-size="15" font-weight="800" fill="#8cf7ff">synthetic preview</text>
-    <g font-size="14" font-weight="800" letter-spacing=".6">
-      <rect x="92" y="145" width="84" height="29" rx="15" fill="#071a18" stroke="#42e69b"/><text x="108" y="164" class="ok">CI PASS</text>
-      <rect x="256" y="145" width="143" height="29" rx="15" fill="#071a22" stroke="#68eaff"/><text x="272" y="164" class="cyan">CONTRACTS OK</text>
-      <rect x="420" y="145" width="162" height="29" rx="15" fill="#201611" stroke="#ffc46a"/><text x="435" y="164" class="warn">LOCAL DEGRADED</text>
+  <rect width="1600" height="900" class="bg"/>
+  <rect x="0" y="0" width="1600" height="64" fill="#101723"/>
+  <g class="sans">
+    <text x="42" y="40" fill="#ffffff" font-size="20" font-weight="850">Comptextv7</text>
+    <text x="166" y="40" fill="#aeb7c7" font-size="14">Cloud validation operations</text>
+    <rect x="1260" y="18" width="132" height="28" rx="14" fill="#1c2736" stroke="#344258"/>
+    <circle cx="1280" cy="32" r="5" fill="#3fb950"/>
+    <text x="1294" y="37" fill="#dfe6f3" font-size="12" font-weight="750">CI AUTHORITY</text>
+    <rect x="1410" y="18" width="144" height="28" rx="14" fill="#1c2736" stroke="#344258"/>
+    <text x="1427" y="37" fill="#dfe6f3" font-size="12" font-weight="750">RUN 2026.05.12</text>
+  </g>
+  <g class="sans">
+    <rect x="28" y="88" width="1544" height="92" rx="14" class="panel"/>
+    <text x="58" y="129" class="ink h1">Deterministic artifact validation console</text>
+    <text x="58" y="158" class="muted" font-size="16">Synthetic diagnostic logs are compressed into KVTC-V7 frames, replayed, validated, and published as cloud-first CI evidence.</text>
+    <g transform="translate(1040 112)">
+      <rect width="150" height="44" rx="10" class="green-bg"/><text x="18" y="18" class="micro green" font-weight="850">VALIDATED</text><text x="18" y="35" class="mono mono13 ink">128/128</text>
     </g>
-    <g>
-      <g transform="translate(92 190)"><rect width="326" height="140" rx="18" class="card"/><text x="24" y="40" font-size="16" font-weight="800" class="muted">Token reduction</text><text x="24" y="92" font-size="42" font-weight="850" class="text">72.4%</text><text x="24" y="119" font-size="15" class="muted">conservative synthetic median</text></g>
-      <g transform="translate(450 190)"><rect width="326" height="140" rx="18" class="card"/><text x="24" y="40" font-size="16" font-weight="800" class="muted">Replay stability</text><text x="24" y="92" font-size="42" font-weight="850" class="text">100%</text><text x="24" y="119" font-size="15" class="muted">deterministic fixture pass</text></g>
-      <g transform="translate(808 190)"><rect width="326" height="140" rx="18" class="card"/><text x="24" y="40" font-size="16" font-weight="800" class="muted">Artifact freshness</text><text x="24" y="92" font-size="42" font-weight="850" class="text">cloud</text><text x="24" y="119" font-size="15" class="muted">GitHub Actions authority</text></g>
-      <g transform="translate(1166 190)"><rect width="326" height="140" rx="18" class="card"/><text x="24" y="40" font-size="16" font-weight="800" class="muted">Schema coverage</text><text x="24" y="92" font-size="42" font-weight="850" class="text">5/5</text><text x="24" y="119" font-size="15" class="muted">contract surfaces valid</text></g>
+    <g transform="translate(1210 112)">
+      <rect width="150" height="44" rx="10" class="blue-bg"/><text x="18" y="18" class="micro blue" font-weight="850">ARTIFACTS</text><text x="18" y="35" class="mono mono13 ink">summary.json</text>
     </g>
-    <g transform="translate(92 365)"><rect width="780" height="439" rx="18" class="card"/><text x="22" y="33" font-size="17" font-weight="850" class="text">Benchmark replay summary</text>
-      <g class="mono" font-size="12" font-weight="800" fill="#83f3ff"><text x="34" y="63">SURFACE</text><text x="268" y="63">STATUS</text><text x="446" y="63">COMPRESSION</text><text x="628" y="63">EVIDENCE</text></g>
-      <g font-size="16"><g transform="translate(24 78)"><rect width="724" height="44" rx="10" fill="#0d1729" stroke="#45658f"/><text x="10" y="28" class="text">golden replay</text><text x="244" y="28" class="ok" font-weight="800">pass</text><text x="422" y="28" class="text">74.1%</text><text x="604" y="28" class="text">replay_summary.json</text></g>
-      <g transform="translate(24 140)"><rect width="724" height="44" rx="10" fill="#0a1324" stroke="#45658f"/><text x="10" y="28" class="text">forensic audit</text><text x="244" y="28" class="ok" font-weight="800">pass</text><text x="422" y="28" class="text">68.7%</text><text x="604" y="28" class="text">FORENSIC_AUDIT.md</text></g>
-      <g transform="translate(24 202)"><rect width="724" height="44" rx="10" fill="#0d1729" stroke="#45658f"/><text x="10" y="28" class="text">dashboard smoke</text><text x="244" y="28" class="ok" font-weight="800">pass</text><text x="422" y="28" class="text">n/a</text><text x="604" y="28" class="text">dashboard health</text></g>
-      <g transform="translate(24 264)"><rect width="724" height="44" rx="10" fill="#0a1324" stroke="#45658f"/><text x="10" y="28" class="text">contract export</text><text x="244" y="28" class="ok" font-weight="800">pass</text><text x="422" y="28" class="text">n/a</text><text x="604" y="28" class="text">schema validation</text></g>
-      <g transform="translate(24 326)"><rect width="724" height="44" rx="10" fill="#0d1729" stroke="#45658f"/><text x="10" y="28" class="text">local runner</text><text x="244" y="28" class="warn" font-weight="800">degraded</text><text x="422" y="28" class="text">n/a</text><text x="604" y="28" class="text">cloud handoff</text></g></g>
-      <polyline points="34,373 148,351 262,359 376,335 490,317 604,305 718,289" fill="none" stroke="#66e8ff" stroke-width="4"/><text x="34" y="412" font-size="14" class="muted">compression trend across synthetic benchmark suites</text>
+    <g transform="translate(1380 112)">
+      <rect width="150" height="44" rx="10" class="amber-bg"/><text x="18" y="18" class="micro amber" font-weight="850">LOCAL</text><text x="18" y="35" class="mono mono13 ink">degraded only</text>
     </g>
-    <g transform="translate(908 365)"><rect width="600" height="205" rx="18" class="card"/><text x="22" y="33" font-size="17" font-weight="850" class="text">Artifact rail</text>
-      <g class="mono" font-size="15"><g transform="translate(32 35)"><rect width="536" height="46" rx="12" fill="#0d1729" stroke="#45658f"/><text x="26" y="30" class="text">hash-chilli-cloud-ci-result.json</text><text x="398" y="30" class="ok" font-weight="800">validated</text></g><g transform="translate(32 81)"><rect width="536" height="46" rx="12" fill="#0d1729" stroke="#45658f"/><text x="26" y="30" class="text">benchmark-summary.schema.json</text><text x="398" y="30" class="ok" font-weight="800">validated</text></g><g transform="translate(32 127)"><rect width="536" height="46" rx="12" fill="#0d1729" stroke="#45658f"/><text x="26" y="30" class="text">dashboard-health-summary.json</text><text x="398" y="30" class="ok" font-weight="800">published</text></g></g>
+  </g>
+  <g class="sans">
+    <rect x="28" y="206" width="1018" height="312" rx="14" class="panel"/>
+    <text x="58" y="244" class="h2 ink">Workflow timeline</text>
+    <text x="58" y="269" class="small muted">GitHub Actions remains the authoritative execution environment.</text>
+    <line x1="92" y1="330" x2="988" y2="330" stroke="#d4dbe7" stroke-width="2"/>
+    <g transform="translate(92 305)">
+      <circle cx="0" cy="25" r="12" fill="#17803d"/><text x="0" y="30" text-anchor="middle" fill="#fff" font-size="12" font-weight="900">1</text>
+      <text x="-12" y="67" class="mono mono12 ink">checkout</text><text x="-12" y="88" class="small muted">source + fixtures</text>
     </g>
-    <g transform="translate(908 600)"><rect width="600" height="204" rx="18" class="card"/><text x="22" y="33" font-size="17" font-weight="850" class="text">Validation states</text>
-      <g font-size="16" font-weight="800"><text x="38" y="60" class="text">pytest</text><rect x="212" y="50" width="338" height="15" rx="8" fill="#20324c"/><rect x="212" y="50" width="324" height="15" rx="8" fill="#57e5a6"/><text x="566" y="62" class="muted">96%</text>
-      <text x="38" y="102" class="text">determinism</text><rect x="212" y="92" width="338" height="15" rx="8" fill="#20324c"/><rect x="212" y="92" width="338" height="15" rx="8" fill="url(#bar)"/><text x="566" y="104" class="muted">100%</text>
-      <text x="38" y="144" class="text">contracts</text><rect x="212" y="134" width="338" height="15" rx="8" fill="#20324c"/><rect x="212" y="134" width="297" height="15" rx="8" fill="url(#bar)"/><text x="566" y="146" class="muted">88%</text>
-      <text x="38" y="186" class="text">local handoff</text><rect x="212" y="176" width="338" height="15" rx="8" fill="#20324c"/><rect x="212" y="176" width="142" height="15" rx="8" fill="#ffc46a"/><text x="566" y="188" class="muted">42%</text></g>
+    <g transform="translate(242 305)">
+      <circle cx="0" cy="25" r="12" fill="#17803d"/><text x="0" y="30" text-anchor="middle" fill="#fff" font-size="12" font-weight="900">2</text>
+      <text x="-28" y="67" class="mono mono12 ink">parse logs</text><text x="-28" y="88" class="small muted">diagnostic corpus</text>
+    </g>
+    <g transform="translate(402 305)">
+      <circle cx="0" cy="25" r="12" fill="#17803d"/><text x="0" y="30" text-anchor="middle" fill="#fff" font-size="12" font-weight="900">3</text>
+      <text x="-28" y="67" class="mono mono12 ink">build frames</text><text x="-28" y="88" class="small muted">KVTC-V7 payloads</text>
+    </g>
+    <g transform="translate(572 305)">
+      <circle cx="0" cy="25" r="12" fill="#17803d"/><text x="0" y="30" text-anchor="middle" fill="#fff" font-size="12" font-weight="900">4</text>
+      <text x="-30" y="67" class="mono mono12 ink">replay</text><text x="-30" y="88" class="small muted">deterministic trace</text>
+    </g>
+    <g transform="translate(732 305)">
+      <circle cx="0" cy="25" r="12" fill="#17803d"/><text x="0" y="30" text-anchor="middle" fill="#fff" font-size="12" font-weight="900">5</text>
+      <text x="-38" y="67" class="mono mono12 ink">contract checks</text><text x="-38" y="88" class="small muted">schema + hashes</text>
+    </g>
+    <g transform="translate(902 305)">
+      <circle cx="0" cy="25" r="12" fill="#17803d"/><text x="0" y="30" text-anchor="middle" fill="#fff" font-size="12" font-weight="900">6</text>
+      <text x="-32" y="67" class="mono mono12 ink">publish</text><text x="-32" y="88" class="small muted">CI artifacts</text>
+    </g>
+    <rect x="58" y="438" width="958" height="52" rx="10" fill="#fbfcfe" stroke="#e1e6ef"/>
+    <text x="78" y="469" class="mono mono13 ink">run_id=ci-7429 · sha=8f41c2d · seed=locked · output=deterministic · generated_at=2026-05-12T00:00:00Z</text>
+  </g>
+  <g class="sans">
+    <rect x="1070" y="206" width="502" height="312" rx="14" class="panel"/>
+    <text x="1100" y="244" class="h2 ink">Artifact validation states</text>
+    <line x1="1100" y1="276" x2="1542" y2="276" class="line"/>
+    <g class="mono mono13">
+      <text x="1100" y="310" class="muted">artifact</text><text x="1325" y="310" class="muted">state</text><text x="1446" y="310" class="muted">hash</text>
+      <line x1="1100" y1="328" x2="1542" y2="328" class="rule"/>
+      <text x="1100" y="361" class="ink">summary.json</text><rect x="1320" y="342" width="78" height="26" rx="13" class="green-bg"/><text x="1337" y="360" class="green" font-weight="800">PASS</text><text x="1446" y="361" class="ink">sha256</text>
+      <text x="1100" y="408" class="ink">replay.trace</text><rect x="1320" y="389" width="78" height="26" rx="13" class="green-bg"/><text x="1337" y="407" class="green" font-weight="800">PASS</text><text x="1446" y="408" class="ink">sha256</text>
+      <text x="1100" y="455" class="ink">kvtc-v7.cfi</text><rect x="1320" y="436" width="78" height="26" rx="13" class="green-bg"/><text x="1337" y="454" class="green" font-weight="800">PASS</text><text x="1446" y="455" class="ink">sha256</text>
+      <text x="1100" y="496" class="subtle">All evidence uploaded by cloud workflow; local execution is advisory.</text>
+    </g>
+  </g>
+  <g class="sans">
+    <rect x="28" y="544" width="502" height="298" rx="14" class="panel"/>
+    <text x="58" y="582" class="h2 ink">Replay trace summary</text>
+    <g class="mono mono13">
+      <text x="58" y="627" class="muted">trace window</text><text x="250" y="627" class="ink">00:00:42.184</text>
+      <line x1="58" y1="648" x2="500" y2="648" class="rule"/>
+      <text x="58" y="682" class="muted">frames replayed</text><text x="250" y="682" class="ink">4,096</text>
+      <text x="58" y="722" class="muted">mismatches</text><text x="250" y="722" class="green" font-weight="850">0</text>
+      <text x="58" y="762" class="muted">determinism seed</text><text x="250" y="762" class="ink">locked</text>
+      <text x="58" y="802" class="muted">forensic notes</text><text x="250" y="802" class="ink">chain intact</text>
+    </g>
+  </g>
+  <g class="sans">
+    <rect x="554" y="544" width="568" height="298" rx="14" class="panel"/>
+    <text x="584" y="582" class="h2 ink">Compression comparison</text>
+    <g class="mono mono13">
+      <text x="584" y="626" class="muted">source</text><text x="782" y="626" class="muted">raw tokens</text><text x="934" y="626" class="muted">KVTC-V7</text><text x="1042" y="626" class="muted">ratio</text>
+      <line x1="584" y1="646" x2="1092" y2="646" class="rule"/>
+      <text x="584" y="681" class="ink">kernel diagnostics</text><text x="800" y="681" class="ink">18,420</text><text x="948" y="681" class="ink">6,214</text><text x="1042" y="681" class="green" font-weight="850">2.96x</text>
+      <text x="584" y="726" class="ink">service incident</text><text x="800" y="726" class="ink">11,008</text><text x="948" y="726" class="ink">3,902</text><text x="1042" y="726" class="green" font-weight="850">2.82x</text>
+      <text x="584" y="771" class="ink">network replay</text><text x="800" y="771" class="ink">26,771</text><text x="948" y="771" class="ink">8,931</text><text x="1042" y="771" class="green" font-weight="850">3.00x</text>
+      <line x1="584" y1="796" x2="1092" y2="796" class="rule"/>
+      <text x="584" y="824" class="muted">validated deterministic mean</text><text x="1042" y="824" class="ink" font-weight="850">2.93x</text>
+    </g>
+  </g>
+  <g class="sans">
+    <rect x="1146" y="544" width="426" height="298" rx="14" class="panel"/>
+    <text x="1176" y="582" class="h2 ink">Forensic audit indicators</text>
+    <g class="mono mono13">
+      <rect x="1176" y="612" width="356" height="42" rx="9" class="green-bg"/><text x="1196" y="638" class="green" font-weight="850">✓ chain-of-custody hashes verified</text>
+      <rect x="1176" y="670" width="356" height="42" rx="9" class="green-bg"/><text x="1196" y="696" class="green" font-weight="850">✓ replay output byte-stable</text>
+      <rect x="1176" y="728" width="356" height="42" rx="9" class="blue-bg"/><text x="1196" y="754" class="blue" font-weight="850">● evidence published to CI artifacts</text>
+      <rect x="1176" y="786" width="356" height="42" rx="9" class="amber-bg"/><text x="1196" y="812" class="amber" font-weight="850">! local runner marked degraded</text>
     </g>
   </g>
 </svg>
