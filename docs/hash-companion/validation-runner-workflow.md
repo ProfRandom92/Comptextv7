@@ -29,8 +29,11 @@ The single `validation-runner` job runs on `ubuntu-latest` and performs only
 cloud-hosted work:
 
 1. Captures a UTC request timestamp.
-2. Checks out the requested commit or pull request head SHA.
-3. Sets up Python 3.11 and installs test dependencies in the GitHub runner.
+2. Checks out the requested commit or pull request head SHA, including the pull
+   request head repository for forked pull requests.
+3. Sets up Python 3.11 and installs test dependencies in the GitHub runner with
+   `python -m pip install -e ".[test]"`; `pyproject.toml` defines the `test`
+   optional dependency group used by the existing CI workflow.
 4. Runs the existing validation suite in GitHub Actions:
    - `python -m pytest`
    - `python scripts/validate.py replay`
@@ -48,7 +51,9 @@ cloud-hosted work:
 
 Validation steps use `continue-on-error` so the CFI-01 summary artifact is still
 written and uploaded for failing runs whenever GitHub Actions reaches the summary
-steps. The final enforcement step preserves normal CI pass/fail semantics.
+steps. The final enforcement step preserves normal CI pass/fail semantics. The
+job also has a bounded timeout so a hung cloud runner cannot block the workflow
+indefinitely.
 
 ## Artifact contract
 
@@ -66,7 +71,7 @@ The payload uses the schema in
 | `contract` | Constant `hash_chilli_cloud_ci_result`. |
 | `contract_version` | Constant `1`. |
 | `result_id` | `gha:<github.run_id>:<github.run_attempt>`. |
-| `request_id` | Optional `workflow_dispatch` input, otherwise `null`. |
+| `request_id` | Optional `workflow_dispatch` input when it matches the CFI-01 identifier pattern, otherwise `null`. |
 | `runner` | Constant `validation_runner`. |
 | `execution_target` | Constant `cloud_ci`. |
 | `provider` | Constant `github_actions`. |

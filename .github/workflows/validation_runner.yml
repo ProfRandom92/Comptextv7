@@ -19,6 +19,7 @@ jobs:
   validation-runner:
     name: validation_runner cloud validation
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       CFI_RESULT_PATH: reports/hash-chilli-cloud-ci-result.json
       CFI_SCHEMA_PATH: contracts/hash-chilli-cloud-ci-result.schema.json
@@ -39,6 +40,7 @@ jobs:
         uses: actions/checkout@v4
         continue-on-error: true
         with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Python 3.11
@@ -108,6 +110,7 @@ jobs:
           python - <<'PY'
           import json
           import os
+          import re
           from datetime import datetime, timezone
           from pathlib import Path
 
@@ -133,11 +136,14 @@ jobs:
               failed = ", ".join(name for name, value in required_outcomes.items() if value != "success")
               summary = f"Cloud CI validation failed or skipped: {failed}."[:240]
 
+          raw_request_id = os.environ.get("CFI_REQUEST_ID") or ""
+          request_id = raw_request_id if re.fullmatch(r"[A-Za-z0-9._:-]{1,96}", raw_request_id) else None
+
           payload = {
               "contract": "hash_chilli_cloud_ci_result",
               "contract_version": 1,
               "result_id": os.environ["CFI_RESULT_ID"],
-              "request_id": os.environ.get("CFI_REQUEST_ID") or None,
+              "request_id": request_id,
               "runner": "validation_runner",
               "execution_target": "cloud_ci",
               "provider": "github_actions",
