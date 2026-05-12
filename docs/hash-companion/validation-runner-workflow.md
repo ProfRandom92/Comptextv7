@@ -3,7 +3,9 @@
 ## Purpose
 
 CFI-02 adds `hash-companion-validation`, a cloud-backed GitHub Actions workflow
-for the `validation_runner` surface. The workflow keeps the CFI-01 authority
+for the `validation_runner` surface. CFI-03 refines artifact publication for the
+same workflow by using a structured publisher and uploading both a review result
+and a compact JSON summary for consumers. The workflow keeps the CFI-01 authority
 model intact: GitHub Actions runs validation in cloud CI, emits the compact
 CFI-01 result payload, and uploads that payload as a CI artifact for Hash/chilli
 consumers to display.
@@ -31,22 +33,27 @@ cloud-hosted work:
 1. Captures a UTC request timestamp.
 2. Checks out the requested commit or pull request head SHA, including the pull
    request head repository for forked pull requests.
-3. Sets up Python 3.11 and installs test dependencies in the GitHub runner with
+3. Sets up Python 3.11 and syntax-checks the CFI-03 publisher in GitHub
+   Actions with `python -m py_compile scripts/publish_hash_chilli_ci_artifacts.py`
+   before the workflow uses it.
+4. Installs test dependencies in the GitHub runner with
    `python -m pip install -e ".[test]"`; `pyproject.toml` defines the `test`
    optional dependency group used by the existing CI workflow.
-4. Runs the cloud validation commands aligned with the existing CI workflow:
+5. Runs the cloud validation commands aligned with the existing CI workflow:
    - `python -m pytest`
    - `python dashboard/industrial_dashboard.py --once`
-5. Relies on `dashboard/industrial_dashboard.py --once` for the integrated
+6. Relies on `dashboard/industrial_dashboard.py --once` for the integrated
    dashboard data path that already invokes benchmark, forensic, replay, and
    token telemetry surfaces, avoiding duplicate direct runner calls.
-6. Writes `reports/hash-chilli-cloud-ci-result.json` using the CFI-01 contract.
-7. Validates that JSON payload against
+7. Runs `scripts/publish_hash_chilli_ci_artifacts.py` in GitHub Actions to write
+   `reports/hash-chilli-cloud-ci-result.json` and the compact
+   `reports/hash-chilli-cloud-ci-summary.json` from cloud step outcomes.
+8. Validates the result JSON payload against
    `contracts/hash-chilli-cloud-ci-result.schema.json` in GitHub Actions.
-8. Adds selected payload fields to the GitHub job summary.
-9. Uploads the JSON payload as the `validation-runner-cfi-summary` artifact.
-10. Fails the workflow if any required cloud validation step failed or was
-   skipped.
+9. Adds selected compact payload fields to the GitHub job summary.
+10. Uploads both JSON files as the `validation-runner-cfi-artifacts` artifact.
+11. Fails the workflow if any required cloud validation step failed or was
+    skipped.
 
 Validation steps use `continue-on-error` so the CFI-01 summary artifact is still
 written and uploaded for failing runs whenever GitHub Actions reaches the summary
@@ -56,14 +63,18 @@ indefinitely.
 
 ## Artifact contract
 
-The uploaded artifact contains exactly the CFI-01 payload file:
+The uploaded `validation-runner-cfi-artifacts` artifact contains the CFI-01
+payload in two publication forms:
 
 ```text
+reports/hash-chilli-cloud-ci-summary.json
 reports/hash-chilli-cloud-ci-result.json
 ```
 
-The payload uses the schema in
-`contracts/hash-chilli-cloud-ci-result.schema.json` and includes these fields:
+The compact summary is minified for display handoff, while the result file is
+pretty-printed for review. Both files carry the same CFI-01 fields and use the
+schema in
+`contracts/hash-chilli-cloud-ci-result.schema.json`. They include these fields:
 
 | Field | Value source |
 | --- | --- |
@@ -79,7 +90,7 @@ The payload uses the schema in
 | `commit_sha` | Pull request head SHA or triggering commit SHA. |
 | `branch` | Pull request head ref or triggering ref name. |
 | `run_url` | GitHub Actions run URL. |
-| `artifact_url` | `null`; the artifact itself is uploaded by the same run. |
+| `artifact_url` | GitHub Actions run artifact section URL for the same run. |
 | `requested_at` | UTC timestamp captured before checkout. |
 | `completed_at` | UTC timestamp captured when the payload is written. |
 | `summary` | Compact CI-authored status summary, maximum 240 characters. |
@@ -89,4 +100,6 @@ The payload uses the schema in
 
 Hash/chilli consumers should render the artifact as status metadata only. If no
 artifact is available, consumers should keep the existing degraded local runner
-status rather than attempting local validation or mutating source/assets.
+status rather than attempting local validation or mutating source/assets. See
+[`artifact-consumption.md`](artifact-consumption.md) for the CFI-03 consumption
+flow and artifact URL behavior.

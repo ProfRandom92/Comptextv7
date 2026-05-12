@@ -22,6 +22,7 @@ jobs:
     timeout-minutes: 30
     env:
       CFI_RESULT_PATH: reports/hash-chilli-cloud-ci-result.json
+      CFI_COMPACT_SUMMARY_PATH: reports/hash-chilli-cloud-ci-summary.json
       CFI_SCHEMA_PATH: contracts/hash-chilli-cloud-ci-result.schema.json
       CFI_WORKFLOW_NAME: hash-companion-validation
       CFI_REQUEST_ID: ${{ github.event.inputs.request_id || '' }}
@@ -29,6 +30,7 @@ jobs:
       CFI_BRANCH: ${{ github.head_ref || github.ref_name }}
       CFI_RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
       CFI_RESULT_ID: gha:${{ github.run_id }}:${{ github.run_attempt }}
+      CFI_ARTIFACT_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts
 
     steps:
       - name: Capture requested timestamp
@@ -50,6 +52,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Syntax-check CFI-03 publisher
+        id: publisher_syntax
+        if: steps.checkout.outcome == 'success' && steps.setup_python.outcome == 'success'
+        run: python -m py_compile scripts/publish_hash_chilli_ci_artifacts.py
+
       - name: Install package with test dependencies
         id: install
         if: steps.checkout.outcome == 'success' && steps.setup_python.outcome == 'success'
@@ -68,7 +75,7 @@ jobs:
         continue-on-error: true
         run: python dashboard/industrial_dashboard.py --once
 
-      - name: Write CFI-01 validation_runner summary artifact
+      - name: Publish CFI-03 Hash/chilli CI artifacts
         id: write_summary
         if: always()
         env:
@@ -78,65 +85,9 @@ jobs:
           INSTALL_OUTCOME: ${{ steps.install.outcome }}
           PYTEST_OUTCOME: ${{ steps.pytest_validation.outcome }}
           DASHBOARD_OUTCOME: ${{ steps.dashboard_validation.outcome }}
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          import re
-          from datetime import datetime, timezone
-          from pathlib import Path
+        run: python scripts/publish_hash_chilli_ci_artifacts.py
 
-          required_outcomes = {
-              "checkout": os.environ.get("CHECKOUT_OUTCOME", "skipped"),
-              "setup_python": os.environ.get("SETUP_PYTHON_OUTCOME", "skipped"),
-              "install": os.environ.get("INSTALL_OUTCOME", "skipped"),
-              "pytest": os.environ.get("PYTEST_OUTCOME", "skipped"),
-              "dashboard": os.environ.get("DASHBOARD_OUTCOME", "skipped"),
-          }
-          if any(value == "cancelled" for value in required_outcomes.values()):
-              status = "cancelled"
-              summary = "Cloud CI validation was cancelled before producing a pass/fail outcome."
-          elif all(value == "success" for value in required_outcomes.values()):
-              status = "passed"
-              summary = "Cloud CI validation passed for the requested commit."
-          else:
-              status = "failed"
-              failed = ", ".join(name for name, value in required_outcomes.items() if value != "success")
-              summary = f"Cloud CI validation failed or skipped: {failed}."[:240]
-
-          raw_request_id = os.environ.get("CFI_REQUEST_ID") or ""
-          request_id = raw_request_id if re.fullmatch(r"[A-Za-z0-9._:-]{1,96}", raw_request_id) else None
-
-          payload = {
-              "contract": "hash_chilli_cloud_ci_result",
-              "contract_version": 1,
-              "result_id": os.environ["CFI_RESULT_ID"],
-              "request_id": request_id,
-              "runner": "validation_runner",
-              "execution_target": "cloud_ci",
-              "provider": "github_actions",
-              "workflow": os.environ["CFI_WORKFLOW_NAME"],
-              "status": status,
-              "commit_sha": os.environ["CFI_COMMIT_SHA"],
-              "branch": os.environ["CFI_BRANCH"],
-              "run_url": os.environ["CFI_RUN_URL"],
-              "artifact_url": None,
-              "requested_at": os.environ.get("REQUESTED_AT") or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-              "completed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-              "summary": summary,
-              "local_execution": "disabled",
-          }
-
-          result_path = Path(os.environ["CFI_RESULT_PATH"])
-          result_path.parent.mkdir(parents=True, exist_ok=True)
-          result_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-          env_path = Path(os.environ["GITHUB_ENV"])
-          with env_path.open("a", encoding="utf-8") as env_file:
-              env_file.write(f"CFI_VALIDATION_STATUS={status}\n")
-          PY
-
-      - name: Validate CFI-01 summary artifact against schema
+      - name: Validate CFI-03 result artifact against schema
         if: always() && steps.write_summary.outcome == 'success'
         env:
           RESULT_PATH: ${{ env.CFI_RESULT_PATH }}
@@ -214,32 +165,34 @@ jobs:
                           errors.append(f"{field} is not a date-time")
 
           if errors:
-              print("CFI-01 summary artifact failed schema validation:")
+              print("CFI-03 result artifact failed schema validation:")
               for error in errors:
                   print(f"- {error}")
               sys.exit(1)
-          print(f"CFI-01 summary artifact validated against {schema_path}.")
+          print(f"CFI-03 result artifact validated against {schema_path}.")
           PY
 
-      - name: Publish CFI summary to job summary
-        if: always() && hashFiles(env.CFI_RESULT_PATH) != ''
+      - name: Publish CFI-03 compact summary to job summary
+        if: always() && hashFiles(env.CFI_COMPACT_SUMMARY_PATH) != ''
         run: |
           python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
           from pathlib import Path
-          payload = json.loads(Path("reports/hash-chilli-cloud-ci-result.json").read_text(encoding="utf-8"))
-          print("## validation_runner CFI-01 summary")
+          payload = json.loads(Path("reports/hash-chilli-cloud-ci-summary.json").read_text(encoding="utf-8"))
+          print("## validation_runner CFI-03 summary")
           print("")
           for field in ("status", "summary", "commit_sha", "branch", "run_url", "artifact_url", "local_execution"):
               print(f"- `{field}`: `{payload[field]}`")
           PY
 
-      - name: Upload CFI-01 validation_runner summary artifact
+      - name: Upload CFI-03 Hash/chilli CI artifacts
         if: always() && hashFiles(env.CFI_RESULT_PATH) != ''
         uses: actions/upload-artifact@v4
         with:
-          name: validation-runner-cfi-summary
-          path: ${{ env.CFI_RESULT_PATH }}
+          name: validation-runner-cfi-artifacts
+          path: |
+            ${{ env.CFI_RESULT_PATH }}
+            ${{ env.CFI_COMPACT_SUMMARY_PATH }}
           if-no-files-found: error
           retention-days: 14
 
