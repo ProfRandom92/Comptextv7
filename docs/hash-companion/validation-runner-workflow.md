@@ -33,23 +33,26 @@ cloud-hosted work:
 1. Captures a UTC request timestamp.
 2. Checks out the requested commit or pull request head SHA, including the pull
    request head repository for forked pull requests.
-3. Sets up Python 3.11 and installs test dependencies in the GitHub runner with
+3. Sets up Python 3.11 and syntax-checks the CFI-03 publisher in GitHub
+   Actions with `python -m py_compile scripts/publish_hash_chilli_ci_artifacts.py`
+   before the workflow uses it.
+4. Installs test dependencies in the GitHub runner with
    `python -m pip install -e ".[test]"`; `pyproject.toml` defines the `test`
    optional dependency group used by the existing CI workflow.
-4. Runs the cloud validation commands aligned with the existing CI workflow:
+5. Runs the cloud validation commands aligned with the existing CI workflow:
    - `python -m pytest`
    - `python dashboard/industrial_dashboard.py --once`
-5. Relies on `dashboard/industrial_dashboard.py --once` for the integrated
+6. Relies on `dashboard/industrial_dashboard.py --once` for the integrated
    dashboard data path that already invokes benchmark, forensic, replay, and
    token telemetry surfaces, avoiding duplicate direct runner calls.
-6. Runs `scripts/publish_hash_chilli_ci_artifacts.py` in GitHub Actions to write
+7. Runs `scripts/publish_hash_chilli_ci_artifacts.py` in GitHub Actions to write
    `reports/hash-chilli-cloud-ci-result.json` and the compact
    `reports/hash-chilli-cloud-ci-summary.json` from cloud step outcomes.
-7. Validates the result JSON payload against
+8. Validates the result JSON payload against
    `contracts/hash-chilli-cloud-ci-result.schema.json` in GitHub Actions.
-8. Adds selected compact payload fields to the GitHub job summary.
-9. Uploads both JSON files as the `validation-runner-cfi-artifacts` artifact.
-10. Fails the workflow if any required cloud validation step failed or was
+9. Adds selected compact payload fields to the GitHub job summary.
+10. Uploads both JSON files as the `validation-runner-cfi-artifacts` artifact.
+11. Fails the workflow if any required cloud validation step failed or was
     skipped.
 
 Validation steps use `continue-on-error` so the CFI-01 summary artifact is still

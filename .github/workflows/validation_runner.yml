@@ -52,6 +52,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Syntax-check CFI-03 publisher
+        id: publisher_syntax
+        if: steps.checkout.outcome == 'success' && steps.setup_python.outcome == 'success'
+        run: python -m py_compile scripts/publish_hash_chilli_ci_artifacts.py
+
       - name: Install package with test dependencies
         id: install
         if: steps.checkout.outcome == 'success' && steps.setup_python.outcome == 'success'
