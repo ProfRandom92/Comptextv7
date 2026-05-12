@@ -1,208 +1,244 @@
-# CompText V7 — KVTC Cognitive Fabric for Technical Logs
+# Comptextv7 — Cloud-First Diagnostic Compression Infrastructure
 
 [![Industrial Validation](https://github.com/ProfRandom92/Comptextv7/actions/workflows/ci.yml/badge.svg)](https://github.com/ProfRandom92/Comptextv7/actions/workflows/ci.yml)
 [![Agent Workflow Checks](https://github.com/ProfRandom92/Comptextv7/actions/workflows/agent-checks.yml/badge.svg)](https://github.com/ProfRandom92/Comptextv7/actions/workflows/agent-checks.yml)
+[![Hash Companion Validation](https://github.com/ProfRandom92/Comptextv7/actions/workflows/validation_runner.yml/badge.svg)](https://github.com/ProfRandom92/Comptextv7/actions/workflows/validation_runner.yml)
 
-CompText V7 is a deterministic, auditable prototype for **lossy token reduction of structured vehicle and workshop diagnostics**. Its core KVTC-V7 engine converts synthetic XENTRY-, OBD-, and workshop-style logs into compact transport frames for assistant handoff, audit workflows, dashboards, and downstream validation.
+**Comptextv7 turns repetitive synthetic vehicle and workshop-style diagnostic logs into compact, deterministic transport frames for review, validation, and dashboard handoff.**
 
-The project is written for a Daimler-Truck-style industrial review posture without claiming vendor certification or affiliation. All benchmark, dashboard, and release-readiness examples in this repository are synthetic/static unless explicitly stated otherwise.
+[**Live Vercel showcase →**](https://comptextv7.vercel.app) · [Reviewer walkthrough](docs/DEMO_WALKTHROUGH.md) · [Showcase readiness](docs/SHOWCASE_READINESS.md) · [Benchmark interpretation](docs/BENCHMARK_EXPLANATION.md)
 
-## Executive snapshot
+Comptextv7 is presented as an industrial AI infrastructure prototype: cloud-validated, artifact-driven, deterministic, and synthetic-only. It is designed to be understandable from GitHub first, without requiring a reviewer to run local commands.
 
-| Area | Status | Notes |
-| --- | --- | --- |
-| KVTC compression engine | Active | Deterministic four-layer frame: header, middle family layer, temporal window, compact payload. |
-| Validation pipeline | Active | Pytest, deterministic replay, token telemetry, forensic validation, benchmark replay, dashboard startup validation. |
-| Dashboard | Active | React SRE/ML-Ops console plus stdlib backend for API/export and static bundle hosting. |
-| Contract layer | Active | Machine-readable JSON handoff contracts, generated fixtures, API/export validation, and report summaries. |
-| Release health | Active | Generated Markdown/JSON reports, dashboard health panel, smoke test, and CI integration. |
-| Data posture | Synthetic-only | No real Daimler payloads, secrets, raw production logs, or proprietary customer data should be committed. |
+## Architecture highlights
 
-## System architecture
-
-```mermaid
-flowchart TB
-    subgraph Input["Synthetic input layer"]
-        A["XENTRY / OBD / workshop-style fixtures"]
-        B["Experiment repo benchmark summaries"]
-    end
-
-    subgraph Core["CompText V7 core"]
-        C["Structured parser"]
-        D["KVTC-V7 compression engine"]
-        E["Auditable transport frame"]
-    end
-
-    subgraph Evidence["Evidence and contracts"]
-        F["Contract-compatible JSON"]
-        G["Validation reports"]
-        H["Release-health summary"]
-    end
-
-    subgraph Delivery["Reviewer surfaces"]
-        I["Dashboard panel"]
-        J["GitHub Actions checks"]
-        K["Cross-repo promotion checklist"]
-    end
-
-    A --> C --> D --> E --> F
-    B --> F
-    F --> G --> H
-    H --> I
-    H --> J
-    H --> K
-```
-
-## KVTC processing model
-
-```mermaid
-flowchart TB
-    A["Input diagnostics"] --> B["Normalize lines"]
-    B --> C["Parse structured events"]
-    C --> D1["Severity inventory"]
-    C --> D2["ECU / module context"]
-    C --> D3["DTC / SPN / FMI anchors"]
-    C --> D4["Measurement slots"]
-    D1 --> E["KVTC sandwich frame"]
-    D2 --> E
-    D3 --> E
-    D4 --> E
-    E --> F1["Header layer"]
-    E --> F2["Middle family layer"]
-    E --> F3["Temporal window layer"]
-    E --> F4["Frame dictionary + payload"]
-    F1 --> G["Auditable output"]
-    F2 --> G
-    F3 --> G
-    F4 --> G
-```
-
-| Layer | Purpose | Examples retained |
-| --- | --- | --- |
-| Header | Run-level inventory and provenance. | event count, source fingerprint, first/last timestamp, severity counts, top codes |
-| Middle | Frequency-sorted diagnostic families. | `ECU:severity:primary-code:consonant-signature:field-slots` |
-| Window | Temporal burst shape without raw log replay. | top window buckets and family counts |
-| Frame | Transport representation. | deterministic family dictionary plus compact JSON payload, or sparse micro-frame for tiny heterogeneous packets |
-
-## Validation and release-health pipeline
-
-```mermaid
-sequenceDiagram
-    participant Dev as Developer / Agent
-    participant CI as GitHub Actions
-    participant Py as Python validation
-    participant UI as Dashboard smoke test
-    participant Reports as docs/reports
-    participant Main as main branch
-
-    Dev->>CI: Open pull request
-    CI->>Py: Run industrial validation
-    CI->>Py: Run agent workflow checks
-    CI->>UI: npm run smoke:release-health
-    Py->>Reports: Generate health and contract reports
-    UI->>Reports: Validate dashboard summary rendering
-    Reports-->>CI: Markdown/JSON artifacts
-    CI-->>Dev: pass/fail signal
-    Dev->>Main: Squash merge when green
-```
-
-Release readiness is generated from synthetic/static project health artifacts. It does not include real Daimler data, secrets, customer data, or raw production logs.
-
-| Surface | Entrypoint |
+| Capability | What reviewers should notice |
 | --- | --- |
-| Machine-readable release health source | [`docs/reports/dashboard-health-summary.json`](docs/reports/dashboard-health-summary.json) |
-| Human-readable release health report | [`docs/reports/dashboard-health-summary.md`](docs/reports/dashboard-health-summary.md) |
-| Dashboard panel | `Release Health Summary` |
-| Local smoke test | `cd dashboard/app && npm run smoke:release-health` |
-| CI workflow | [`.github/workflows/agent-checks.yml`](.github/workflows/agent-checks.yml) |
-| Agent workflow | [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) |
-| Cross-repo promotion checklist | [`docs/CROSS_REPO_RELEASE_CHECKLIST.md`](docs/CROSS_REPO_RELEASE_CHECKLIST.md) |
+| Cloud-first validation | GitHub Actions is the authoritative validation surface for tests, dashboard checks, contracts, and CFI artifacts. |
+| Deterministic transport | The same reviewed input is expected to produce stable KVTC-V7 frame structure under the same code revision. |
+| Audit-friendly artifacts | Reports, schemas, compact summaries, and uploaded CI artifacts provide reviewable evidence. |
+| Synthetic-only posture | Examples and validation fixtures are synthetic/static; no real Daimler, customer, fleet, or production payloads are claimed. |
+| Local degraded fallback | Local execution can report degraded status and hand off to cloud CI; it is not the source of validation truth. |
 
-## Showcase readiness
+---
 
-For reviewer/demo readiness, start with the documentation-only, cloud-first showcase pack:
+## What Comptextv7 does
 
-- [`docs/SHOWCASE_READINESS.md`](docs/SHOWCASE_READINESS.md) — executive overview, validation/CI model, CFI artifact flow, enterprise-readiness boundaries, limits, and next steps.
-- [`docs/DEMO_WALKTHROUGH.md`](docs/DEMO_WALKTHROUGH.md) — no-local-execution reviewer path and demo script.
-- [`docs/BENCHMARK_EXPLANATION.md`](docs/BENCHMARK_EXPLANATION.md) — conservative guidance for token-reduction and benchmark interpretation.
+Comptextv7 focuses on one practical infrastructure problem: **diagnostic logs are often too repetitive and verbose for clean AI handoff, dashboard triage, or reviewer inspection**.
 
-## Repository map
+### 1. Diagnostic token reduction, explained simply
+
+Instead of forwarding every repeated log line, Comptextv7 groups recurring diagnostic structure into compact summaries. It keeps review anchors such as:
+
+- severity inventory;
+- ECU/module context;
+- DTC/SPN/FMI-style code families;
+- temporal burst windows;
+- measurements and field slots where available;
+- provenance and payload metadata.
+
+The result is intentionally **lossy**. It is meant for compact triage and assistant/dashboard handoff, not byte-for-byte reconstruction of raw logs.
+
+### 2. Deterministic transport frames
+
+The core KVTC-V7 output is a layered frame designed for predictable downstream handling:
+
+| Frame layer | Purpose |
+| --- | --- |
+| Header | Run-level inventory, source fingerprint, severity counts, top codes, and time range. |
+| Middle family layer | Frequency-oriented diagnostic families such as module, severity, primary code, compact signature, and field slots. |
+| Temporal window layer | Burst shape and timing context without replaying every raw line. |
+| Compact payload | Deterministic dictionary/payload representation for transport, audit, dashboard, or assistant handoff. |
+
+### 3. Synthetic-only validation posture
+
+Comptextv7 does **not** claim production Daimler integration, certification, fleet telemetry coverage, or proprietary-data access. The repository is intentionally safe to review: fixtures, examples, reports, and showcase content are synthetic/static unless a file explicitly states otherwise.
+
+---
+
+## Showcase
+
+> **Screenshot placeholder**
+>
+> Add the current Vercel showcase screenshot here when the UI settles:
+>
+> `docs/assets/showcase-home.png`
+
+| Reviewer path | Link |
+| --- | --- |
+| Live showcase | <https://comptextv7.vercel.app> |
+| No-local-execution demo script | [`docs/DEMO_WALKTHROUGH.md`](docs/DEMO_WALKTHROUGH.md) |
+| Showcase readiness pack | [`docs/SHOWCASE_READINESS.md`](docs/SHOWCASE_READINESS.md) |
+| Conservative benchmark explanation | [`docs/BENCHMARK_EXPLANATION.md`](docs/BENCHMARK_EXPLANATION.md) |
+| Dashboard/API boundaries | [`docs/API_SURFACE.md`](docs/API_SURFACE.md) |
+
+### Demo highlights
+
+- Review the product story first: compact diagnostic handoff rather than generic text compression.
+- Inspect validation evidence through GitHub Actions, reports, schemas, and uploaded artifacts.
+- Treat benchmark numbers conservatively: token reduction is useful only when paired with replay, forensic, and contract evidence.
+- Use the Vercel deployment as the first visual surface; use repository artifacts as the authoritative evidence surface.
+
+---
+
+## Cloud-first validation architecture
+
+Comptextv7 is intentionally biased toward **cloud-review workflow** rather than local machine trust.
+
+### GitHub Actions is authoritative
+
+| Workflow | Role |
+| --- | --- |
+| [`ci.yml`](.github/workflows/ci.yml) | Industrial validation: pytest, deterministic replay, token telemetry, semantic forensic validation, benchmark replay, and dashboard startup validation. |
+| [`agent-checks.yml`](.github/workflows/agent-checks.yml) | Repository/report/contract checks plus dashboard typecheck, build, and release-health smoke coverage. |
+| [`validation_runner.yml`](.github/workflows/validation_runner.yml) | Cloud CI validation runner for CFI result publishing and compact Hash/chilli-compatible summaries. |
+
+### Artifact publishing
+
+The validation runner publishes compact cloud CI result artifacts for review and downstream display:
+
+```text
+GitHub Actions run
+  ├─ executes validation surfaces
+  ├─ writes reports/hash-chilli-cloud-ci-result.json
+  ├─ writes reports/hash-chilli-cloud-ci-summary.json
+  ├─ validates the result payload against the CFI schema
+  └─ uploads validation-runner-cfi-artifacts
+```
+
+### Degraded local runner
+
+Local execution is a fallback/status layer only when the local sandbox is unavailable. In degraded mode, the local runner can display status, request handoff state, and the latest cloud result, but it must not run validation, builds, tests, retries, cleanups, resets, or source mutations. The expected execution target remains Cloud/GitHub CI.
+
+### Privacy and GDPR-safe review posture
+
+The repository is designed to be reviewed without exposing personal data, customer data, real vehicle telemetry, production logs, credentials, or proprietary payloads. Synthetic-only validation makes the public artifact trail safer for recruiter, enterprise, and compliance-oriented review.
+
+---
+
+## Validation + artifacts
+
+### CFI artifact model
+
+| CFI item | Plain-English meaning | Primary evidence |
+| --- | --- | --- |
+| CFI-01 | A compact Cloud CI result contract exists for status metadata. | [`contracts/hash-chilli-cloud-ci-result.schema.json`](contracts/hash-chilli-cloud-ci-result.schema.json), [`docs/hash-companion/cloud-ci-result-contract.md`](docs/hash-companion/cloud-ci-result-contract.md) |
+| CFI-02 | A GitHub Actions validation runner can produce authoritative cloud validation status. | [`.github/workflows/validation_runner.yml`](.github/workflows/validation_runner.yml), [`docs/hash-companion/validation-runner-workflow.md`](docs/hash-companion/validation-runner-workflow.md) |
+| CFI-03 | The workflow publishes compact result artifacts for reviewer/companion consumption. | `validation-runner-cfi-artifacts`, `reports/hash-chilli-cloud-ci-result.json`, `reports/hash-chilli-cloud-ci-summary.json` |
+
+### Compact CI summaries
+
+The compact summary is designed for surfaces that should not parse full logs: dashboards, companion UIs, pull-request comments, or reviewer checklists. It exposes status, commit, branch, run URL, artifact URL, summary, and local-execution state in a small deterministic payload.
+
+### Generated report surfaces
+
+| Report surface | Purpose |
+| --- | --- |
+| [`docs/reports/project-health-report.md`](docs/reports/project-health-report.md) | Repository-level health snapshot. |
+| [`docs/reports/dashboard-health-summary.md`](docs/reports/dashboard-health-summary.md) | Human-readable dashboard/release-health summary. |
+| [`docs/reports/dashboard-health-summary.json`](docs/reports/dashboard-health-summary.json) | Machine-readable dashboard health source. |
+| [`docs/reports/contract-validation-report.md`](docs/reports/contract-validation-report.md) | Contract validation evidence. |
+| [`docs/reports/api-export-validation-report.md`](docs/reports/api-export-validation-report.md) | API/export validation evidence. |
+
+---
+
+## Enterprise positioning
+
+Comptextv7 is intentionally framed for industrial review rather than hype-driven AI claims.
+
+| Enterprise concern | Project response |
+| --- | --- |
+| Auditability | Validation reports, schemas, CI summaries, deterministic frames, and documented artifact flow. |
+| Deterministic outputs | KVTC-V7 is structured around stable frame layers and replayable validation checks. |
+| Data safety | Synthetic-only fixtures and public artifacts; no real customer or production payload assumptions. |
+| Cloud-review workflow | GitHub Actions provides authoritative evidence, while local degraded mode remains status-only. |
+| Reviewer clarity | Vercel showcase, walkthrough docs, compact diagrams, and conservative benchmark guidance. |
+
+---
+
+## Architecture
+
+```text
+Synthetic diagnostic fixtures
+        │
+        ▼
+Parser + normalization
+        │
+        ▼
+KVTC-V7 frame builder
+  ├─ header inventory
+  ├─ diagnostic family layer
+  ├─ temporal window layer
+  └─ compact payload
+        │
+        ▼
+Contracts + validation reports
+        │
+        ├──────────────► GitHub Actions authority
+        │                    ├─ pytest / replay / forensic checks
+        │                    ├─ dashboard startup + frontend checks
+        │                    └─ CFI artifact publishing
+        │
+        ▼
+Reviewer surfaces
+  ├─ Vercel showcase
+  ├─ dashboard/release-health summaries
+  ├─ uploaded CI artifacts
+  └─ docs + walkthroughs
+```
+
+### Repository map
 
 ```text
 Comptextv7/
-├── benchmarks/                     # deterministic compression and audit runners
-├── contracts/                      # machine-readable API/report handoff contracts
-├── dashboard/
-│   ├── industrial_dashboard.py     # stdlib API/export backend and static bundle host
-│   └── app/                        # React SRE/ML-Ops operations console
-├── datasets/golden/                # immutable synthetic replay fixtures
-├── docs/
-│   ├── reports/                    # generated validation and release-health reports
-│   └── wiki/                       # indexed architecture, governance, and runbook docs
-├── scripts/                        # validation, fixture generation, health/report tooling
-├── src/                            # KVTC engine, audit, and validation modules
-├── tests/                          # Python regression and validation tests
-├── pyproject.toml
+├── benchmarks/                 # deterministic compression and audit runners
+├── contracts/                  # machine-readable handoff contracts
+├── dashboard/                  # backend plus React operations console
+├── datasets/golden/            # immutable synthetic replay fixtures
+├── docs/                       # showcase, reports, wiki, and Hash/chilli docs
+├── scripts/                    # validation, reporting, and artifact tooling
+├── src/                        # KVTC engine, audit, and validation modules
+├── tests/                      # Python regression and validation tests
 └── README.md
 ```
 
-## Quick start
+---
 
-Install the package with test dependencies:
+## Quick reviewer workflow
+
+1. Open the [live Vercel showcase](https://comptextv7.vercel.app).
+2. Read the [demo walkthrough](docs/DEMO_WALKTHROUGH.md) for the no-local-execution path.
+3. Check the latest GitHub Actions runs for `ci.yml`, `agent-checks.yml`, and `validation_runner.yml`.
+4. Inspect generated reports under [`docs/reports/`](docs/reports/).
+5. Review CFI artifacts and compact summaries from the validation runner when available.
+
+Local commands remain useful for maintainers, but they are not required for reviewer confidence.
+
+---
+
+## Maintainer commands
 
 ```bash
 python -m pip install -e ".[test]"
-```
-
-Run the Python validation suite:
-
-```bash
 python -m pytest
+python scripts/validate.py replay
+python scripts/validate.py token
+python scripts/validate.py forensic
+python benchmarks/run_kvtc_v7_benchmarks.py --iterations 1 --warmups 0
+python dashboard/industrial_dashboard.py --once
 ```
 
-Run the compression benchmark:
-
-```bash
-python benchmarks/run_kvtc_v7_benchmarks.py --iterations 5 --warmups 1
-```
-
-Emit JSON for CI artifacts or dashboards:
-
-```bash
-python benchmarks/run_kvtc_v7_benchmarks.py --iterations 5 --warmups 1 --json
-```
-
-Run the industrial audit scorecard:
-
-```bash
-python benchmarks/run_industrial_audit.py --iterations 3
-```
-
-Run the industrial operations dashboard API/export backend:
-
-```bash
-python dashboard/industrial_dashboard.py --host 127.0.0.1 --port 8765
-```
-
-Build or develop the React SRE/ML-Ops console:
+Dashboard frontend checks:
 
 ```bash
 cd dashboard/app
 npm install
-npm run dev
-# or: npm run build
-```
-
-Run the release-health dashboard smoke test:
-
-```bash
-cd dashboard/app
+npm run typecheck
+npm run build
 npm run smoke:release-health
 ```
 
-## Agent and contract commands
-
-These commands are designed to be CI-friendly, deterministic, and safe for future agents:
+Agent/report tooling:
 
 ```bash
 python scripts/repo_intake.py
@@ -214,75 +250,28 @@ python scripts/generate_project_health_report.py
 python scripts/generate_dashboard_health_summary.py
 ```
 
-Generated reports are written under [`docs/reports/`](docs/reports/) and are intended for review, release gating, and dashboard consumption.
+---
 
-## Cross-repo experiment handoff
+## Roadmap
 
-CompText V7 consumes only **contract-compatible, sanitized, synthetic summaries** from [`ProfRandom92/Comptext-Daimler-Experiment-`](https://github.com/ProfRandom92/Comptext-Daimler-Experiment-). The experiment repository owns benchmark, regression, sanitization, and forensic replay outputs. This runtime repository owns API contracts, dashboard presentation, validation gates, and release-readiness summaries.
-
-Required experiment-side artifacts for promotion review:
-
-| Artifact | Purpose |
+| Area | Direction |
 | --- | --- |
-| `benchmark-summary.json` | Synthetic benchmark result summary. |
-| `regression-summary.json` | Conservative regression decision summary. |
-| `sanitization-summary.json` | Fixture/report sanitization summary. |
-| `report-contract-validation-report.md` | Structural validation of report contracts. |
+| Showcase | Keep the Vercel surface clean, visual, and reviewer-first. |
+| Dashboard | Continue improving release-health and validation-status presentation. |
+| Artifact surfacing | Make CFI summaries, report links, and uploaded artifacts easier to discover from review surfaces. |
+| Reviewer UX | Reduce local setup assumptions; keep cloud validation and walkthroughs primary. |
+| Lightweight Hash/chilli UI | Later-stage companion UI for compact CI status display, not local heavy execution. |
 
-Promotion rules are documented in [`docs/CROSS_REPO_RELEASE_CHECKLIST.md`](docs/CROSS_REPO_RELEASE_CHECKLIST.md). No runtime coupling to the experiment repository is required.
-
-## Benchmark snapshot
-
-Measured in this repository on **2026-05-10** with:
-
-```bash
-python benchmarks/run_kvtc_v7_benchmarks.py --iterations 5 --warmups 1
-```
-
-| case | lines | input bytes | payload bytes | original tokens | compressed tokens | reduction | median ms | lines/s | peak KiB | distinct families | top-family coverage | interpretation |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| repetitive_xentry_2k | 2000 | 345326 | 998 | 33998 | 139 | 99.59% | 1070.06 | 1869 | 4899.7 | 6 | 100.00% | Best case: repeated families compress extremely well. |
-| mixed_obd_workshop_1_5k | 1500 | 142738 | 1281 | 13804 | 155 | 98.88% | 555.42 | 2701 | 2379.4 | 10 | 100.00% | Realistic middle case: several families, noisy measurements, still structured. |
-| high_entropy_json_750 | 750 | 179617 | 2509 | 21000 | 113 | 99.46% | 501.40 | 1496 | 1684.6 | 750 | 1.60% | Weak case: apparent reduction is lossy and requires quality gates. |
-| short_sparse_3 | 3 | 202 | 61 | 23 | 8 | 65.22% | 1.16 | 2593 | 5.9 | 3 | 100.00% | Sparse edge case: micro-frame prevents metadata overhead from dominating tiny inputs. |
-
-Read benchmark results conservatively. High compression is not proof of semantic fidelity; top-family coverage, forensic replay, regression summaries, and downstream validation must be reviewed together.
-
-## Design posture
-
-CompText V7 is an industrial diagnostic fabric rather than a generic text zipper:
-
-1. **Workshop semantics first** — severity, ECU/module, DTC/SPN/FMI codes, and measurements are parsed before compression.
-2. **Token economy** — repeated language is collapsed into domain abbreviations and consonant skeletons while diagnostic anchors remain reviewable.
-3. **Burst awareness** — temporal windows preserve when fault families cluster for triage and production support.
-4. **Data-sovereign edge readiness** — deterministic local execution supports review before cloud upload or assistant handoff.
-5. **Governance by artifacts** — reports, schemas, fixtures, and smoke tests provide reviewable release evidence.
-
-## Documentation hub
-
-| Document | Purpose |
-| --- | --- |
-| [`docs/API_SURFACE.md`](docs/API_SURFACE.md) | Dashboard/API/export route and payload boundaries. |
-| [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) | Safe branch, PR, and validation workflow for future agents. |
-| [`docs/BENCHMARK_INTEGRATION.md`](docs/BENCHMARK_INTEGRATION.md) | How benchmark/regression findings flow into CompText V7. |
-| [`docs/CROSS_REPO_RELEASE_CHECKLIST.md`](docs/CROSS_REPO_RELEASE_CHECKLIST.md) | Go/no-go and rollback criteria for experiment-to-runtime promotion. |
-| [`docs/wiki/README.md`](docs/wiki/README.md) | Structured wiki navigation for architecture, governance, runbook, and roadmap material. |
-| [`dashboard/app/README.md`](dashboard/app/README.md) | Frontend architecture and dashboard implementation notes. |
+---
 
 ## Safety boundaries
 
-Never commit:
+Do not commit:
 
-- real Daimler payloads or proprietary customer data
-- secrets, API keys, tokens, cookies, or credentials
-- raw production logs
-- unsanitized replay fixtures
-- private deployment credentials or environment dumps
+- real Daimler payloads or proprietary customer data;
+- secrets, API keys, tokens, cookies, or credentials;
+- raw production logs;
+- unsanitized replay fixtures;
+- private deployment credentials or environment dumps.
 
-Synthetic fixtures and generated summaries are acceptable when they are deterministic, sanitized, and safe to review.
-
-## Caveats
-
-- KVTC-V7 is intentionally **lossy**. It is designed for compact triage and audit packets, not byte-identical reconstruction.
-- The datasets are synthetic and deterministic. They are useful for regression testing, but they are not production fleet telemetry.
-- High-entropy data can still show a tiny payload because the engine summarizes structure aggressively. Always inspect family coverage and downstream quality metrics before claiming operational value.
+Comptextv7 is a deterministic, synthetic-only infrastructure prototype for reviewable diagnostic compression workflows. It is not a production fleet telemetry system and does not claim vendor certification or affiliation.
