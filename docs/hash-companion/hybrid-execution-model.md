@@ -41,9 +41,9 @@ The local environment is responsible for user experience and state visibility:
 4. Capture user requests, perform local sanitization (masking/hashing), and route them to the cloud-backed execution path.
 5. Report local runner degradation when `CreateProcessAsUserW failed: 5` is
    observed.
-6. Refuse local execution for validation, builds, mutation, cleanup, reset,
-   generated-output updates, or process-isolated tasks while the stop condition
-   remains active.
+6. Refuse local execution for validation, builds, tests, formatters, execution
+   retries, mutation, cleanup, reset, generated-output updates, or
+   process-isolated tasks while the stop condition remains active.
 
 ## Cloud/GitHub CI responsibilities
 
@@ -84,7 +84,7 @@ In degraded mode the local runner must not:
 - retry local sandbox creation;
 - run builds, tests, formatters, cleanups, resets, or generated-output updates;
 - modify chilli pet assets;
-- mutate `C:\Comptextv7` source behavior.
+- mutate comptextv7 source behavior.
 
 ## `validation_runner` plan
 
