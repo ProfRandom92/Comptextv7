@@ -34,19 +34,18 @@ cloud-hosted work:
 3. Sets up Python 3.11 and installs test dependencies in the GitHub runner with
    `python -m pip install -e ".[test]"`; `pyproject.toml` defines the `test`
    optional dependency group used by the existing CI workflow.
-4. Runs the existing validation suite in GitHub Actions:
+4. Runs the cloud validation commands aligned with the existing CI workflow:
    - `python -m pytest`
-   - `python scripts/validate.py replay`
-   - `python scripts/validate.py token`
-   - `python scripts/validate.py forensic`
-   - `python benchmarks/run_kvtc_v7_benchmarks.py --iterations 1 --warmups 0`
    - `python dashboard/industrial_dashboard.py --once`
-5. Writes `reports/hash-chilli-cloud-ci-result.json` using the CFI-01 contract.
-6. Validates that JSON payload against
+5. Relies on `dashboard/industrial_dashboard.py --once` for the integrated
+   dashboard data path that already invokes benchmark, forensic, replay, and
+   token telemetry surfaces, avoiding duplicate direct runner calls.
+6. Writes `reports/hash-chilli-cloud-ci-result.json` using the CFI-01 contract.
+7. Validates that JSON payload against
    `contracts/hash-chilli-cloud-ci-result.schema.json` in GitHub Actions.
-7. Adds selected payload fields to the GitHub job summary.
-8. Uploads the JSON payload as the `validation-runner-cfi-summary` artifact.
-9. Fails the workflow if any required cloud validation step failed or was
+8. Adds selected payload fields to the GitHub job summary.
+9. Uploads the JSON payload as the `validation-runner-cfi-summary` artifact.
+10. Fails the workflow if any required cloud validation step failed or was
    skipped.
 
 Validation steps use `continue-on-error` so the CFI-01 summary artifact is still
@@ -76,7 +75,7 @@ The payload uses the schema in
 | `execution_target` | Constant `cloud_ci`. |
 | `provider` | Constant `github_actions`. |
 | `workflow` | Constant `hash-companion-validation`. |
-| `status` | `passed`, `failed`, or `cancelled` from cloud step outcomes. |
+| `status` | `passed`, `failed`, `cancelled`, or `degraded` per the CFI-01 contract. The workflow emits `passed`, `failed`, or `cancelled` from cloud step outcomes. |
 | `commit_sha` | Pull request head SHA or triggering commit SHA. |
 | `branch` | Pull request head ref or triggering ref name. |
 | `run_url` | GitHub Actions run URL. |

@@ -62,30 +62,6 @@ jobs:
         continue-on-error: true
         run: python -m pytest
 
-      - name: Run deterministic replay validation
-        id: replay_validation
-        if: steps.install.outcome == 'success'
-        continue-on-error: true
-        run: python scripts/validate.py replay
-
-      - name: Run token telemetry validation
-        id: token_validation
-        if: steps.install.outcome == 'success'
-        continue-on-error: true
-        run: python scripts/validate.py token
-
-      - name: Run semantic forensic validation
-        id: forensic_validation
-        if: steps.install.outcome == 'success'
-        continue-on-error: true
-        run: python scripts/validate.py forensic
-
-      - name: Run benchmark replay validation
-        id: benchmark_validation
-        if: steps.install.outcome == 'success'
-        continue-on-error: true
-        run: python benchmarks/run_kvtc_v7_benchmarks.py --iterations 1 --warmups 0
-
       - name: Run dashboard startup validation
         id: dashboard_validation
         if: steps.install.outcome == 'success'
@@ -101,10 +77,6 @@ jobs:
           SETUP_PYTHON_OUTCOME: ${{ steps.setup_python.outcome }}
           INSTALL_OUTCOME: ${{ steps.install.outcome }}
           PYTEST_OUTCOME: ${{ steps.pytest_validation.outcome }}
-          REPLAY_OUTCOME: ${{ steps.replay_validation.outcome }}
-          TOKEN_OUTCOME: ${{ steps.token_validation.outcome }}
-          FORENSIC_OUTCOME: ${{ steps.forensic_validation.outcome }}
-          BENCHMARK_OUTCOME: ${{ steps.benchmark_validation.outcome }}
           DASHBOARD_OUTCOME: ${{ steps.dashboard_validation.outcome }}
         run: |
           python - <<'PY'
@@ -119,10 +91,6 @@ jobs:
               "setup_python": os.environ.get("SETUP_PYTHON_OUTCOME", "skipped"),
               "install": os.environ.get("INSTALL_OUTCOME", "skipped"),
               "pytest": os.environ.get("PYTEST_OUTCOME", "skipped"),
-              "replay": os.environ.get("REPLAY_OUTCOME", "skipped"),
-              "token": os.environ.get("TOKEN_OUTCOME", "skipped"),
-              "forensic": os.environ.get("FORENSIC_OUTCOME", "skipped"),
-              "benchmark": os.environ.get("BENCHMARK_OUTCOME", "skipped"),
               "dashboard": os.environ.get("DASHBOARD_OUTCOME", "skipped"),
           }
           if any(value == "cancelled" for value in required_outcomes.values()):
