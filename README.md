@@ -18,6 +18,7 @@ Comptextv7 is presented as an industrial AI infrastructure prototype: cloud-vali
 | Deterministic transport | The same reviewed input is expected to produce stable KVTC-V7 frame structure under the same code revision. |
 | Audit-friendly artifacts | Reports, schemas, compact summaries, and uploaded CI artifacts provide reviewable evidence. |
 | Synthetic-only posture | Examples and validation fixtures are synthetic/static; no real Daimler, customer, fleet, or production payloads are claimed. |
+| Privacy-by-design | Public examples avoid personal data, VIN-linked datasets, production telemetry, and private enterprise logs by design. |
 | Local degraded fallback | Local execution can report degraded status and hand off to cloud CI; it is not the source of validation truth. |
 
 ---
@@ -116,6 +117,22 @@ The repository is designed to be reviewed without exposing personal data, custom
 
 ---
 
+## 📊 Synthetic Data Disclosure
+
+Comptextv7 uses synthetic diagnostic fixtures and static demonstration content only. This public repository does not include, require, or claim access to:
+
+- proprietary customer data;
+- production vehicle or fleet telemetry;
+- VIN-linked datasets;
+- private enterprise logs.
+
+Synthetic data is used to keep the project reviewable under a privacy-by-design posture aligned with GDPR Art. 25 principles. It also supports reproducible validation, deterministic CI artifacts, and safe cloud-based review without exposing customer, fleet, or enterprise operational records.
+
+### Limitations
+
+Synthetic data is not a substitute for full real-world diagnostic fidelity. Production deployment would require controlled calibration against approved enterprise datasets, operational telemetry constraints, and domain-specific validation criteria before any live use.
+
+---
 ## Validation + artifacts
 
 ### CFI artifact model
