@@ -17,25 +17,6 @@ from typing import Any
 
 REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._:-]{1,96}")
 TERMINAL_STEP_NAMES = ("checkout", "setup_python", "install", "pytest", "dashboard")
-SUMMARY_FIELDS = (
-    "contract",
-    "contract_version",
-    "result_id",
-    "request_id",
-    "runner",
-    "execution_target",
-    "provider",
-    "workflow",
-    "status",
-    "commit_sha",
-    "branch",
-    "run_url",
-    "artifact_url",
-    "requested_at",
-    "completed_at",
-    "summary",
-    "local_execution",
-)
 
 
 def utc_now() -> str:
@@ -82,26 +63,41 @@ def status_and_summary(outcomes: dict[str, str]) -> tuple[str, str]:
     return "failed", f"Cloud CI validation failed or skipped: {failed_or_skipped}."[:240]
 
 
+REQUIRED_ENV_VARS = ("CFI_RESULT_ID", "CFI_COMMIT_SHA", "CFI_BRANCH", "CFI_RUN_URL")
+
+
+def required_env() -> dict[str, str]:
+    """Return required CI metadata or fail before payload construction."""
+
+    values = {name: env(name).strip() for name in REQUIRED_ENV_VARS}
+    missing = [name for name, value in values.items() if not value]
+    if missing:
+        missing_names = ", ".join(missing)
+        raise RuntimeError(f"Missing required environment variable(s) for CFI-03 publication: {missing_names}")
+    return values
+
+
 def build_payload() -> dict[str, Any]:
     """Build the CFI-01 result payload for cloud publication."""
 
+    required = required_env()
     outcomes = step_outcomes()
     status, summary = status_and_summary(outcomes)
-    run_url = env("CFI_RUN_URL")
-    artifact_url = env("CFI_ARTIFACT_URL") or f"{run_url}#artifacts"
+    run_url = required["CFI_RUN_URL"]
+    artifact_url = env("CFI_ARTIFACT_URL").strip() or f"{run_url}#artifacts"
 
     return {
         "contract": "hash_chilli_cloud_ci_result",
         "contract_version": 1,
-        "result_id": env("CFI_RESULT_ID"),
+        "result_id": required["CFI_RESULT_ID"],
         "request_id": sanitized_request_id(env("CFI_REQUEST_ID")),
         "runner": "validation_runner",
         "execution_target": "cloud_ci",
         "provider": "github_actions",
         "workflow": env("CFI_WORKFLOW_NAME", "hash-companion-validation"),
         "status": status,
-        "commit_sha": env("CFI_COMMIT_SHA"),
-        "branch": env("CFI_BRANCH"),
+        "commit_sha": required["CFI_COMMIT_SHA"],
+        "branch": required["CFI_BRANCH"],
         "run_url": run_url,
         "artifact_url": artifact_url,
         "requested_at": env("REQUESTED_AT") or utc_now(),
@@ -137,11 +133,10 @@ def main() -> None:
     result_path = Path(env("CFI_RESULT_PATH", "reports/hash-chilli-cloud-ci-result.json"))
     compact_path = Path(env("CFI_COMPACT_SUMMARY_PATH", "reports/hash-chilli-cloud-ci-summary.json"))
 
-    # Both files contain the same contract fields. The compact summary is the
+    # Both files contain the same payload fields. The compact summary is the
     # preferred display handoff; the pretty result remains review-friendly.
-    compact_payload = {field: payload[field] for field in SUMMARY_FIELDS}
     write_json(result_path, payload, compact=False)
-    write_json(compact_path, compact_payload, compact=True)
+    write_json(compact_path, payload, compact=True)
     append_github_env(payload)
 
     print(f"Published Hash/chilli CFI result: {result_path}")
