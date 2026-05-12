@@ -2,7 +2,7 @@
 
 - generated_at: deterministic-contract-validation
 - status: pass
-- schema_count: 4
+- schema_count: 5
 - example_count: 4
 
 ## Schemas
@@ -11,6 +11,7 @@
 | --- | --- | --- |
 | `contracts/api-dashboard.schema.json` | pass | valid JSON and required schema metadata present |
 | `contracts/benchmark-summary.schema.json` | pass | valid JSON and required schema metadata present |
+| `contracts/hash-chilli-cloud-ci-result.schema.json` | pass | valid JSON and required schema metadata present |
 | `contracts/regression-summary.schema.json` | pass | valid JSON and required schema metadata present |
 | `contracts/sanitization-summary.schema.json` | pass | valid JSON and required schema metadata present |
 

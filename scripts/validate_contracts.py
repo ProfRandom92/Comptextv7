@@ -20,7 +20,7 @@ EXAMPLES_DIR = CONTRACTS_DIR / "examples"
 REPORT_PATH = ROOT / "docs" / "reports" / "contract-validation-report.md"
 SCHEMA_SUFFIX = ".schema.json"
 EXAMPLE_SUFFIX = ".example.json"
-SUPPORTED_TYPES = {"string", "number", "integer", "boolean", "object", "array"}
+SUPPORTED_TYPES = {"string", "number", "integer", "boolean", "object", "array", "null"}
 SCHEMA_REQUIRED_FIELDS = {"title", "description", "type", "required", "properties"}
 
 
@@ -51,7 +51,26 @@ def type_name(value: Any) -> str:
     return type(value).__name__
 
 
-def matches_type(value: Any, expected: str) -> bool:
+def schema_types(schema_type: Any) -> list[str]:
+    if isinstance(schema_type, str):
+        return [schema_type]
+    if isinstance(schema_type, list) and all(isinstance(item, str) for item in schema_type):
+        return schema_type
+    return []
+
+
+def validate_schema_type(schema_type: Any, location: str) -> list[str]:
+    types = schema_types(schema_type)
+    if not types or any(item not in SUPPORTED_TYPES for item in types):
+        return [f"{location} has unsupported or missing type"]
+    return []
+
+
+def matches_type(value: Any, expected: Any) -> bool:
+    return any(matches_single_type(value, item) for item in schema_types(expected))
+
+
+def matches_single_type(value: Any, expected: str) -> bool:
     if expected == "string":
         return isinstance(value, str)
     if expected == "number":
@@ -64,6 +83,8 @@ def matches_type(value: Any, expected: str) -> bool:
         return isinstance(value, dict)
     if expected == "array":
         return isinstance(value, list)
+    if expected == "null":
+        return value is None
     return False
 
 
@@ -76,7 +97,11 @@ def validate_schema_shape(schema: Any, path: Path) -> list[str]:
     for field in missing:
         errors.append(f"schema missing required metadata field: {field}")
 
-    if schema.get("type") != "object":
+    schema_type = schema.get("type")
+    type_errors = validate_schema_type(schema_type, "schema root")
+    if type_errors:
+        errors.extend(type_errors)
+    elif "object" not in schema_types(schema_type):
         errors.append("schema root type must be object")
     if not isinstance(schema.get("required"), list) or not all(
         isinstance(item, str) for item in schema.get("required", [])
@@ -107,10 +132,9 @@ def validate_property_definition(definition: Any, location: str) -> list[str]:
         return [f"{location} definition must be an object"]
 
     expected_type = definition.get("type")
-    if expected_type not in SUPPORTED_TYPES:
-        errors.append(f"{location} has unsupported or missing type")
+    errors.extend(validate_schema_type(expected_type, location))
 
-    if definition.get("type") == "object":
+    if "object" in schema_types(expected_type):
         nested_properties = definition.get("properties")
         nested_required = definition.get("required", [])
         if nested_properties is not None and not isinstance(nested_properties, dict):
@@ -154,14 +178,18 @@ def validate_instance(instance: Any, schema: dict[str, Any], location: str) -> l
             errors.append(f"{location}.{field} has invalid schema definition")
             continue
         field_type = definition.get("type")
-        if field_type not in SUPPORTED_TYPES:
-            errors.append(f"{location}.{field} has unsupported schema type")
+        type_errors = validate_schema_type(field_type, f"{location}.{field}")
+        if type_errors:
+            errors.extend(
+                error.replace("unsupported or missing type", "unsupported schema type")
+                for error in type_errors
+            )
             continue
         value = instance[field]
         if not matches_type(value, field_type):
             errors.append(f"{location}.{field} expected {field_type}, found {type_name(value)}")
             continue
-        if field_type == "object":
+        if isinstance(value, dict) and "object" in schema_types(field_type):
             errors.extend(validate_instance(value, definition, f"{location}.{field}"))
     return errors
 
