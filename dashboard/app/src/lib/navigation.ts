@@ -2,7 +2,7 @@ import { Activity, AlertTriangle, BarChart3, GitCompareArrows, HeartPulse, Shiel
 import type { RouteId } from '../types/domain';
 
 export const navigation = [
-  { id: 'overview', label: 'Operations', description: 'Fleet health and SLO posture', icon: Activity },
+  { id: 'overview', label: 'Showcase', description: 'Enterprise cloud review experience', icon: Activity },
   { id: 'release-health', label: 'Release Health', description: 'Readiness gates and promotion evidence', icon: HeartPulse },
   { id: 'forensics', label: 'Forensics', description: 'Safety and retention gates', icon: ShieldCheck },
   { id: 'benchmarks', label: 'Benchmarks', description: 'Compression and throughput lanes', icon: BarChart3 },

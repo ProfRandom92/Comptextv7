@@ -30,7 +30,7 @@
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 1160px; background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.14), transparent 32rem), var(--bg); color: var(--text); font-family: var(--font-sans); }
+body { margin: 0; background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.14), transparent 32rem), var(--bg); color: var(--text); font-family: var(--font-sans); }
 button, input { font: inherit; }
 button { cursor: pointer; }
 a { color: inherit; }

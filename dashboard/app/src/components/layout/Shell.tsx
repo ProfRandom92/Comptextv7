@@ -9,11 +9,11 @@ export function Shell({ activeRoute, onNavigate, onOpenCommand, children }: { ac
   return (
     <div className="shell">
       <aside className="sidebar" aria-label="Primary navigation">
-        <div className="brand"><div className="brand-mark">CT</div><div><h1>CompText Ops</h1><p>Industrial SRE / ML-Ops console</p></div></div>
+        <div className="brand"><div className="brand-mark">CT</div><div><h1>CompText V7</h1><p>Enterprise showcase console</p></div></div>
         <nav className="nav">
           {navigation.map((item) => <button key={item.id} onClick={() => onNavigate(item.id)} aria-current={item.id === activeRoute ? 'page' : undefined}><item.icon size={20} /><span><strong>{item.label}</strong><span>{item.description}</span></span></button>)}
         </nav>
-        <div className="sidebar-footer">Architecture: feature-based React app, typed API boundary, query cache, virtualized data surfaces.</div>
+        <div className="sidebar-footer">Cloud-first showcase: docs, CI artifacts, typed payloads, and reviewer-safe validation boundaries.</div>
       </aside>
       <main className="main">
         <header className="topbar">
