@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="330" viewBox="0 0 780 330">
+<rect width="100%" height="100%" fill="#0f172a" />
+<text x="20" y="28" fill="#e2e8f0" font-size="22" font-family="sans-serif">Continuity heatmap</text>
+<text x="250" y="42" fill="#e2e8f0" font-size="13">naive</text>
+<text x="382" y="42" fill="#e2e8f0" font-size="13">baseline</text>
+<text x="514" y="42" fill="#e2e8f0" font-size="13">adaptive</text>
+<text x="646" y="42" fill="#e2e8f0" font-size="13">comptext_v7</text>
+<text x="20" y="84" fill="#e2e8f0" font-size="12">replay_consistency</text>
+<rect x="250" y="58" width="128" height="38" fill="rgb(228,92,90)" />
+<text x="284" y="83" fill="#0f172a" font-size="13">0.085</text>
+<rect x="382" y="58" width="128" height="38" fill="rgb(203,119,90)" />
+<text x="416" y="83" fill="#0f172a" font-size="13">0.264</text>
+<rect x="514" y="58" width="128" height="38" fill="rgb(159,166,90)" />
+<text x="548" y="83" fill="#0f172a" font-size="13">0.578</text>
+<rect x="646" y="58" width="128" height="38" fill="rgb(100,230,90)" />
+<text x="680" y="83" fill="#0f172a" font-size="13">1.000</text>
+<text x="20" y="126" fill="#e2e8f0" font-size="12">architecture_continuity</text>
+<rect x="250" y="100" width="128" height="38" fill="rgb(240,80,90)" />
+<text x="284" y="125" fill="#0f172a" font-size="13">0.000</text>
+<rect x="382" y="100" width="128" height="38" fill="rgb(208,113,90)" />
+<text x="416" y="125" fill="#0f172a" font-size="13">0.222</text>
+<rect x="514" y="100" width="128" height="38" fill="rgb(208,113,90)" />
+<text x="548" y="125" fill="#0f172a" font-size="13">0.222</text>
+<rect x="646" y="100" width="128" height="38" fill="rgb(100,230,90)" />
+<text x="680" y="125" fill="#0f172a" font-size="13">1.000</text>
+<text x="20" y="168" fill="#e2e8f0" font-size="12">constraint_survival</text>
+<rect x="250" y="142" width="128" height="38" fill="rgb(240,80,90)" />
+<text x="284" y="167" fill="#0f172a" font-size="13">0.000</text>
+<rect x="382" y="142" width="128" height="38" fill="rgb(217,104,90)" />
+<text x="416" y="167" fill="#0f172a" font-size="13">0.163</text>
+<rect x="514" y="142" width="128" height="38" fill="rgb(171,153,90)" />
+<text x="548" y="167" fill="#0f172a" font-size="13">0.488</text>
+<rect x="646" y="142" width="128" height="38" fill="rgb(100,230,90)" />
+<text x="680" y="167" fill="#0f172a" font-size="13">1.000</text>
+<text x="20" y="210" fill="#e2e8f0" font-size="12">truth_retention</text>
+<rect x="250" y="184" width="128" height="38" fill="rgb(240,80,90)" />
+<text x="284" y="209" fill="#0f172a" font-size="13">0.000</text>
+<rect x="382" y="184" width="128" height="38" fill="rgb(213,108,90)" />
+<text x="416" y="209" fill="#0f172a" font-size="13">0.189</text>
+<rect x="514" y="184" width="128" height="38" fill="rgb(160,165,90)" />
+<text x="548" y="209" fill="#0f172a" font-size="13">0.567</text>
+<rect x="646" y="184" width="128" height="38" fill="rgb(100,230,90)" />
+<text x="680" y="209" fill="#0f172a" font-size="13">1.000</text>
+<text x="20" y="252" fill="#e2e8f0" font-size="12">operational_continuity</text>
+<rect x="250" y="226" width="128" height="38" fill="rgb(236,83,90)" />
+<text x="284" y="251" fill="#0f172a" font-size="13">0.025</text>
+<rect x="382" y="226" width="128" height="38" fill="rgb(205,116,90)" />
+<text x="416" y="251" fill="#0f172a" font-size="13">0.243</text>
+<rect x="514" y="226" width="128" height="38" fill="rgb(171,153,90)" />
+<text x="548" y="251" fill="#0f172a" font-size="13">0.491</text>
+<rect x="646" y="226" width="128" height="38" fill="rgb(100,230,90)" />
+<text x="680" y="251" fill="#0f172a" font-size="13">1.000</text>
+<text x="20" y="294" fill="#e2e8f0" font-size="12">overall_continuity</text>
+<rect x="250" y="268" width="128" height="38" fill="rgb(236,83,90)" />
+<text x="284" y="293" fill="#0f172a" font-size="13">0.022</text>
+<rect x="382" y="268" width="128" height="38" fill="rgb(209,113,90)" />
+<text x="416" y="293" fill="#0f172a" font-size="13">0.221</text>
+<rect x="514" y="268" width="128" height="38" fill="rgb(172,151,90)" />
+<text x="548" y="293" fill="#0f172a" font-size="13">0.480</text>
+<rect x="646" y="268" width="128" height="38" fill="rgb(100,230,90)" />
+<text x="680" y="293" fill="#0f172a" font-size="13">1.000</text>
+</svg>
