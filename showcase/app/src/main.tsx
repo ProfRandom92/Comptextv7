@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, useEffect, useId, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Activity,
@@ -20,6 +20,7 @@ import {
   Workflow
 } from 'lucide-react';
 import './styles.css';
+
 
 type StatusTone = 'pass' | 'warn' | 'info' | 'neutral';
 
@@ -51,7 +52,10 @@ const kpis: Kpi[] = [
   { label: 'Compressed Tokens', value: '382,118', detail: 'KVTC-V7 artifact frame', tone: 'info' },
   { label: 'Reduction Ratio', value: '70.2%', detail: 'deterministic replay retained', tone: 'info' },
   { label: 'Replay Drift Delta', value: '0.000', detail: 'REP-CONSISTENCY-441', tone: 'pass' },
-  { label: 'Validation Status', value: 'PASS', detail: 'GH-ACT-551882', tone: 'pass' }
+  { label: 'Validation Pass Rate', value: '99.82%', detail: '2,184 CI validation runs', tone: 'pass' },
+  { label: 'Replay Determinism', value: '100%', detail: 'pinned replay contract', tone: 'pass' },
+  { label: 'Artifact Count', value: '441', detail: 'registry evidence objects', tone: 'neutral' },
+  { label: 'CI Validation Runs', value: '2,184', detail: 'contract executions indexed', tone: 'info' }
 ];
 
 const architectureNodes = [
@@ -62,7 +66,48 @@ const architectureNodes = [
   'Replay Executor',
   'Drift Assertions',
   'Artifact Registry',
-  'Enterprise Review Dashboard'
+  'Enterprise Dashboard'
+];
+
+const mermaidDiagrams = [
+  {
+    title: 'Deterministic Replay Pipeline',
+    chart: `flowchart LR
+    A[Raw Corpus Ingest]
+    B[Tokenizer Pipeline]
+    C[Compression Engine]
+    D[Validation Runner]
+    E[Replay Executor]
+    F[Drift Assertions]
+    G[Artifact Registry]
+    H[Enterprise Dashboard]
+
+    A --> B --> C --> D --> E --> F --> G --> H`
+  },
+  {
+    title: 'CI Validation Flow',
+    chart: `flowchart TD
+    A[Git Push]
+    B[GitHub Actions]
+    C[Validation Runner]
+    D[Artifact Publish]
+    E[Replay Verification]
+    F[Preview Deploy]
+    G[Reviewer Inspection]
+
+    A --> B --> C --> D --> E --> F --> G`
+  },
+  {
+    title: 'Artifact Lineage',
+    chart: `graph TD
+    A[Corpus Snapshot]
+    B[Compression Artifact]
+    C[Replay Artifact]
+    D[Validation Report]
+    E[CI Evidence Bundle]
+
+    A --> B --> C --> D --> E`
+  }
 ];
 
 const timeline: TimelineItem[] = [
@@ -99,19 +144,21 @@ const timeline: TimelineItem[] = [
 ];
 
 const spans: Span[] = [
-  { name: 'comptextv7.replay.workflow', id: 'trace-8842', duration: '8.02s', width: 100, offset: 0, depth: 0 },
-  { name: 'corpus.load.raw_frames', id: 'span-a12', duration: '1.08s', width: 18, offset: 3, depth: 1 },
-  { name: 'tokenizer.normalize.windows', id: 'span-b44', duration: '1.91s', width: 26, offset: 18, depth: 1 },
-  { name: 'compression.emit.kvtc_frame', id: 'span-c83', duration: '2.20s', width: 31, offset: 41, depth: 1 },
-  { name: 'validation.contract.assert', id: 'span-d09', duration: '1.14s', width: 18, offset: 68, depth: 2 },
-  { name: 'replay.diff.drift_delta', id: 'span-e71', duration: '0.71s', width: 12, offset: 85, depth: 2 }
+  { name: 'TRACE replay.run.8842', id: 'trace-8842', duration: '8.02s', width: 100, offset: 0, depth: 0 },
+  { name: 'tokenize.corpus', id: 'span-a12', duration: '1.08s', width: 18, offset: 3, depth: 1 },
+  { name: 'compress.segment', id: 'span-b44', duration: '2.20s', width: 31, offset: 21, depth: 1 },
+  { name: 'validation.assert', id: 'span-c83', duration: '1.14s', width: 18, offset: 51, depth: 1 },
+  { name: 'replay.verify', id: 'span-d09', duration: '1.43s', width: 21, offset: 67, depth: 1 },
+  { name: 'artifact.publish', id: 'span-e71', duration: '0.71s', width: 12, offset: 85, depth: 1 }
 ];
 
 const artifacts = [
-  { id: 'ART-CTX7-2F91A', type: 'Compression Frame', hash: 'sha256:91a7…c2ff', owner: 'compression-engine', state: 'Immutable' },
-  { id: 'REP-CONSISTENCY-441', type: 'Replay Evidence', hash: 'sha256:441b…77ad', owner: 'replay-executor', state: 'Verified' },
-  { id: 'GH-ACT-551882', type: 'CI Validation', hash: 'run:551882', owner: 'github-actions', state: 'PASS' },
-  { id: 'RUN-2026-05-13-8842', type: 'Run Envelope', hash: 'sha256:8842…09ef', owner: 'validation-runner', state: 'Sealed' }
+  { id: 'ART-CTX7-2F91A', type: 'Compression', source: 'CORP-2026-05', hash: 'sha256:91a7…c2ff', status: 'PASS' },
+  { id: 'ART-CTX7-319AB', type: 'Replay', source: 'ART-CTX7-2F91A', hash: 'sha256:319a…88be', status: 'VERIFIED' },
+  { id: 'ART-CTX7-4AA1D', type: 'Validation', source: 'REP-CONSISTENCY-441', hash: 'sha256:4aa1…18dc', status: 'PASS' },
+  { id: 'ART-CTX7-77C04', type: 'Lineage', source: 'RUN-2026-05-13-8842', hash: 'sha256:77c0…41fe', status: 'SEALED' },
+  { id: 'ART-CTX7-8D202', type: 'CI Evidence', source: 'GH-ACT-551882', hash: 'run:551882', status: 'PUBLISHED' },
+  { id: 'ART-CTX7-A91E0', type: 'Telemetry', source: 'trace-8842', hash: 'sha256:a91e…00ad', status: 'INDEXED' }
 ];
 
 const ciHistory = [
@@ -129,12 +176,59 @@ const benchmarkRows = [
 ];
 
 const useCases = [
-  ['LLM context optimization', 'Compress repetitive corpus evidence into deterministic context frames without losing replay anchors.'],
+  ['Enterprise knowledge compression', 'Compress large internal corpora into deterministic context frames with retained replay anchors.'],
+  ['Technical documentation pipelines', 'Normalize manuals, SOPs, and service bulletins into token windows that can be audited later.'],
+  ['OEM/workshop document systems', 'Preserve lineage across workshop procedures, parts documentation, and validated retrieval artifacts.'],
   ['Deterministic benchmark validation', 'Re-run benchmark suites with pinned corpus hashes and explicit drift assertions.'],
-  ['CI-backed AI workflows', 'Gate AI infrastructure changes through GitHub Actions contracts before artifact publication.'],
-  ['Enterprise document pipelines', 'Preserve lineage between source documents, token windows, compression output, and review artifacts.'],
-  ['Compliance replayability', 'Demonstrate exactly how a compressed artifact reconstructs against approved validation evidence.']
+  ['Compliance replayability', 'Demonstrate exactly how a compressed artifact reconstructs against approved validation evidence.'],
+  ['Audit-ready AI workflows', 'Expose run envelopes, traces, CI evidence, and artifact hashes for internal review boards.'],
+  ['CI-backed validation pipelines', 'Gate AI infrastructure changes through GitHub Actions contracts before artifact publication.'],
+  ['Artifact-preserving evaluation systems', 'Keep compression, replay, benchmark, and telemetry outputs available through immutable registry IDs.']
 ];
+
+
+function MermaidDiagram({ title, chart }: { title: string; chart: string }) {
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+  const [svg, setSvg] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    import('mermaid').then(({ default: mermaid }) => {
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: 'strict',
+        theme: 'dark',
+        themeVariables: {
+          background: '#080d14',
+          primaryColor: '#0f1724',
+          primaryTextColor: '#e5edf7',
+          primaryBorderColor: '#3b82f6',
+          lineColor: '#60a5fa',
+          secondaryColor: '#111827',
+          tertiaryColor: '#0b1220',
+          fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif'
+        }
+      });
+      return mermaid.render(`diagram-${id}`, chart);
+    }).then(({ svg: renderedSvg }) => {
+      if (mounted) setSvg(renderedSvg);
+    }).catch(() => {
+      if (mounted) setSvg('');
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [chart, id]);
+
+  return (
+    <article className="mermaid-panel">
+      <div className="panel-title"><Workflow size={18} /> {title}</div>
+      {svg ? <div className="mermaid-render" dangerouslySetInnerHTML={{ __html: svg }} /> : <pre className="mermaid-code">{chart}</pre>}
+      <pre className="mermaid-source">{chart}</pre>
+    </article>
+  );
+}
 
 function StatusPill({ children, tone = 'neutral' }: { children: string; tone?: StatusTone }) {
   return <span className={`pill pill--${tone}`}>{children}</span>;
@@ -188,7 +282,7 @@ function ExecutiveOverview() {
       <div className="kpi-grid">
         {kpis.map((kpi, index) => (
           <article className="kpi-card" key={kpi.label}>
-            <div className="kpi-topline"><span>{kpi.label}</span><StatusPill tone={kpi.tone}>{index === 4 ? 'CI' : 'LIVE'}</StatusPill></div>
+            <div className="kpi-topline"><span>{kpi.label}</span><StatusPill tone={kpi.tone}>{kpi.label.includes('CI') || kpi.label.includes('Validation') ? 'CI' : 'LIVE'}</StatusPill></div>
             <strong>{kpi.value}</strong>
             <p>{kpi.detail}</p>
             <Sparkline variant={index} />
@@ -212,8 +306,8 @@ function ArchitectureSurface() {
       </div>
       <div className="architecture-layout">
         <div className="dag-card">
-          <div className="panel-title"><Workflow size={18} /> Mermaid-style DAG</div>
-          <div className="dag" aria-label="Raw Corpus Ingest to Enterprise Review Dashboard DAG">
+          <div className="panel-title"><Workflow size={18} /> Deterministic pipeline nodes</div>
+          <div className="dag" aria-label="Raw Corpus Ingest to Enterprise Dashboard DAG">
             {architectureNodes.map((node, index) => (
               <div className="dag-node" key={node}>
                 <span>{String(index + 1).padStart(2, '0')}</span>
@@ -221,15 +315,7 @@ function ArchitectureSurface() {
               </div>
             ))}
           </div>
-          <pre className="mermaid-code">{`graph LR
-  A[Raw Corpus Ingest] --> B[Tokenizer Pipeline]
-  B --> C[Compression Engine]
-  C --> D[Validation Runner]
-  D --> E[Replay Executor]
-  E --> F[Drift Assertions]
-  F --> G[Artifact Registry]
-  G --> H[Enterprise Review Dashboard]`}</pre>
-        </div>
+          </div>
         <div className="contract-stack">
           <article>
             <GitBranch size={20} />
@@ -244,6 +330,9 @@ function ArchitectureSurface() {
             <div><h3>Artifact Registry → Showcase</h3><p>Published evidence references immutable IDs instead of ad hoc screenshots or untraceable benchmark notes.</p></div>
           </article>
         </div>
+      </div>
+      <div className="mermaid-grid">
+        {mermaidDiagrams.map((diagram) => <MermaidDiagram key={diagram.title} {...diagram} />)}
       </div>
     </section>
   );
@@ -268,7 +357,13 @@ function WorkflowSimulation() {
           ))}
         </div>
         <div className="trace-card">
-          <div className="panel-title"><Activity size={18} /> OpenTelemetry trace: trace-8842</div>
+          <div className="panel-title"><Activity size={18} /> OpenTelemetry trace: replay.run.8842</div>
+          <pre className="trace-tree">{`TRACE replay.run.8842
+ ├─ tokenize.corpus
+ ├─ compress.segment
+ ├─ validation.assert
+ ├─ replay.verify
+ └─ artifact.publish`}</pre>
           <div className="trace-axis"><span>0s</span><span>2s</span><span>4s</span><span>6s</span><span>8s</span></div>
           {spans.map((span) => (
             <div className="span-row" key={span.id} style={{ '--depth': span.depth } as React.CSSProperties}>
@@ -292,23 +387,23 @@ function OperationsConsole() {
     <section className="section-shell" id="operations" aria-labelledby="operations-title">
       <div className="console-frame">
         <div className="console-header">
-          <div><div className="eyebrow"><Radar size={16} /> Operations Console</div><h2 id="operations-title">Enterprise review dashboard</h2></div>
+          <div><div className="eyebrow"><Radar size={16} /> Operations Console</div><h2 id="operations-title">Enterprise Review Dashboard</h2></div>
           <StatusPill tone="pass">Validation Status: PASS</StatusPill>
         </div>
         <div className="ops-grid">
-          {kpis.slice(0, 4).map((kpi, index) => (
+          {kpis.map((kpi, index) => (
             <article className="ops-card" key={kpi.label}><span>{kpi.label}</span><strong>{kpi.value}</strong><Sparkline variant={index + 1} /></article>
           ))}
         </div>
         <div className="ops-columns">
-          <TablePanel title="Artifact registry" icon={<Database size={18} />} columns={['Artifact', 'Type', 'Owner', 'State']} rows={artifacts.map((a) => [a.id, a.type, a.owner, a.state])} />
+          <TablePanel title="Artifact registry" icon={<Database size={18} />} columns={['Artifact', 'Type', 'Source', 'Hash', 'Status']} rows={artifacts.map((a) => [a.id, a.type, a.source, a.hash, a.status])} />
           <TablePanel title="CI execution history" icon={<GitCommitHorizontal size={18} />} columns={['Run', 'Branch', 'Contract', 'Drift', 'Status']} rows={ciHistory.map((c) => [c.run, c.branch, c.contract, c.drift, c.status])} />
         </div>
         <div className="ops-columns secondary">
           <TablePanel title="Benchmark suite" icon={<SplitSquareHorizontal size={18} />} columns={['Suite', 'p50', 'p95', 'Samples', 'Outcome']} rows={benchmarkRows.map((b) => [b.suite, b.p50, b.p95, b.samples, b.outcome])} />
           <div className="orchestration-panel">
             <div className="panel-title"><GitPullRequestArrow size={18} /> Orchestration panel</div>
-            {['Preview deploy created', 'CI validation complete', 'Artifact lineage indexed', 'Enterprise showcase promoted'].map((label, index) => (
+            {['ingest corpus snapshot', 'compress deterministic frames', 'validate contract assertions', 'replay pinned envelope', 'inspect artifact registry', 'verify drift delta 0.000', 'approve CI contract'].map((label, index) => (
               <div className="orchestration-step" key={label}><span>{index + 1}</span><p>{label}</p><StatusPill tone="pass">complete</StatusPill></div>
             ))}
           </div>
@@ -347,15 +442,24 @@ function UseCasesAndWalkthrough() {
       <section className="section-shell walkthrough" id="walkthrough" aria-labelledby="walkthrough-title">
         <div>
           <div className="eyebrow"><ShieldCheck size={16} /> Reviewer Walkthrough</div>
-          <h2 id="walkthrough-title">Trust model explained for reviewers.</h2>
+          <h2 id="walkthrough-title">Guided approval flow for internal reviewers.</h2><p className="walkthrough-note">Follow the same operational sequence used by the validation surface: ingest → compress → validate → replay → inspect artifacts → verify determinism → approve CI contract.</p>
         </div>
         <div className="walkthrough-grid">
-          <article><h3>Deterministic replay</h3><p>Replay is evaluated from pinned run envelopes, corpus hashes, tokenizer windows, and reconstruction checksums.</p></article>
-          <article><h3>Validation contracts</h3><p>GitHub Actions acts as the review authority for contract execution, not a local laptop or mutable dashboard state.</p></article>
-          <article><h3>Artifact-driven workflows</h3><p>Compression, replay, benchmark, and telemetry evidence remain inspectable through immutable operational IDs.</p></article>
-          <article><h3>Operational telemetry</h3><p>Reviewers see token counts, reduction ratio, drift delta, trace spans, CI status, and artifact lineage together.</p></article>
-          <article><h3>Reproducibility</h3><p>The same run envelope can be re-executed against the same golden corpus and produce the same replay result.</p></article>
-          <article><h3>Enterprise trust model</h3><p>Claims are backed by validation summaries, CI history, benchmark rows, and lineage records rather than generic AI language.</p></article>
+          {['ingest', 'compress', 'validate', 'replay', 'inspect artifacts', 'verify determinism', 'approve CI contract'].map((step, index) => (
+            <article key={step}>
+              <span className="walkthrough-index">{String(index + 1).padStart(2, '0')}</span>
+              <h3>{step}</h3>
+              <p>{[
+                'Confirm the corpus snapshot, tokenizer version, and run envelope are pinned before execution.',
+                'Review the compression artifact frame and retained cursor map for deterministic reconstruction.',
+                'Check validation assertions, pass rate, and contract outputs from CI rather than mutable local state.',
+                'Run the replay envelope against the golden corpus and inspect checksum parity.',
+                'Open registry rows for compression, replay, validation, lineage, telemetry, and CI evidence.',
+                'Verify replay drift delta is 0.000 and replay determinism remains 100%.',
+                'Approve the CI contract only after evidence bundle publication and reviewer inspection.'
+              ][index]}</p>
+            </article>
+          ))}
         </div>
       </section>
     </>
