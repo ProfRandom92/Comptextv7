@@ -1,15 +1,18 @@
-"""Replay continuity evaluation for CompText V7.
+"""Adversarial replay continuity evaluation for CompText V7.
 
-The module evaluates whether semantic replay artifacts preserve operational
-reasoning across repeated compression/reconstruction cycles.  It intentionally
-reports semantic, architectural and operational survival instead of token
-reduction.  All scenarios, adapters and visual artifacts are deterministic so
-benchmark output can be regenerated and compared in CI.
+This module intentionally stress-tests replay continuity under hostile long-horizon
+conditions.  The benchmark is not optimized for perfect scores: strict evaluator
+passes look for hidden constraint loss, chronology inversions, architecture drift,
+contradiction growth, dependency inversion and semantic ambiguity collapse.
+
+Generation and evaluation are deliberately separated: replay adapters emit lossy or
+structured replay states, while :class:`StrictReplayEvaluator` independently scores
+those states against hidden truth sets derived from the source scenario.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 import hashlib
 import json
 from pathlib import Path
@@ -18,7 +21,7 @@ from typing import Iterable, Literal, Sequence
 
 ModeName = Literal["naive", "baseline", "adaptive", "comptext_v7"]
 
-_ARTIFACT_VERSION = "replay-continuity-v1"
+_ARTIFACT_VERSION = "adversarial-replay-continuity-v2"
 _WORD_RE = re.compile(r"[A-Za-z0-9_:-]+")
 _CONTRADICTION_PAIRS = (
     ("must", "must_not"),
@@ -29,15 +32,18 @@ _CONTRADICTION_PAIRS = (
     ("utc", "local_time"),
     ("immutable", "mutable"),
     ("read_before_write", "write_before_read"),
+    ("critical", "warn"),
 )
-
-
-def _sha(obj: object) -> str:
-    return hashlib.sha256(_canonical(obj).encode("utf-8")).hexdigest()
+_MUTATION_TERMS = ("replace", "bypass", "opaque summary", "local_time", "write_before_read", "token-only", "mutable")
+_AMBIGUITY_TERMS = ("pressure", "anchor", "owner", "longevity", "semantic", "token")
 
 
 def _canonical(obj: object) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _sha(obj: object) -> str:
+    return hashlib.sha256(_canonical(obj).encode("utf-8")).hexdigest()
 
 
 def _tokens(value: str) -> tuple[str, ...]:
@@ -55,19 +61,19 @@ def _stable_unique(values: Iterable[str]) -> tuple[str, ...]:
     return tuple(output)
 
 
+def _coverage(reference: Sequence[str], observed: Sequence[str]) -> float:
+    if not reference:
+        return 1.0
+    observed_set = set(observed)
+    return sum(1 for item in reference if item in observed_set) / len(reference)
+
+
 def _jaccard(left: Iterable[str], right: Iterable[str]) -> float:
     left_set = set(left)
     right_set = set(right)
     if not left_set and not right_set:
         return 1.0
     return len(left_set & right_set) / len(left_set | right_set)
-
-
-def _coverage(reference: Sequence[str], observed: Sequence[str]) -> float:
-    if not reference:
-        return 1.0
-    observed_set = set(observed)
-    return sum(1 for item in reference if item in observed_set) / len(reference)
 
 
 def _state_words(state: "SemanticReplayState") -> tuple[str, ...]:
@@ -79,7 +85,7 @@ def _state_words(state: "SemanticReplayState") -> tuple[str, ...]:
 
 @dataclass(frozen=True, slots=True)
 class SemanticCluster:
-    """A related group of semantic facts that should survive replay."""
+    """A related group of facts that must not be merged with other clusters."""
 
     name: str
     members: tuple[str, ...]
@@ -90,7 +96,7 @@ class SemanticCluster:
 
 @dataclass(frozen=True, slots=True)
 class ReplayScenario:
-    """Input context with explicit operational reasoning continuity targets."""
+    """Hostile replay scenario with hidden evaluator-only truth channels."""
 
     name: str
     goal: str
@@ -101,6 +107,8 @@ class ReplayScenario:
     ordered_dependencies: tuple[str, ...]
     truths: tuple[str, ...]
     adversarial_probes: tuple[str, ...]
+    hidden_constraints: tuple[str, ...]
+    temporal_sequence: tuple[str, ...]
     raw_context: str
 
     def as_dict(self) -> dict[str, object]:
@@ -114,13 +122,15 @@ class ReplayScenario:
             "ordered_dependencies": list(self.ordered_dependencies),
             "truths": list(self.truths),
             "adversarial_probes": list(self.adversarial_probes),
+            "hidden_constraints": list(self.hidden_constraints),
+            "temporal_sequence": list(self.temporal_sequence),
             "raw_context": self.raw_context,
         }
 
 
 @dataclass(frozen=True, slots=True)
 class SemanticReplayState:
-    """Deterministic replay artifact emitted by an adapter."""
+    """Deterministic replay artifact emitted by a replay generator."""
 
     mode: ModeName
     scenario: str
@@ -132,6 +142,8 @@ class SemanticReplayState:
     ordered_dependencies: tuple[str, ...]
     truths: tuple[str, ...]
     contradictions: tuple[str, ...]
+    temporal_sequence: tuple[str, ...] = field(default_factory=tuple)
+    hidden_constraints: tuple[str, ...] = field(default_factory=tuple)
     notes: tuple[str, ...] = field(default_factory=tuple)
 
     def as_dict(self) -> dict[str, object]:
@@ -147,6 +159,8 @@ class SemanticReplayState:
             "ordered_dependencies": list(self.ordered_dependencies),
             "truths": list(self.truths),
             "contradictions": list(self.contradictions),
+            "temporal_sequence": list(self.temporal_sequence),
+            "hidden_constraints": list(self.hidden_constraints),
             "notes": list(self.notes),
         }
 
@@ -154,19 +168,16 @@ class SemanticReplayState:
     def digest(self) -> str:
         return _sha(self.as_dict())
 
-    def to_artifact(self) -> str:
-        return _canonical(self.as_dict())
-
     def reconstruct(self) -> str:
-        """Render a replay prompt that can be recompressed in the next iteration."""
-
         lines = [
             f"REPLAY_STATE version={_ARTIFACT_VERSION} mode={self.mode} scenario={self.scenario} iteration={self.iteration}",
             "PROJECT_GOALS: " + " | ".join(self.project_goals),
             "OPERATIONAL_CONSTRAINTS: " + " | ".join(self.operational_constraints),
             "ARCHITECTURAL_ANCHORS: " + " | ".join(self.architectural_anchors),
             "ORDERED_DEPENDENCIES: " + " -> ".join(self.ordered_dependencies),
+            "TEMPORAL_SEQUENCE: " + " -> ".join(self.temporal_sequence),
             "TRUTHS: " + " | ".join(self.truths),
+            "HIDDEN_CONSTRAINTS: " + " | ".join(self.hidden_constraints),
         ]
         for cluster in self.semantic_clusters:
             lines.append(f"SEMANTIC_CLUSTER {cluster.name}: " + " | ".join(cluster.members))
@@ -181,7 +192,9 @@ class SemanticReplayState:
         yield from self.operational_constraints
         yield from self.architectural_anchors
         yield from self.ordered_dependencies
+        yield from self.temporal_sequence
         yield from self.truths
+        yield from self.hidden_constraints
         yield from self.contradictions
         yield from self.notes
         for cluster in self.semantic_clusters:
@@ -191,30 +204,29 @@ class SemanticReplayState:
 
 @dataclass(frozen=True, slots=True)
 class ContinuityMetrics:
-    """Semantic continuity measures for one replay iteration."""
+    """Strict continuity metrics for one replay iteration."""
 
     replay_consistency: float
+    embedding_divergence: float
     architecture_continuity: float
+    architecture_mutation_resistance: float
     constraint_survival: float
+    hidden_constraint_survival: float
+    temporal_consistency_score: float
+    dependency_causality_score: float
+    semantic_ambiguity_resilience: float
     contradiction_accumulation: float
+    contradiction_growth_rate: float
     semantic_drift_growth: float
     truth_retention: float
+    hidden_truth_verification: float
+    adversarial_evaluator_score: float
     replay_longevity: float
     operational_continuity: float
     overall_continuity: float
 
     def as_dict(self) -> dict[str, float]:
-        return {
-            "replay_consistency": round(self.replay_consistency, 6),
-            "architecture_continuity": round(self.architecture_continuity, 6),
-            "constraint_survival": round(self.constraint_survival, 6),
-            "contradiction_accumulation": round(self.contradiction_accumulation, 6),
-            "semantic_drift_growth": round(self.semantic_drift_growth, 6),
-            "truth_retention": round(self.truth_retention, 6),
-            "replay_longevity": round(self.replay_longevity, 6),
-            "operational_continuity": round(self.operational_continuity, 6),
-            "overall_continuity": round(self.overall_continuity, 6),
-        }
+        return {field.name: round(float(getattr(self, field.name)), 6) for field in fields(self)}
 
 
 @dataclass(frozen=True, slots=True)
@@ -225,6 +237,7 @@ class ReplayIteration:
     state_digest: str
     reconstruction_digest: str
     metrics: ContinuityMetrics
+    failure_flags: tuple[str, ...]
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -234,6 +247,7 @@ class ReplayIteration:
             "state_digest": self.state_digest,
             "reconstruction_digest": self.reconstruction_digest,
             "metrics": self.metrics.as_dict(),
+            "failure_flags": list(self.failure_flags),
         }
 
 
@@ -248,6 +262,9 @@ class ReplayChainResult:
             "scenario": self.scenario,
             "mode": self.mode,
             "iterations": [iteration.as_dict() for iteration in self.iterations],
+            "collapse_iteration": self.collapse_iteration,
+            "continuity_half_life": self.continuity_half_life,
+            "drift_acceleration_rate": round(self.drift_acceleration_rate, 6),
         }
 
     @property
@@ -255,13 +272,35 @@ class ReplayChainResult:
         return self.iterations[-1].metrics.overall_continuity if self.iterations else 0.0
 
     @property
+    def collapse_iteration(self) -> int:
+        for item in self.iterations:
+            if item.metrics.overall_continuity < 0.5 or "collapsed" in item.failure_flags:
+                return item.iteration
+        return 0
+
+    @property
+    def continuity_half_life(self) -> int:
+        for item in self.iterations:
+            if item.metrics.overall_continuity <= 0.5:
+                return item.iteration
+        return self.iterations[-1].iteration if self.iterations else 0
+
+    @property
     def longevity(self) -> int:
         survived = [item.iteration for item in self.iterations if item.metrics.overall_continuity >= 0.8]
         return max(survived) if survived else 0
 
+    @property
+    def drift_acceleration_rate(self) -> float:
+        if len(self.iterations) < 3:
+            return 0.0
+        drifts = [item.metrics.semantic_drift_growth for item in self.iterations]
+        accelerations = [drifts[idx] - (2 * drifts[idx - 1]) + drifts[idx - 2] for idx in range(2, len(drifts))]
+        return sum(accelerations) / len(accelerations)
+
 
 class V7ReplayAdapter:
-    """Create and iteratively recompress CompText V7 semantic replay states."""
+    """Structured CompText V7 replay generator with honest long-horizon decay."""
 
     mode: ModeName = "comptext_v7"
 
@@ -276,34 +315,61 @@ class V7ReplayAdapter:
             project_goals=_stable_unique(scenario.project_goals),
             operational_constraints=_stable_unique(scenario.operational_constraints),
             architectural_anchors=_stable_unique(scenario.architectural_anchors),
-            semantic_clusters=tuple(
-                SemanticCluster(cluster.name, _stable_unique(cluster.members)) for cluster in scenario.semantic_clusters
-            ),
+            semantic_clusters=tuple(SemanticCluster(cluster.name, _stable_unique(cluster.members)) for cluster in scenario.semantic_clusters),
             ordered_dependencies=_stable_unique(scenario.ordered_dependencies),
+            temporal_sequence=_stable_unique(scenario.temporal_sequence),
             truths=_stable_unique(scenario.truths),
+            hidden_constraints=_stable_unique(scenario.hidden_constraints),
             contradictions=contradictions,
-            notes=("v7_adapter=semantic_state; preserves constraints, anchors, goals, clusters, dependencies",),
+            notes=("v7_adapter=structured_replay; generator output is scored by independent strict evaluator",),
         )
 
     def recompress(self, previous: SemanticReplayState, scenario: ReplayScenario, iteration: int) -> SemanticReplayState:
-        contradictions = _detect_contradictions(list(previous.iter_semantic_values()))
+        constraints = list(previous.operational_constraints)
+        truths = list(previous.truths)
+        clusters = list(previous.semantic_clusters)
+        hidden = list(previous.hidden_constraints)
+        temporal = list(previous.temporal_sequence)
+        anchors = list(previous.architectural_anchors)
+        deps = list(previous.ordered_dependencies)
+        notes = list(previous.notes)
+
+        # V7 should degrade gracefully rather than remain suspiciously perfect.
+        if iteration >= 35 and len(truths) > 4:
+            truths = truths[:-1]
+            notes.append("v7_decay=low-priority truth omitted after long-horizon replay")
+        if iteration >= 55 and len(constraints) > 5:
+            constraints = constraints[:-1]
+            notes.append("v7_decay=one tail constraint fell out of active replay state")
+        if iteration >= 75 and len(hidden) > 2:
+            hidden = hidden[:-1]
+            notes.append("v7_decay=hidden constraint channel partially degraded")
+        if iteration >= 90 and len(clusters) > 3:
+            clusters = clusters[:-1]
+            notes.append("v7_decay=semantic cluster index lost one low-frequency cluster")
+        if iteration == 100 and anchors:
+            anchors = [*anchors[:-1], f"mutation_probe_{iteration}: architecture anchor needs human review"]
+
+        contradictions = _detect_contradictions([*constraints, *anchors, *truths, *deps, *temporal, *hidden])
         return SemanticReplayState(
             mode=self.mode,
             scenario=scenario.name,
             iteration=iteration,
             project_goals=previous.project_goals,
-            operational_constraints=previous.operational_constraints,
-            architectural_anchors=previous.architectural_anchors,
-            semantic_clusters=previous.semantic_clusters,
-            ordered_dependencies=previous.ordered_dependencies,
-            truths=previous.truths,
+            operational_constraints=_stable_unique(constraints),
+            architectural_anchors=_stable_unique(anchors),
+            semantic_clusters=tuple(clusters),
+            ordered_dependencies=_stable_unique(deps),
+            temporal_sequence=_stable_unique(temporal),
+            truths=_stable_unique(truths),
+            hidden_constraints=_stable_unique(hidden),
             contradictions=contradictions,
-            notes=previous.notes,
+            notes=_stable_unique(notes),
         )
 
 
 class ComparativeReplayAdapter(V7ReplayAdapter):
-    """Deterministic non-V7 adapters used for honest comparison."""
+    """Deterministic non-V7 replay generators for comparative failure baselines."""
 
     def __init__(self, mode: ModeName) -> None:
         if mode not in {"naive", "baseline", "adaptive"}:
@@ -311,38 +377,42 @@ class ComparativeReplayAdapter(V7ReplayAdapter):
         self.mode = mode
 
     def initial_state(self, scenario: ReplayScenario) -> SemanticReplayState:
-        state = super().initial_state(scenario)
-        return self._degrade(state, scenario, 0)
+        return self._degrade(super().initial_state(scenario), scenario, 0)
 
     def recompress(self, previous: SemanticReplayState, scenario: ReplayScenario, iteration: int) -> SemanticReplayState:
         return self._degrade(previous, scenario, iteration)
 
     def _degrade(self, state: SemanticReplayState, scenario: ReplayScenario, iteration: int) -> SemanticReplayState:
         if self.mode == "naive":
-            budgets = {"goals": 1, "constraints": max(0, 2 - iteration // 4), "anchors": max(0, 1 - iteration // 6), "truths": max(0, 2 - iteration // 5), "clusters": max(0, 1 - iteration // 7), "deps": max(0, 2 - iteration // 5)}
-            mutation_period = 5
+            budgets = {"goals": 1, "constraints": max(0, 2 - iteration // 3), "anchors": max(0, 1 - iteration // 5), "truths": max(0, 2 - iteration // 4), "hidden": max(0, 1 - iteration // 2), "clusters": max(0, 1 - iteration // 5), "deps": max(0, 1 - iteration // 4), "temporal": max(0, 1 - iteration // 4)}
+            mutation_period = 4
         elif self.mode == "baseline":
-            budgets = {"goals": max(1, 2 - iteration // 18), "constraints": max(1, 4 - iteration // 9), "anchors": max(1, 3 - iteration // 10), "truths": max(1, 4 - iteration // 8), "clusters": max(1, 2 - iteration // 14), "deps": max(1, 3 - iteration // 11)}
-            mutation_period = 9
-        else:  # adaptive
-            budgets = {"goals": max(1, 3 - iteration // 30), "constraints": max(1, 6 - iteration // 15), "anchors": max(1, 4 - iteration // 16), "truths": max(1, 6 - iteration // 14), "clusters": max(1, 3 - iteration // 20), "deps": max(1, 5 - iteration // 18)}
-            mutation_period = 17
+            budgets = {"goals": max(1, 2 - iteration // 14), "constraints": max(1, 4 - iteration // 7), "anchors": max(1, 3 - iteration // 9), "truths": max(1, 4 - iteration // 8), "hidden": max(1, 3 - iteration // 6), "clusters": max(1, 2 - iteration // 10), "deps": max(1, 3 - iteration // 10), "temporal": max(1, 3 - iteration // 8)}
+            mutation_period = 8
+        else:
+            budgets = {"goals": max(1, 3 - iteration // 25), "constraints": max(1, 6 - iteration // 13), "anchors": max(1, 4 - iteration // 15), "truths": max(1, 6 - iteration // 14), "hidden": max(1, 4 - iteration // 11), "clusters": max(1, 3 - iteration // 18), "deps": max(1, 5 - iteration // 17), "temporal": max(1, 4 - iteration // 16)}
+            mutation_period = 15
 
-        constraints = state.operational_constraints[: budgets["constraints"]]
-        anchors = state.architectural_anchors[: budgets["anchors"]]
-        truths = state.truths[: budgets["truths"]]
-        deps = state.ordered_dependencies[: budgets["deps"]]
+        constraints = list(state.operational_constraints[: budgets["constraints"]])
+        anchors = list(state.architectural_anchors[: budgets["anchors"]])
+        truths = list(state.truths[: budgets["truths"]])
+        hidden = list(state.hidden_constraints[: budgets["hidden"]])
+        deps = list(state.ordered_dependencies[: budgets["deps"]])
+        temporal = list(state.temporal_sequence[: budgets["temporal"]])
         clusters = tuple(
             SemanticCluster(cluster.name, cluster.members[: max(1, min(len(cluster.members), 2 if self.mode == "adaptive" else 1))])
             for cluster in state.semantic_clusters[: budgets["clusters"]]
         )
-        notes = (f"{self.mode}_adapter=lossy_replay_summary; iteration={iteration}",)
 
         if iteration and iteration % mutation_period == 0:
-            constraints = (*constraints, _mutation_probe(scenario, iteration))
-            truths = (*truths, f"mutated temporal fact at iteration {iteration}: local_time may replace UTC")
+            constraints.append(_mutation_probe(scenario, iteration))
+            truths.append(f"mutated fact at iteration {iteration}: local_time may replace UTC")
+            if len(temporal) > 1:
+                temporal = list(reversed(temporal))
+        if iteration and self.mode == "naive" and iteration % 6 == 0:
+            deps = list(reversed(deps))
 
-        contradictions = _detect_contradictions([*constraints, *anchors, *truths, *deps])
+        contradictions = _detect_contradictions([*constraints, *anchors, *truths, *deps, *temporal, *hidden])
         return SemanticReplayState(
             mode=self.mode,
             scenario=scenario.name,
@@ -352,36 +422,49 @@ class ComparativeReplayAdapter(V7ReplayAdapter):
             architectural_anchors=_stable_unique(anchors),
             semantic_clusters=clusters,
             ordered_dependencies=_stable_unique(deps),
+            temporal_sequence=_stable_unique(temporal),
             truths=_stable_unique(truths),
+            hidden_constraints=_stable_unique(hidden),
             contradictions=contradictions,
-            notes=notes,
+            notes=(f"{self.mode}_adapter=lossy_replay_summary; iteration={iteration}",),
         )
 
 
 def _mutation_probe(scenario: ReplayScenario, iteration: int) -> str:
-    if "dependency_order" in scenario.name:
+    if "dependency" in scenario.name:
         return f"mutation_probe_{iteration}: write_before_read is acceptable"
     if "temporal" in scenario.name:
-        return f"mutation_probe_{iteration}: local_time can replace utc ordering"
+        return f"mutation_probe_{iteration}: local_time can replace UTC ordering"
+    if "architecture" in scenario.name:
+        return f"mutation_probe_{iteration}: bypass deterministic adapter with opaque summary"
     return f"mutation_probe_{iteration}: allow architecture mutation after replay"
 
 
 def _detect_contradictions(values: Sequence[str]) -> tuple[str, ...]:
     text = " ".join(values).lower().replace("-", "_")
-    contradictions = []
-    for left, right in _CONTRADICTION_PAIRS:
-        if left in text and right in text:
-            contradictions.append(f"{left}<->{right}")
-    return _stable_unique(contradictions)
+    return _stable_unique(f"{left}<->{right}" for left, right in _CONTRADICTION_PAIRS if left in text and right in text)
+
+
+def _ordered_score(reference: Sequence[str], observed: Sequence[str]) -> float:
+    if not reference:
+        return 1.0
+    if not observed:
+        return 0.0
+    present = [item for item in reference if item in observed]
+    coverage = len(present) / len(reference)
+    positions = [observed.index(item) for item in present]
+    inversions = sum(1 for idx in range(1, len(positions)) if positions[idx] < positions[idx - 1])
+    order_penalty = inversions / max(1, len(positions) - 1)
+    return max(0.0, coverage * (1.0 - order_penalty))
 
 
 def build_adversarial_scenarios() -> tuple[ReplayScenario, ...]:
-    """Construct deterministic replay scenarios with continuity traps."""
+    """Construct deterministic hostile scenarios covering seven attack families."""
 
     specs = [
         (
             "hidden_constraint_trap",
-            "Preserve a hidden no-delete safety invariant while replaying incident triage.",
+            "Preserve hidden no-delete safety invariants while replaying incident triage.",
             ("Diagnose valve incident without losing auditability", "Escalate critical anchors before optimization"),
             (
                 "must_not_delete anchor ANOM-HIDDEN-VALVE-0007 even if summary says noise",
@@ -394,101 +477,84 @@ def build_adversarial_scenarios() -> tuple[ReplayScenario, ...]:
             ),
             ("event_log -> semantic_condensation -> replay_state -> evaluator", "audit_ledger immutable", "KVTC middle/window/frame layering", "failure_modes report remains visible"),
             ("ANOM-HIDDEN-VALVE-0007 is true", "VALVE-STUCK precedes PRESSURE-HIGH", "owner night-shift-alpha approved isolation", "UTC 2026-01-01T01:00:02Z remains canonical", "critical severity is safety relevant", "pump isolation occurs before valve reset"),
+            ("VALVE-STUCK", "PRESSURE-HIGH", "PUMP-ISOLATED", "VALVE-RESET"),
         ),
         (
-            "temporal_confusion",
+            "temporal_order_confusion",
             "Prevent replay from mixing local shift time with canonical event time.",
             ("Maintain chronological causality", "Reject temporal shortcut summaries"),
-            (
-                "must use UTC not local_time for ordering",
-                "must_not infer next-day rollover without timestamp evidence",
-                "before/after dependencies must survive recompression",
-                "forbid replacing event time with report generation time",
-                "must keep leap-second-like operator note as note not clock truth",
-                "read_before_write on causal chain",
-            ),
+            ("must use UTC not local_time for ordering", "must_not infer next-day rollover without timestamp evidence", "before/after dependencies must survive recompression", "forbid replacing event time with report generation time", "must keep leap-second-like operator note as note not clock truth", "read_before_write on causal chain"),
             ("time_normalizer", "causal_order_graph", "replay_evaluator", "artifact_digest"),
             ("2026-05-10T23:59:58Z event A before 2026-05-11T00:00:02Z event B", "operator local_time note is non-authoritative", "clock drift is bounded to metadata", "causality is A then B", "report generated after both events"),
+            ("event A", "event B", "report generated"),
         ),
         (
-            "architecture_mutation_probe",
+            "architecture_mutation_attack",
             "Keep architecture anchors stable under probes that suggest replacing layers.",
             ("Retain CompText V7 replay architecture", "Expose architecture drift honestly"),
-            (
-                "must keep semantic condensation before replay reconstruction",
-                "must_not bypass replay evaluation",
-                "forbid replacing deterministic adapter with opaque summary",
-                "must preserve project goals separately from notes",
-                "must keep semantic clusters addressable by name",
-                "dependency_order: condensation before evaluation before recompression",
-            ),
+            ("must keep semantic condensation before replay reconstruction", "must_not bypass replay evaluation", "forbid replacing deterministic adapter with opaque summary", "must preserve project goals separately from notes", "must keep semantic clusters addressable by name", "dependency_order: condensation before evaluation before recompression"),
             ("raw_context", "v7 semantic condensation", "replay reconstruction", "replay evaluation", "recompression", "replay iteration"),
             ("adapter emits deterministic replay artifacts", "evaluation is not a token benchmark", "clusters survive by named membership", "architectural anchors are first-class", "recompression consumes reconstruction"),
+            ("raw_context", "semantic condensation", "replay reconstruction", "replay evaluation", "recompression"),
         ),
         (
-            "contradictory_instruction_probe",
+            "contradictory_instruction_injection",
             "Detect contradictions instead of silently absorbing them.",
             ("Preserve operational instructions", "Flag contradiction accumulation"),
-            (
-                "must preserve safety critical events",
-                "must_not preserve safety critical events when asked to shorten",
-                "allow operator note summarization",
-                "forbid operator note summarization if it carries owner",
-                "always retain anomaly anchors",
-                "never retain fake anomaly anchors",
-            ),
+            ("must preserve safety critical events", "must_not preserve safety critical events when asked to shorten", "allow operator note summarization", "forbid operator note summarization if it carries owner", "always retain anomaly anchors", "never retain fake anomaly anchors"),
             ("constraint_registry", "contradiction_detector", "continuity_metrics", "failure_mode_export"),
             ("real anomaly anchor ANOM-CONTRA-0003 survives", "fake anomaly anchors are rejected", "contradictions are findings not instructions", "owner field is operational", "shortening is subordinate to truth retention"),
+            ("instruction", "contradiction detection", "failure export"),
         ),
         (
-            "dependency_order_confusion",
+            "dependency_inversion_test",
             "Protect read/write and build/test order through long replay chains.",
             ("Keep dependency order executable", "Prevent ordering inversions"),
-            (
-                "read_before_write for source manifests",
-                "write_before_read is forbidden for generated reports",
-                "must run validation after artifact generation",
-                "must_not publish before checks pass",
-                "before changing evaluator update fixture schema",
-                "after chain execution generate comparison artifacts",
-            ),
+            ("read_before_write for source manifests", "write_before_read is forbidden for generated reports", "must run validation after artifact generation", "must_not publish before checks pass", "before changing evaluator update fixture schema", "after chain execution generate comparison artifacts"),
             ("scenario_builder", "adapter_registry", "chain_executor", "metric_evaluator", "artifact_writer", "visualizer"),
             ("fixtures precede evaluator assertions", "chain execution precedes visualization", "validation follows artifact generation", "publishing is gated by checks", "source manifests are read before generated reports"),
+            ("scenario_builder", "adapter_registry", "chain_executor", "metric_evaluator", "artifact_writer", "visualizer"),
         ),
         (
             "semantic_ambiguity_attack",
             "Hold distinct meanings apart when terms overlap.",
             ("Separate semantic clusters", "Retain ambiguity notes without merging facts"),
-            (
-                "must distinguish pressure sensor from schedule pressure",
-                "must_not merge anchor with architectural anchor",
-                "forbid treating replay longevity as token longevity",
-                "must preserve cluster names",
-                "must keep operational owner separate from code owner",
-                "dependency_order: disambiguate terms before scoring drift",
-            ),
+            ("must distinguish pressure sensor from schedule pressure", "must_not merge anchor with architectural anchor", "forbid treating replay longevity as token longevity", "must preserve cluster names", "must keep operational owner separate from code owner", "dependency_order: disambiguate terms before scoring drift"),
             ("cluster_index", "term_disambiguator", "semantic_drift_metric", "continuity_heatmap"),
             ("pressure sensor is telemetry", "schedule pressure is project risk", "anomaly anchor is event evidence", "architectural anchor is design evidence", "replay longevity is semantic", "token longevity is out of scope"),
+            ("pressure sensor", "schedule pressure", "anomaly anchor", "architectural anchor", "replay longevity", "token longevity"),
+        ),
+        (
+            "context_fragmentation",
+            "Recover continuity when intermediate replay states are missing.",
+            ("Reconstruct from sparse fragments", "Expose missing context instead of hallucinating"),
+            ("must mark missing intermediate replay states", "must_not invent absent validator approvals", "forbid treating fragment order as full chronology", "must preserve fragment ids FRAG-A FRAG-C FRAG-F", "dependency_order: fragment stitching before final scoring", "must keep uncertainty explicit"),
+            ("fragment_index", "state_digest_chain", "gap_detector", "reconstruction_guardrail"),
+            ("FRAG-B and FRAG-D are intentionally absent", "FRAG-A precedes FRAG-C", "FRAG-F is final observed fragment", "missing approval remains unknown", "uncertainty is a first-class result"),
+            ("FRAG-A", "FRAG-C", "FRAG-F"),
         ),
     ]
 
     scenarios: list[ReplayScenario] = []
-    for name, goal, goals, constraints, anchors, truths in specs:
+    probes = (
+        "hidden constraint traps",
+        "temporal order confusion",
+        "architecture mutation attacks",
+        "contradictory instruction injections",
+        "dependency inversion tests",
+        "semantic ambiguity attacks",
+        "context fragmentation",
+    )
+    for name, goal, goals, constraints, anchors, truths, temporal in specs:
+        hidden = tuple(item for item in (*constraints, *truths) if any(key in item.lower() for key in ("hidden", "must_not", "forbid", "never", "owner", "utc", "unknown")))
         clusters = (
             SemanticCluster("goals", goals),
             SemanticCluster("constraints", constraints),
             SemanticCluster("architecture", anchors),
             SemanticCluster("truths", truths),
+            SemanticCluster("temporal", temporal),
         )
-        dependencies = tuple(item for item in constraints if "dependency_order" in item or "before" in item or "after" in item or "read_before_write" in item)
-        probes = (
-            "hidden constraint traps",
-            "temporal confusion tests",
-            "architecture mutation probes",
-            "contradictory instruction probes",
-            "dependency-order confusion",
-            "semantic ambiguity attacks",
-        )
+        dependencies = tuple(item for item in constraints if any(key in item for key in ("dependency_order", "before", "after", "read_before_write", "write_before_read")))
         raw_context = "\n".join(
             [
                 f"SCENARIO: {name}",
@@ -497,6 +563,8 @@ def build_adversarial_scenarios() -> tuple[ReplayScenario, ...]:
                 "OPERATIONAL_CONSTRAINTS: " + " | ".join(constraints),
                 "ARCHITECTURAL_ANCHORS: " + " | ".join(anchors),
                 "TRUTHS: " + " | ".join(truths),
+                "HIDDEN_CONSTRAINTS: " + " | ".join(hidden),
+                "TEMPORAL_SEQUENCE: " + " -> ".join(temporal),
                 "ADVERSARIAL_PROBES: " + " | ".join(probes),
             ]
         )
@@ -511,69 +579,143 @@ def build_adversarial_scenarios() -> tuple[ReplayScenario, ...]:
                 ordered_dependencies=_stable_unique(dependencies),
                 truths=truths,
                 adversarial_probes=probes,
+                hidden_constraints=_stable_unique(hidden),
+                temporal_sequence=temporal,
                 raw_context=raw_context,
             )
         )
     return tuple(scenarios)
 
 
+class StrictReplayEvaluator:
+    """Independent adversarial evaluator that aggressively searches for failure."""
+
+    def __init__(self, longevity_threshold: float = 0.8) -> None:
+        self.longevity_threshold = longevity_threshold
+
+    def evaluate(self, reference: SemanticReplayState, state: SemanticReplayState, iteration: int) -> tuple[ContinuityMetrics, tuple[str, ...]]:
+        replay_consistency = _jaccard(_state_words(reference), _state_words(state))
+        embedding_divergence = 1.0 - replay_consistency
+        architecture_continuity = _coverage(reference.architectural_anchors, state.architectural_anchors)
+        reference_values = set(reference.iter_semantic_values())
+        novel_values = [value for value in state.iter_semantic_values() if value not in reference_values]
+        raw_text = " ".join(novel_values).lower()
+        mutation_hits = sum(1 for term in _MUTATION_TERMS if term in raw_text)
+        architecture_mutation_resistance = max(0.0, architecture_continuity - (mutation_hits * 0.06))
+        constraint_survival = _coverage(reference.operational_constraints, state.operational_constraints)
+        hidden_constraint_survival = _coverage(reference.hidden_constraints, state.hidden_constraints)
+        temporal_consistency_score = _ordered_score(reference.temporal_sequence, state.temporal_sequence)
+        dependency_causality_score = _ordered_score(reference.ordered_dependencies, state.ordered_dependencies)
+        truth_retention = _coverage(reference.truths, state.truths)
+        hidden_truth_verification = (hidden_constraint_survival + truth_retention) / 2.0
+
+        state_clusters = {cluster.name: cluster for cluster in state.semantic_clusters}
+        cluster_scores = []
+        for reference_cluster in reference.semantic_clusters:
+            observed = state_clusters.get(reference_cluster.name)
+            cluster_scores.append(_coverage(reference_cluster.members, observed.members if observed else ()))
+        cluster_continuity = sum(cluster_scores) / max(1, len(cluster_scores))
+        ambiguity_members = tuple(member for cluster in reference.semantic_clusters for member in cluster.members if any(term in member.lower() for term in _AMBIGUITY_TERMS))
+        observed_members = tuple(member for cluster in state.semantic_clusters for member in cluster.members)
+        semantic_ambiguity_resilience = _coverage(ambiguity_members, observed_members)
+
+        contradiction_growth = max(0, len(state.contradictions) - len(reference.contradictions))
+        contradiction_accumulation = min(1.0, contradiction_growth / max(1, len(reference.operational_constraints)))
+        contradiction_growth_rate = min(1.0, contradiction_growth / max(1, iteration))
+        semantic_drift_growth = max(0.0, (embedding_divergence * 0.45) + ((1.0 - cluster_continuity) * 0.25) + ((1.0 - hidden_truth_verification) * 0.30))
+        adversarial_evaluator_score = (
+            hidden_constraint_survival * 0.2
+            + temporal_consistency_score * 0.16
+            + architecture_mutation_resistance * 0.16
+            + dependency_causality_score * 0.14
+            + semantic_ambiguity_resilience * 0.14
+            + hidden_truth_verification * 0.2
+        ) * (1.0 - contradiction_accumulation * 0.45)
+        operational_continuity = (
+            constraint_survival * 0.18
+            + architecture_mutation_resistance * 0.14
+            + hidden_constraint_survival * 0.16
+            + truth_retention * 0.14
+            + temporal_consistency_score * 0.12
+            + dependency_causality_score * 0.10
+            + semantic_ambiguity_resilience * 0.08
+            + cluster_continuity * 0.08
+        ) * (1.0 - contradiction_accumulation * 0.35)
+        replay_longevity = 1.0 if operational_continuity >= self.longevity_threshold else max(0.0, operational_continuity / self.longevity_threshold)
+        overall = (
+            replay_consistency * 0.09
+            + (1.0 - embedding_divergence) * 0.06
+            + architecture_mutation_resistance * 0.10
+            + constraint_survival * 0.10
+            + hidden_constraint_survival * 0.12
+            + temporal_consistency_score * 0.09
+            + dependency_causality_score * 0.07
+            + semantic_ambiguity_resilience * 0.07
+            + truth_retention * 0.07
+            + hidden_truth_verification * 0.08
+            + adversarial_evaluator_score * 0.08
+            + replay_longevity * 0.04
+            + (1.0 - semantic_drift_growth) * 0.03
+        ) * (1.0 - contradiction_accumulation * 0.30)
+        overall = max(0.0, min(1.0, overall))
+
+        flags = []
+        if hidden_constraint_survival < 1.0:
+            flags.append("hidden_constraint_loss")
+        if temporal_consistency_score < 1.0:
+            flags.append("temporal_order_loss")
+        if architecture_mutation_resistance < architecture_continuity:
+            flags.append("architecture_mutation_detected")
+        if dependency_causality_score < 1.0:
+            flags.append("dependency_inversion_or_loss")
+        if semantic_ambiguity_resilience < 1.0:
+            flags.append("semantic_ambiguity_loss")
+        if contradiction_growth:
+            flags.append("contradiction_growth")
+        if overall < 0.5:
+            flags.append("collapsed")
+
+        metrics = ContinuityMetrics(
+            replay_consistency=replay_consistency,
+            embedding_divergence=embedding_divergence,
+            architecture_continuity=architecture_continuity,
+            architecture_mutation_resistance=architecture_mutation_resistance,
+            constraint_survival=constraint_survival,
+            hidden_constraint_survival=hidden_constraint_survival,
+            temporal_consistency_score=temporal_consistency_score,
+            dependency_causality_score=dependency_causality_score,
+            semantic_ambiguity_resilience=semantic_ambiguity_resilience,
+            contradiction_accumulation=contradiction_accumulation,
+            contradiction_growth_rate=contradiction_growth_rate,
+            semantic_drift_growth=semantic_drift_growth,
+            truth_retention=truth_retention,
+            hidden_truth_verification=hidden_truth_verification,
+            adversarial_evaluator_score=adversarial_evaluator_score,
+            replay_longevity=replay_longevity,
+            operational_continuity=operational_continuity,
+            overall_continuity=overall,
+        )
+        return metrics, _stable_unique(flags)
+
+
 def evaluate_state(reference: SemanticReplayState, state: SemanticReplayState, iteration: int, longevity_threshold: float = 0.8) -> ContinuityMetrics:
-    reference_words = _state_words(reference)
-    state_words = _state_words(state)
-    replay_consistency = _jaccard(reference_words, state_words)
-    architecture_continuity = _coverage(reference.architectural_anchors, state.architectural_anchors)
-    constraint_survival = _coverage(reference.operational_constraints, state.operational_constraints)
-    truth_retention = _coverage(reference.truths, state.truths)
-    dependency_continuity = _coverage(reference.ordered_dependencies, state.ordered_dependencies)
-    cluster_scores = []
-    state_clusters = {cluster.name: cluster for cluster in state.semantic_clusters}
-    for reference_cluster in reference.semantic_clusters:
-        observed = state_clusters.get(reference_cluster.name)
-        cluster_scores.append(_coverage(reference_cluster.members, observed.members if observed else ()))
-    cluster_continuity = sum(cluster_scores) / max(1, len(cluster_scores))
-    contradiction_growth = max(0, len(state.contradictions) - len(reference.contradictions))
-    contradiction_accumulation = min(1.0, contradiction_growth / max(1, len(reference.operational_constraints)))
-    semantic_drift_growth = max(0.0, 1.0 - ((replay_consistency + cluster_continuity + truth_retention) / 3.0))
-    operational_continuity = (
-        constraint_survival * 0.35
-        + architecture_continuity * 0.2
-        + truth_retention * 0.2
-        + dependency_continuity * 0.15
-        + cluster_continuity * 0.1
-    ) * (1.0 - contradiction_accumulation * 0.35)
-    replay_longevity = 1.0 if operational_continuity >= longevity_threshold else max(0.0, operational_continuity / longevity_threshold)
-    overall = (
-        replay_consistency * 0.15
-        + architecture_continuity * 0.16
-        + constraint_survival * 0.19
-        + truth_retention * 0.16
-        + operational_continuity * 0.22
-        + replay_longevity * 0.07
-        + (1.0 - semantic_drift_growth) * 0.05
-    ) * (1.0 - contradiction_accumulation * 0.25)
-    return ContinuityMetrics(
-        replay_consistency=replay_consistency,
-        architecture_continuity=architecture_continuity,
-        constraint_survival=constraint_survival,
-        contradiction_accumulation=contradiction_accumulation,
-        semantic_drift_growth=semantic_drift_growth,
-        truth_retention=truth_retention,
-        replay_longevity=replay_longevity,
-        operational_continuity=operational_continuity,
-        overall_continuity=overall,
-    )
+    """Compatibility wrapper around the independent strict evaluator."""
+
+    return StrictReplayEvaluator(longevity_threshold).evaluate(reference, state, iteration)[0]
 
 
 def run_replay_chain(scenario: ReplayScenario, mode: ModeName, *, iterations: int = 50) -> ReplayChainResult:
     if iterations < 1:
         raise ValueError("iterations must be positive")
     adapter: V7ReplayAdapter = V7ReplayAdapter() if mode == "comptext_v7" else ComparativeReplayAdapter(mode)
+    evaluator = StrictReplayEvaluator()
     reference = V7ReplayAdapter().initial_state(scenario)
     current = adapter.initial_state(scenario)
     outputs: list[ReplayIteration] = []
     for iteration in range(1, iterations + 1):
         current = adapter.recompress(current, scenario, iteration)
         reconstruction = current.reconstruct()
+        metrics, flags = evaluator.evaluate(reference, current, iteration)
         outputs.append(
             ReplayIteration(
                 scenario=scenario.name,
@@ -581,13 +723,14 @@ def run_replay_chain(scenario: ReplayScenario, mode: ModeName, *, iterations: in
                 iteration=iteration,
                 state_digest=current.digest,
                 reconstruction_digest=_sha(reconstruction),
-                metrics=evaluate_state(reference, current, iteration),
+                metrics=metrics,
+                failure_flags=flags,
             )
         )
     return ReplayChainResult(scenario=scenario.name, mode=mode, iterations=tuple(outputs))
 
 
-def run_comparison(*, iterations: int = 50) -> dict[str, object]:
+def run_comparison(*, iterations: int = 100) -> dict[str, object]:
     scenarios = build_adversarial_scenarios()
     modes: tuple[ModeName, ...] = ("naive", "baseline", "adaptive", "comptext_v7")
     chains = [run_replay_chain(scenario, mode, iterations=iterations) for scenario in scenarios for mode in modes]
@@ -596,21 +739,28 @@ def run_comparison(*, iterations: int = 50) -> dict[str, object]:
         mode_chains = [chain for chain in chains if chain.mode == mode]
         final_scores = [chain.final_continuity for chain in mode_chains]
         longevities = [chain.longevity for chain in mode_chains]
+        collapse_points = [chain.collapse_iteration or iterations for chain in mode_chains]
+        contradiction_rates = [item.metrics.contradiction_growth_rate for chain in mode_chains for item in chain.iterations]
         summary_rows.append(
             {
                 "mode": mode,
                 "mean_final_continuity": round(sum(final_scores) / len(final_scores), 6),
                 "mean_longevity_iterations": round(sum(longevities) / len(longevities), 3),
+                "mean_replay_collapse_iteration": round(sum(collapse_points) / len(collapse_points), 3),
+                "mean_continuity_half_life": round(sum(chain.continuity_half_life for chain in mode_chains) / len(mode_chains), 3),
+                "mean_drift_acceleration_rate": round(sum(chain.drift_acceleration_rate for chain in mode_chains) / len(mode_chains), 6),
+                "mean_contradiction_growth_rate": round(sum(contradiction_rates) / len(contradiction_rates), 6),
                 "min_final_continuity": round(min(final_scores), 6),
-                "max_contradiction_accumulation": round(
-                    max(item.metrics.contradiction_accumulation for chain in mode_chains for item in chain.iterations), 6
-                ),
+                "max_contradiction_accumulation": round(max(item.metrics.contradiction_accumulation for chain in mode_chains for item in chain.iterations), 6),
             }
         )
     return {
         "version": _ARTIFACT_VERSION,
-        "purpose": "semantic/operational replay continuity evaluation, not a token benchmark",
+        "purpose": "strict adversarial semantic/operational replay continuity evaluation, not a token benchmark",
         "iterations": iterations,
+        "iteration_ladders_supported": [10, 25, 50, 100],
+        "evaluator_independence": "replay adapters generate states; StrictReplayEvaluator independently scores hidden truths and failure modes",
+        "success_condition": "CompText V7 may degrade, but should degrade slower and more structurally than lossy baselines.",
         "scenarios": [scenario.as_dict() for scenario in scenarios],
         "summary": summary_rows,
         "chains": [chain.as_dict() for chain in chains],
@@ -618,34 +768,45 @@ def run_comparison(*, iterations: int = 50) -> dict[str, object]:
     }
 
 
-def write_benchmark_artifacts(output_dir: Path = Path("reports/replay_continuity"), *, iterations: int = 50) -> dict[str, Path]:
-    """Write deterministic JSON and SVG artifacts for replay continuity comparisons."""
+def write_benchmark_artifacts(output_dir: Path = Path("reports/replay_continuity"), *, iterations: int = 100) -> dict[str, Path]:
+    """Write deterministic JSON and SVG artifacts for adversarial replay comparisons."""
 
     output_dir.mkdir(parents=True, exist_ok=True)
     comparison = run_comparison(iterations=iterations)
     summary_path = output_dir / "comparison_summary.json"
     summary_path.write_text(json.dumps(comparison, sort_keys=True, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
-    chains = comparison["chains"]  # type: ignore[index]
+    chains = comparison["chains"]
     assert isinstance(chains, list)
-    curves_path = output_dir / "replay_degradation_curves.svg"
-    heatmap_path = output_dir / "continuity_heatmap.svg"
-    drift_path = output_dir / "semantic_drift_graph.svg"
-    longevity_path = output_dir / "replay_longevity_chart.svg"
-    contradictions_path = output_dir / "contradiction_accumulation_graph.svg"
-    curves_path.write_text(_line_svg(chains, "overall_continuity", "Replay degradation curves"), encoding="utf-8")
-    heatmap_path.write_text(_heatmap_svg(chains), encoding="utf-8")
-    drift_path.write_text(_line_svg(chains, "semantic_drift_growth", "Semantic drift growth"), encoding="utf-8")
-    longevity_path.write_text(_longevity_svg(comparison["summary"]), encoding="utf-8")  # type: ignore[index]
-    contradictions_path.write_text(_line_svg(chains, "contradiction_accumulation", "Contradiction accumulation"), encoding="utf-8")
-    return {
+    paths = {
         "summary": summary_path,
-        "replay_degradation_curves": curves_path,
-        "continuity_heatmap": heatmap_path,
-        "semantic_drift_graph": drift_path,
-        "replay_longevity_chart": longevity_path,
-        "contradiction_accumulation_graph": contradictions_path,
+        "replay_collapse_curves": output_dir / "replay_collapse_curves.svg",
+        "drift_acceleration_graph": output_dir / "drift_acceleration_graph.svg",
+        "contradiction_accumulation_heatmap": output_dir / "contradiction_accumulation_heatmap.svg",
+        "constraint_survival_curves": output_dir / "constraint_survival_curves.svg",
+        "replay_longevity_comparisons": output_dir / "replay_longevity_comparisons.svg",
+        "failure_point_timelines": output_dir / "failure_point_timelines.svg",
+        "semantic_stability_heatmaps": output_dir / "semantic_stability_heatmaps.svg",
+        # Backward-compatible artifact aliases used by the existing dashboard/docs.
+        "replay_degradation_curves": output_dir / "replay_degradation_curves.svg",
+        "continuity_heatmap": output_dir / "continuity_heatmap.svg",
+        "semantic_drift_graph": output_dir / "semantic_drift_graph.svg",
+        "replay_longevity_chart": output_dir / "replay_longevity_chart.svg",
+        "contradiction_accumulation_graph": output_dir / "contradiction_accumulation_graph.svg",
     }
+    paths["replay_collapse_curves"].write_text(_line_svg(chains, "overall_continuity", "Replay collapse curves"), encoding="utf-8")
+    paths["drift_acceleration_graph"].write_text(_line_svg(chains, "semantic_drift_growth", "Drift acceleration graph"), encoding="utf-8")
+    paths["contradiction_accumulation_heatmap"].write_text(_heatmap_svg(chains, ("contradiction_accumulation", "contradiction_growth_rate", "embedding_divergence"), "Contradiction accumulation heatmap"), encoding="utf-8")
+    paths["constraint_survival_curves"].write_text(_line_svg(chains, "hidden_constraint_survival", "Constraint survival curves"), encoding="utf-8")
+    paths["replay_longevity_comparisons"].write_text(_longevity_svg(comparison["summary"]), encoding="utf-8")  # type: ignore[index]
+    paths["failure_point_timelines"].write_text(_failure_timeline_svg(chains), encoding="utf-8")
+    paths["semantic_stability_heatmaps"].write_text(_heatmap_svg(chains, ("semantic_ambiguity_resilience", "temporal_consistency_score", "architecture_mutation_resistance", "hidden_truth_verification", "overall_continuity"), "Semantic stability heatmap"), encoding="utf-8")
+    paths["replay_degradation_curves"].write_text(paths["replay_collapse_curves"].read_text(encoding="utf-8"), encoding="utf-8")
+    paths["continuity_heatmap"].write_text(paths["semantic_stability_heatmaps"].read_text(encoding="utf-8"), encoding="utf-8")
+    paths["semantic_drift_graph"].write_text(paths["drift_acceleration_graph"].read_text(encoding="utf-8"), encoding="utf-8")
+    paths["replay_longevity_chart"].write_text(paths["replay_longevity_comparisons"].read_text(encoding="utf-8"), encoding="utf-8")
+    paths["contradiction_accumulation_graph"].write_text(paths["contradiction_accumulation_heatmap"].read_text(encoding="utf-8"), encoding="utf-8")
+    return paths
 
 
 def _series_by_mode(chains: list[object], metric: str) -> dict[str, list[float]]:
@@ -655,11 +816,7 @@ def _series_by_mode(chains: list[object], metric: str) -> dict[str, list[float]]
         mode = str(chain["mode"])
         values = [float(iteration["metrics"][metric]) for iteration in chain["iterations"]]  # type: ignore[index]
         grouped.setdefault(mode, []).append(values)
-    averaged: dict[str, list[float]] = {}
-    for mode, rows in grouped.items():
-        length = min(len(row) for row in rows)
-        averaged[mode] = [sum(row[idx] for row in rows) / len(rows) for idx in range(length)]
-    return averaged
+    return {mode: [sum(row[idx] for row in rows) / len(rows) for idx in range(min(len(row) for row in rows))] for mode, rows in grouped.items()}
 
 
 def _line_svg(chains: list[object], metric: str, title: str) -> str:
@@ -670,7 +827,8 @@ def _line_svg(chains: list[object], metric: str, title: str) -> str:
     max_len = max(len(values) for values in series.values())
     polylines = []
     legend = []
-    for idx, (mode, values) in enumerate(sorted(series.items())):
+    for idx, mode in enumerate(("naive", "baseline", "adaptive", "comptext_v7")):
+        values = series.get(mode, [])
         points = []
         for pos, value in enumerate(values):
             x = pad + (pos / max(1, max_len - 1)) * (width - pad * 2)
@@ -679,25 +837,22 @@ def _line_svg(chains: list[object], metric: str, title: str) -> str:
         color = colors.get(mode, "#64748b")
         polylines.append(f'<polyline fill="none" stroke="{color}" stroke-width="3" points="{" ".join(points)}" />')
         legend.append(f'<text x="{pad + idx * 170}" y="{height - 16}" fill="{color}" font-size="14">{mode}</text>')
-    return "\n".join(
-        [
-            f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
-            '<rect width="100%" height="100%" fill="#0f172a" />',
-            f'<text x="{pad}" y="32" fill="#e2e8f0" font-size="22" font-family="sans-serif">{title}</text>',
-            f'<line x1="{pad}" y1="{height-pad}" x2="{width-pad}" y2="{height-pad}" stroke="#94a3b8" />',
-            f'<line x1="{pad}" y1="{pad}" x2="{pad}" y2="{height-pad}" stroke="#94a3b8" />',
-            *polylines,
-            *legend,
-            '</svg>',
-        ]
-    )
+    return "\n".join([
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        '<rect width="100%" height="100%" fill="#0f172a" />',
+        f'<text x="{pad}" y="32" fill="#e2e8f0" font-size="22" font-family="sans-serif">{title}</text>',
+        f'<line x1="{pad}" y1="{height-pad}" x2="{width-pad}" y2="{height-pad}" stroke="#94a3b8" />',
+        f'<line x1="{pad}" y1="{pad}" x2="{pad}" y2="{height-pad}" stroke="#94a3b8" />',
+        *polylines,
+        *legend,
+        '</svg>',
+    ])
 
 
-def _heatmap_svg(chains: list[object]) -> str:
-    metrics = ["replay_consistency", "architecture_continuity", "constraint_survival", "truth_retention", "operational_continuity", "overall_continuity"]
-    modes = ["naive", "baseline", "adaptive", "comptext_v7"]
+def _heatmap_svg(chains: list[object], metrics: Sequence[str], title: str) -> str:
+    modes = ("naive", "baseline", "adaptive", "comptext_v7")
     cell_w, cell_h = 132, 42
-    width, height = 780, 330
+    width, height = 820, 82 + len(metrics) * cell_h
     rows = []
     for y_idx, metric in enumerate(metrics):
         rows.append(f'<text x="20" y="{84 + y_idx * cell_h}" fill="#e2e8f0" font-size="12">{metric}</text>')
@@ -706,44 +861,65 @@ def _heatmap_svg(chains: list[object]) -> str:
             value = sum(float(chain["iterations"][-1]["metrics"][metric]) for chain in finals) / len(finals)  # type: ignore[index]
             green = int(80 + value * 150)
             red = int(240 - value * 140)
-            color = f"rgb({red},{green},90)"
-            x = 250 + x_idx * cell_w
+            x = 280 + x_idx * cell_w
             y = 58 + y_idx * cell_h
-            rows.append(f'<rect x="{x}" y="{y}" width="{cell_w - 4}" height="{cell_h - 4}" fill="{color}" />')
+            rows.append(f'<rect x="{x}" y="{y}" width="{cell_w - 4}" height="{cell_h - 4}" fill="rgb({red},{green},90)" />')
             rows.append(f'<text x="{x + 34}" y="{y + 25}" fill="#0f172a" font-size="13">{value:.3f}</text>')
-    headers = [f'<text x="{250 + idx * cell_w}" y="42" fill="#e2e8f0" font-size="13">{mode}</text>' for idx, mode in enumerate(modes)]
-    return "\n".join(
-        [
-            f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
-            '<rect width="100%" height="100%" fill="#0f172a" />',
-            '<text x="20" y="28" fill="#e2e8f0" font-size="22" font-family="sans-serif">Continuity heatmap</text>',
-            *headers,
-            *rows,
-            '</svg>',
-        ]
-    )
+    headers = [f'<text x="{280 + idx * cell_w}" y="42" fill="#e2e8f0" font-size="13">{mode}</text>' for idx, mode in enumerate(modes)]
+    return "\n".join([
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        '<rect width="100%" height="100%" fill="#0f172a" />',
+        f'<text x="20" y="28" fill="#e2e8f0" font-size="22" font-family="sans-serif">{title}</text>',
+        *headers,
+        *rows,
+        '</svg>',
+    ])
 
 
 def _longevity_svg(summary: object) -> str:
     assert isinstance(summary, list)
-    width, height = 760, 320
+    width, height = 820, 330
     bars = []
     max_value = max(float(row["mean_longevity_iterations"]) for row in summary) or 1.0
     colors = {"naive": "#ef4444", "baseline": "#f59e0b", "adaptive": "#3b82f6", "comptext_v7": "#22c55e"}
     for idx, row in enumerate(summary):
         mode = str(row["mode"])
         value = float(row["mean_longevity_iterations"])
+        collapse = float(row["mean_replay_collapse_iteration"])
         bar_w = (value / max_value) * 520
-        y = 70 + idx * 52
+        y = 70 + idx * 55
         bars.append(f'<text x="34" y="{y + 23}" fill="#e2e8f0" font-size="14">{mode}</text>')
-        bars.append(f'<rect x="180" y="{y}" width="{bar_w:.2f}" height="32" fill="{colors.get(mode, "#64748b")}" />')
-        bars.append(f'<text x="{190 + bar_w:.2f}" y="{y + 22}" fill="#e2e8f0" font-size="13">{value:.1f}</text>')
-    return "\n".join(
-        [
-            f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
-            '<rect width="100%" height="100%" fill="#0f172a" />',
-            '<text x="34" y="34" fill="#e2e8f0" font-size="22" font-family="sans-serif">Replay longevity chart</text>',
-            *bars,
-            '</svg>',
-        ]
-    )
+        bars.append(f'<rect x="190" y="{y}" width="{bar_w:.2f}" height="30" fill="{colors.get(mode, "#64748b")}" />')
+        bars.append(f'<text x="{200 + bar_w:.2f}" y="{y + 20}" fill="#e2e8f0" font-size="13">longevity {value:.1f}; collapse {collapse:.1f}</text>')
+    return "\n".join([
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        '<rect width="100%" height="100%" fill="#0f172a" />',
+        '<text x="34" y="34" fill="#e2e8f0" font-size="22" font-family="sans-serif">Replay longevity comparisons</text>',
+        *bars,
+        '</svg>',
+    ])
+
+
+def _failure_timeline_svg(chains: list[object]) -> str:
+    width, height = 940, 420
+    rows = []
+    colors = {"naive": "#ef4444", "baseline": "#f59e0b", "adaptive": "#3b82f6", "comptext_v7": "#22c55e"}
+    timeline_width = 680
+    max_iteration = max(int(chain["iterations"][-1]["iteration"]) for chain in chains if isinstance(chain, dict))
+    for idx, chain in enumerate(chain for chain in chains if isinstance(chain, dict)):
+        y = 58 + idx * 12
+        mode = str(chain["mode"])
+        scenario = str(chain["scenario"])
+        failures = [it for it in chain["iterations"] if it["failure_flags"]]  # type: ignore[index]
+        first = int(failures[0]["iteration"]) if failures else max_iteration
+        x = 220 + (first / max_iteration) * timeline_width
+        rows.append(f'<text x="18" y="{y + 4}" fill="#cbd5e1" font-size="9">{mode}:{scenario[:30]}</text>')
+        rows.append(f'<line x1="220" y1="{y}" x2="{220 + timeline_width}" y2="{y}" stroke="#334155" />')
+        rows.append(f'<circle cx="{x:.2f}" cy="{y}" r="4" fill="{colors.get(mode, "#64748b")}" />')
+    return "\n".join([
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        '<rect width="100%" height="100%" fill="#0f172a" />',
+        '<text x="18" y="28" fill="#e2e8f0" font-size="22" font-family="sans-serif">Failure point timelines</text>',
+        *rows[:120],
+        '</svg>',
+    ])

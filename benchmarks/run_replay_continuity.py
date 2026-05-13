@@ -16,7 +16,7 @@ from src.validation.replay_continuity import write_benchmark_artifacts
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--iterations", type=int, default=50, help="Replay chain length; supports 10+, 25+, and 50+ chains.")
+    parser.add_argument("--iterations", type=int, default=100, help="Replay chain length; supports 10, 25, 50, and 100 iteration adversarial chains.")
     parser.add_argument("--output-dir", type=Path, default=Path("reports/replay_continuity"))
     args = parser.parse_args()
     paths = write_benchmark_artifacts(args.output_dir, iterations=args.iterations)
