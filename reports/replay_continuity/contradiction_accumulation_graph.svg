@@ -12,8 +12,8 @@
 <text x="446" y="83" fill="#0f172a" font-size="13">0.000</text>
 <rect x="544" y="58" width="128" height="38" fill="rgb(240,80,90)" />
 <text x="578" y="83" fill="#0f172a" font-size="13">0.000</text>
-<rect x="676" y="58" width="128" height="38" fill="rgb(240,80,90)" />
-<text x="710" y="83" fill="#0f172a" font-size="13">0.000</text>
+<rect x="676" y="58" width="128" height="38" fill="rgb(230,89,90)" />
+<text x="710" y="83" fill="#0f172a" font-size="13">0.067</text>
 <text x="20" y="126" fill="#e2e8f0" font-size="12">contradiction_growth_rate</text>
 <rect x="280" y="100" width="128" height="38" fill="rgb(240,80,90)" />
 <text x="314" y="125" fill="#0f172a" font-size="13">0.000</text>
@@ -21,15 +21,15 @@
 <text x="446" y="125" fill="#0f172a" font-size="13">0.000</text>
 <rect x="544" y="100" width="128" height="38" fill="rgb(240,80,90)" />
 <text x="578" y="125" fill="#0f172a" font-size="13">0.000</text>
-<rect x="676" y="100" width="128" height="38" fill="rgb(240,80,90)" />
-<text x="710" y="125" fill="#0f172a" font-size="13">0.000</text>
+<rect x="676" y="100" width="128" height="38" fill="rgb(239,80,90)" />
+<text x="710" y="125" fill="#0f172a" font-size="13">0.002</text>
 <text x="20" y="168" fill="#e2e8f0" font-size="12">embedding_divergence</text>
-<rect x="280" y="142" width="128" height="38" fill="rgb(112,216,90)" />
-<text x="314" y="167" fill="#0f172a" font-size="13">0.909</text>
-<rect x="412" y="142" width="128" height="38" fill="rgb(144,182,90)" />
-<text x="446" y="167" fill="#0f172a" font-size="13">0.682</text>
-<rect x="544" y="142" width="128" height="38" fill="rgb(152,174,90)" />
-<text x="578" y="167" fill="#0f172a" font-size="13">0.628</text>
-<rect x="676" y="142" width="128" height="38" fill="rgb(197,125,90)" />
-<text x="710" y="167" fill="#0f172a" font-size="13">0.301</text>
+<rect x="280" y="142" width="128" height="38" fill="rgb(108,221,90)" />
+<text x="314" y="167" fill="#0f172a" font-size="13">0.943</text>
+<rect x="412" y="142" width="128" height="38" fill="rgb(143,183,90)" />
+<text x="446" y="167" fill="#0f172a" font-size="13">0.692</text>
+<rect x="544" y="142" width="128" height="38" fill="rgb(150,175,90)" />
+<text x="578" y="167" fill="#0f172a" font-size="13">0.637</text>
+<rect x="676" y="142" width="128" height="38" fill="rgb(176,147,90)" />
+<text x="710" y="167" fill="#0f172a" font-size="13">0.452</text>
 </svg>

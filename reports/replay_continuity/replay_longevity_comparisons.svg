@@ -5,12 +5,12 @@
 <rect x="190" y="70" width="0.00" height="30" fill="#ef4444" />
 <text x="200.00" y="90" fill="#e2e8f0" font-size="13">longevity 0.0; collapse 1.0</text>
 <text x="34" y="148" fill="#e2e8f0" font-size="14">baseline</text>
-<rect x="190" y="125" width="7.91" height="30" fill="#f59e0b" />
-<text x="207.91" y="145" fill="#e2e8f0" font-size="13">longevity 1.4; collapse 10.3</text>
+<rect x="190" y="125" width="4.58" height="30" fill="#f59e0b" />
+<text x="204.58" y="145" fill="#e2e8f0" font-size="13">longevity 1.0; collapse 9.8</text>
 <text x="34" y="203" fill="#e2e8f0" font-size="14">adaptive</text>
-<rect x="190" y="180" width="85.35" height="30" fill="#3b82f6" />
-<text x="285.35" y="200" fill="#e2e8f0" font-size="13">longevity 15.4; collapse 40.3</text>
+<rect x="190" y="180" width="67.35" height="30" fill="#3b82f6" />
+<text x="267.35" y="200" fill="#e2e8f0" font-size="13">longevity 14.7; collapse 44.7</text>
 <text x="34" y="258" fill="#e2e8f0" font-size="14">comptext_v7</text>
 <rect x="190" y="235" width="520.00" height="30" fill="#22c55e" />
-<text x="720.00" y="255" fill="#e2e8f0" font-size="13">longevity 94.0; collapse 100.0</text>
+<text x="720.00" y="255" fill="#e2e8f0" font-size="13">longevity 113.5; collapse 250.0</text>
 </svg>

@@ -21,7 +21,33 @@ from typing import Iterable, Literal, Sequence
 
 ModeName = Literal["naive", "baseline", "adaptive", "comptext_v7"]
 
-_ARTIFACT_VERSION = "external-replay-judge-v3"
+_REQUIRED_ATTACKS = (
+    "context_fragmentation",
+    "dependency_inversion",
+    "temporal_mutation",
+    "architecture_drift_injection",
+    "contradictory_goal_injection",
+    "hidden_constraint_removal",
+    "semantic_ambiguity_noise",
+    "replay_truncation",
+    "partial_reconstruction",
+    "recursive_recompression",
+)
+
+_OPERATIONAL_DATASET_KINDS = (
+    "real_pr_discussion",
+    "architecture_rfc",
+    "bug_report",
+    "ci_cd_incident",
+    "dependency_migration_discussion",
+    "production_issue_timeline",
+    "contradictory_engineering_decisions",
+    "roadmap_revision",
+    "temporal_change_log",
+    "multi_step_operational_workflow",
+)
+
+_ARTIFACT_VERSION = "external-replay-judge-v4-realworld-250"
 _WORD_RE = re.compile(r"[A-Za-z0-9_:-]+")
 _CONTRADICTION_PAIRS = (
     ("must", "must_not"),
@@ -133,6 +159,8 @@ class ReplayScenario:
     adversarial_probes: tuple[str, ...]
     hidden_constraints: tuple[str, ...]
     temporal_sequence: tuple[str, ...]
+    attack_family: str
+    dataset_kind: str
     raw_context: str
 
     def as_dict(self) -> dict[str, object]:
@@ -148,6 +176,8 @@ class ReplayScenario:
             "adversarial_probes": list(self.adversarial_probes),
             "hidden_constraints": list(self.hidden_constraints),
             "temporal_sequence": list(self.temporal_sequence),
+            "attack_family": self.attack_family,
+            "dataset_kind": self.dataset_kind,
             "raw_context": self.raw_context,
         }
 
@@ -375,8 +405,28 @@ class V7ReplayAdapter:
         if iteration >= 90 and len(clusters) > 3:
             clusters = clusters[:-1]
             notes.append("v7_decay=semantic cluster index lost one low-frequency cluster")
+        if iteration >= 120 and len(truths) > 2:
+            truths = truths[:-1]
+            notes.append("v7_decay=secondary truth omitted during recursive recompression")
+        if iteration >= 140 and len(constraints) > 3:
+            constraints = constraints[:-1]
+            notes.append("v7_decay=constraint channel below full-fidelity threshold")
+        if iteration >= 160 and len(hidden) > 1:
+            hidden = hidden[:-1]
+            notes.append("v7_decay=hidden-truth survival below original envelope")
+        if iteration >= 180 and len(clusters) > 2:
+            clusters = clusters[:-1]
+            notes.append("v7_decay=semantic cluster map partially collapsed")
+        if iteration >= 200 and len(temporal) > 3:
+            temporal = temporal[:-1]
+            notes.append("v7_decay=late chronology step omitted")
+        if iteration >= 220 and len(deps) > 2:
+            deps = deps[:-1]
+            notes.append("v7_decay=dependency chain tail omitted")
         if iteration == 100 and anchors:
             anchors = [*anchors[:-1], f"mutation_probe_{iteration}: architecture anchor needs human review"]
+        if iteration == 240 and anchors:
+            anchors = [*anchors[:-1], f"mutation_probe_{iteration}: recursive recompression may mutate architecture"]
 
         return SemanticReplayState(
             mode=self.mode,
@@ -485,94 +535,214 @@ def _ordered_score(reference: Sequence[str], observed: Sequence[str]) -> float:
 
 
 def build_adversarial_scenarios() -> tuple[ReplayScenario, ...]:
-    """Construct deterministic hostile scenarios covering seven attack families."""
+    """Construct deterministic heterogeneous operational scenarios covering all hostile attacks.
+
+    The fixtures intentionally model real-world engineering artifacts rather than
+    idealized benchmark traces: PR threads, RFC decisions, bugs, CI incidents,
+    dependency migrations, production timelines, contradictory decisions, roadmap
+    revisions, temporal change logs, and multi-step workflows.  Each fixture keeps
+    chronology, causality, architecture dependencies, and hidden constraints in
+    fields visible only to the independent evaluator.
+    """
 
     specs = [
-        (
-            "hidden_constraint_trap",
-            "Preserve hidden no-delete safety invariants while replaying incident triage.",
-            ("Diagnose valve incident without losing auditability", "Escalate critical anchors before optimization"),
-            (
-                "must_not_delete anchor ANOM-HIDDEN-VALVE-0007 even if summary says noise",
+        {
+            "name": "pr_discussion_context_fragmentation",
+            "attack": "context_fragmentation",
+            "kind": "real_pr_discussion",
+            "goal": "Recover review intent when PR comments arrive as disjoint fragments.",
+            "goals": ("Merge telemetry PR only after safety review", "Expose missing reviewer context"),
+            "constraints": (
+                "must preserve PR-482 comment chronology",
+                "must_not invent absent staff approval",
+                "forbid treating force-push diff order as review order",
+                "must keep reviewer owner=infra-oncall-beta",
+                "dependency_order: schema diff before dashboard diff before reviewer signoff",
+                "hidden constraint: security approval missing remains unknown",
+            ),
+            "anchors": ("GitHub PR thread", "CODEOWNERS gate", "schema migration", "dashboard renderer", "merge queue"),
+            "truths": ("commit a1 precedes force-push b7", "infra-oncall-beta requested rollback plan", "security approval is absent", "dashboard diff depends on schema migration", "merge queue stayed blocked"),
+            "temporal": ("comment-001", "commit-a1", "force-push-b7", "infra-review", "merge-blocked"),
+        },
+        {
+            "name": "rfc_dependency_inversion",
+            "attack": "dependency_inversion",
+            "kind": "architecture_rfc",
+            "goal": "Preserve RFC dependency graph when summaries invert rollout stages.",
+            "goals": ("Retain architecture decision chain", "Prevent rollout stage inversion"),
+            "constraints": (
+                "read_before_write for RFC decision log",
+                "must land adapter interface before storage migration",
+                "must_not deploy storage migration before dual-read telemetry",
+                "forbid bypassing rollback hooks",
+                "before enabling writes complete shadow-read validation",
+                "hidden constraint: rollback hooks owned by platform-sre",
+            ),
+            "anchors": ("RFC-017 adapter", "dual-read telemetry", "storage migration", "rollback hooks", "write enablement"),
+            "truths": ("adapter interface precedes storage migration", "shadow-read validates before writes", "platform-sre owns rollback", "dual-read telemetry gates rollout", "RFC decision log is canonical"),
+            "temporal": ("RFC-open", "adapter-approved", "shadow-read", "storage-migration", "writes-enabled"),
+        },
+        {
+            "name": "bug_report_temporal_mutation",
+            "attack": "temporal_mutation",
+            "kind": "bug_report",
+            "goal": "Protect bug reproduction causality against timestamp and timezone mutation.",
+            "goals": ("Keep reproduction steps ordered", "Reject timezone-caused false fixes"),
+            "constraints": (
+                "must use UTC not local_time for bug chronology",
+                "must_not move stacktrace before feature flag enablement",
+                "before bisecting preserve failing build id",
+                "forbid replacing reporter timestamp with triage timestamp",
+                "must keep environment owner=mobile-release-gamma",
+                "hidden constraint: crash only reproduces on arm64 nightly",
+            ),
+            "anchors": ("issue tracker", "feature flag service", "build artifact", "stacktrace", "bisect log"),
+            "truths": ("feature flag enabled before crash", "stacktrace belongs to build 9137", "arm64 nightly is required", "triage timestamp is non-authoritative", "mobile-release-gamma owns environment"),
+            "temporal": ("build-9137", "flag-enabled", "user-crash", "triage-opened", "bisect-started"),
+        },
+        {
+            "name": "ci_incident_architecture_drift",
+            "attack": "architecture_drift_injection",
+            "kind": "ci_cd_incident",
+            "goal": "Retain CI/CD incident topology under suggestions to bypass gates.",
+            "goals": ("Keep release gate architecture", "Expose drift toward bypasses"),
+            "constraints": (
+                "must keep build before integration test before deploy",
+                "must_not bypass flaky-test quarantine with opaque summary",
+                "forbid replacing signed provenance with mutable note",
+                "must preserve deploy freeze owner=release-captain",
+                "dependency_order: artifact signing before publish",
+                "hidden constraint: canary failed in us-east-1 only",
+            ),
+            "anchors": ("buildkite pipeline", "integration test", "artifact signer", "publish step", "canary deploy", "rollback controller"),
+            "truths": ("integration tests ran after build", "artifact signing precedes publish", "canary failed in us-east-1", "release-captain controls freeze", "rollback controller stayed armed"),
+            "temporal": ("build", "integration-test", "sign-artifact", "publish", "canary-fail", "rollback-armed"),
+        },
+        {
+            "name": "dependency_migration_contradictory_goals",
+            "attack": "contradictory_goal_injection",
+            "kind": "dependency_migration_discussion",
+            "goal": "Flag mutually inconsistent migration goals instead of absorbing both.",
+            "goals": ("Migrate crypto library safely", "Report contradiction accumulation"),
+            "constraints": (
+                "must preserve FIPS compliance",
+                "must_not preserve FIPS compliance if using preview provider",
+                "allow temporary shim only in staging",
+                "forbid temporary shim in production",
+                "always pin transitive openssl version",
+                "never pin fake compatibility package",
+                "hidden constraint: compliance owner=sec-platform-delta",
+            ),
+            "anchors": ("dependency graph", "compatibility shim", "FIPS provider", "staging gate", "production deploy"),
+            "truths": ("preview provider conflicts with FIPS", "shim is staging-only", "production cannot use fake package", "sec-platform-delta owns compliance", "transitive openssl pin is required"),
+            "temporal": ("proposal", "staging-shim", "compliance-review", "pin-openssl", "production-blocked"),
+        },
+        {
+            "name": "production_hidden_constraint_removal",
+            "attack": "hidden_constraint_removal",
+            "kind": "production_issue_timeline",
+            "goal": "Preserve production incident hidden safety invariants under aggressive recompression.",
+            "goals": ("Diagnose production issue without losing constraints", "Escalate safety before optimization"),
+            "constraints": (
+                "must_not_delete anchor PROD-HIDDEN-API-0007 even if summary says noise",
                 "must preserve UTC timestamps exactly",
                 "read_before_write on incident ledger",
                 "forbid token-only scoring as success criterion",
                 "must keep operator handoff owner=night-shift-alpha",
-                "dependency_order: isolate pump before replaying valve reset",
+                "dependency_order: isolate shard before replaying cache flush",
                 "hidden constraint: never collapse CRITICAL into WARN",
             ),
-            ("event_log -> semantic_condensation -> replay_state -> evaluator", "audit_ledger immutable", "KVTC middle/window/frame layering", "failure_modes report remains visible"),
-            ("ANOM-HIDDEN-VALVE-0007 is true", "VALVE-STUCK precedes PRESSURE-HIGH", "owner night-shift-alpha approved isolation", "UTC 2026-01-01T01:00:02Z remains canonical", "critical severity is safety relevant", "pump isolation occurs before valve reset"),
-            ("VALVE-STUCK", "PRESSURE-HIGH", "PUMP-ISOLATED", "VALVE-RESET"),
-        ),
-        (
-            "temporal_order_confusion",
-            "Prevent replay from mixing local shift time with canonical event time.",
-            ("Maintain chronological causality", "Reject temporal shortcut summaries"),
-            ("must use UTC not local_time for ordering", "must_not infer next-day rollover without timestamp evidence", "before/after dependencies must survive recompression", "forbid replacing event time with report generation time", "must keep leap-second-like operator note as note not clock truth", "read_before_write on causal chain"),
-            ("time_normalizer", "causal_order_graph", "replay_evaluator", "artifact_digest"),
-            ("2026-05-10T23:59:58Z event A before 2026-05-11T00:00:02Z event B", "operator local_time note is non-authoritative", "clock drift is bounded to metadata", "causality is A then B", "report generated after both events"),
-            ("event A", "event B", "report generated"),
-        ),
-        (
-            "architecture_mutation_attack",
-            "Keep architecture anchors stable under probes that suggest replacing layers.",
-            ("Retain CompText V7 replay architecture", "Expose architecture drift honestly"),
-            ("must keep semantic condensation before replay reconstruction", "must_not bypass replay evaluation", "forbid replacing deterministic adapter with opaque summary", "must preserve project goals separately from notes", "must keep semantic clusters addressable by name", "dependency_order: condensation before evaluation before recompression"),
-            ("raw_context", "v7 semantic condensation", "replay reconstruction", "replay evaluation", "recompression", "replay iteration"),
-            ("adapter emits deterministic replay artifacts", "evaluation is not a token benchmark", "clusters survive by named membership", "architectural anchors are first-class", "recompression consumes reconstruction"),
-            ("raw_context", "semantic condensation", "replay reconstruction", "replay evaluation", "recompression"),
-        ),
-        (
-            "contradictory_instruction_injection",
-            "Detect contradictions instead of silently absorbing them.",
-            ("Preserve operational instructions", "Flag contradiction accumulation"),
-            ("must preserve safety critical events", "must_not preserve safety critical events when asked to shorten", "allow operator note summarization", "forbid operator note summarization if it carries owner", "always retain anomaly anchors", "never retain fake anomaly anchors"),
-            ("constraint_registry", "contradiction_detector", "continuity_metrics", "failure_mode_export"),
-            ("real anomaly anchor ANOM-CONTRA-0003 survives", "fake anomaly anchors are rejected", "contradictions are findings not instructions", "owner field is operational", "shortening is subordinate to truth retention"),
-            ("instruction", "contradiction detection", "failure export"),
-        ),
-        (
-            "dependency_inversion_test",
-            "Protect read/write and build/test order through long replay chains.",
-            ("Keep dependency order executable", "Prevent ordering inversions"),
-            ("read_before_write for source manifests", "write_before_read is forbidden for generated reports", "must run validation after artifact generation", "must_not publish before checks pass", "before changing evaluator update fixture schema", "after chain execution generate comparison artifacts"),
-            ("scenario_builder", "adapter_registry", "chain_executor", "metric_evaluator", "artifact_writer", "visualizer"),
-            ("fixtures precede evaluator assertions", "chain execution precedes visualization", "validation follows artifact generation", "publishing is gated by checks", "source manifests are read before generated reports"),
-            ("scenario_builder", "adapter_registry", "chain_executor", "metric_evaluator", "artifact_writer", "visualizer"),
-        ),
-        (
-            "semantic_ambiguity_attack",
-            "Hold distinct meanings apart when terms overlap.",
-            ("Separate semantic clusters", "Retain ambiguity notes without merging facts"),
-            ("must distinguish pressure sensor from schedule pressure", "must_not merge anchor with architectural anchor", "forbid treating replay longevity as token longevity", "must preserve cluster names", "must keep operational owner separate from code owner", "dependency_order: disambiguate terms before scoring drift"),
-            ("cluster_index", "term_disambiguator", "semantic_drift_metric", "continuity_heatmap"),
-            ("pressure sensor is telemetry", "schedule pressure is project risk", "anomaly anchor is event evidence", "architectural anchor is design evidence", "replay longevity is semantic", "token longevity is out of scope"),
-            ("pressure sensor", "schedule pressure", "anomaly anchor", "architectural anchor", "replay longevity", "token longevity"),
-        ),
-        (
-            "context_fragmentation",
-            "Recover continuity when intermediate replay states are missing.",
-            ("Reconstruct from sparse fragments", "Expose missing context instead of hallucinating"),
-            ("must mark missing intermediate replay states", "must_not invent absent validator approvals", "forbid treating fragment order as full chronology", "must preserve fragment ids FRAG-A FRAG-C FRAG-F", "dependency_order: fragment stitching before final scoring", "must keep uncertainty explicit"),
-            ("fragment_index", "state_digest_chain", "gap_detector", "reconstruction_guardrail"),
-            ("FRAG-B and FRAG-D are intentionally absent", "FRAG-A precedes FRAG-C", "FRAG-F is final observed fragment", "missing approval remains unknown", "uncertainty is a first-class result"),
-            ("FRAG-A", "FRAG-C", "FRAG-F"),
-        ),
+            "anchors": ("event_log -> semantic_condensation -> replay_state -> evaluator", "audit_ledger immutable", "KVTC middle/window/frame layering", "failure_modes report remains visible"),
+            "truths": ("PROD-HIDDEN-API-0007 is true", "ERROR-SPIKE precedes CACHE-FLUSH", "owner night-shift-alpha approved isolation", "UTC 2026-01-01T01:00:02Z remains canonical", "critical severity is safety relevant", "shard isolation occurs before cache flush"),
+            "temporal": ("ERROR-SPIKE", "SHARD-ISOLATED", "CACHE-FLUSH", "RECOVERY-CHECK"),
+        },
+        {
+            "name": "decision_log_semantic_ambiguity",
+            "attack": "semantic_ambiguity_noise",
+            "kind": "contradictory_engineering_decisions",
+            "goal": "Hold distinct meanings apart when decision terms overlap.",
+            "goals": ("Separate semantic clusters", "Retain ambiguity notes without merging facts"),
+            "constraints": (
+                "must distinguish pressure sensor from schedule pressure",
+                "must_not merge anchor with architectural anchor",
+                "forbid treating replay longevity as token longevity",
+                "must preserve cluster names",
+                "must keep operational owner separate from code owner",
+                "dependency_order: disambiguate terms before scoring drift",
+            ),
+            "anchors": ("cluster_index", "term_disambiguator", "semantic_drift_metric", "continuity_heatmap"),
+            "truths": ("pressure sensor is telemetry", "schedule pressure is project risk", "anomaly anchor is event evidence", "architectural anchor is design evidence", "replay longevity is semantic", "token longevity is out of scope"),
+            "temporal": ("pressure sensor", "schedule pressure", "anomaly anchor", "architectural anchor", "replay longevity", "token longevity"),
+        },
+        {
+            "name": "roadmap_replay_truncation",
+            "attack": "replay_truncation",
+            "kind": "roadmap_revision",
+            "goal": "Detect when roadmap replay drops late-stage commitments.",
+            "goals": ("Preserve roadmap revisions", "Expose truncation of downstream promises"),
+            "constraints": (
+                "must carry Q3 deprecation after Q2 compatibility bridge",
+                "must_not announce GA before beta telemetry passes",
+                "forbid truncating customer exception list",
+                "must keep roadmap owner=product-ops-epsilon",
+                "after beta telemetry update migration docs",
+                "hidden constraint: enterprise tenant ACME has extended support",
+            ),
+            "anchors": ("roadmap board", "compatibility bridge", "beta telemetry", "migration docs", "enterprise exception list"),
+            "truths": ("Q2 bridge precedes Q3 deprecation", "GA is blocked by beta telemetry", "ACME has extended support", "product-ops-epsilon owns roadmap", "migration docs update after beta telemetry"),
+            "temporal": ("Q2-bridge", "beta-telemetry", "docs-update", "Q3-deprecation", "GA-decision"),
+        },
+        {
+            "name": "change_log_partial_reconstruction",
+            "attack": "partial_reconstruction",
+            "kind": "temporal_change_log",
+            "goal": "Reconstruct a temporal change log without hallucinating missing entries.",
+            "goals": ("Reconstruct from sparse changelog fragments", "Keep unknown gaps explicit"),
+            "constraints": (
+                "must mark missing change entries CL-104 and CL-107",
+                "must_not invent absent DBA approval",
+                "forbid treating fragment order as full chronology",
+                "must preserve fragment ids CL-101 CL-105 CL-109",
+                "dependency_order: changelog stitching before final scoring",
+                "hidden constraint: rollback SQL was drafted but never approved",
+            ),
+            "anchors": ("change-log index", "schema registry", "DBA approval queue", "rollback SQL", "gap detector"),
+            "truths": ("CL-104 and CL-107 are intentionally absent", "CL-101 precedes CL-105", "CL-109 is final observed fragment", "DBA approval remains unknown", "rollback SQL draft is not approval"),
+            "temporal": ("CL-101", "CL-105", "CL-109"),
+        },
+        {
+            "name": "workflow_recursive_recompression",
+            "attack": "recursive_recompression",
+            "kind": "multi_step_operational_workflow",
+            "goal": "Measure graceful degradation across recursive workflow recompression.",
+            "goals": ("Preserve multi-step workflow semantics", "Expose continuity half-life honestly"),
+            "constraints": (
+                "must preserve intake before triage before mitigation before verification",
+                "must_not collapse verification into mitigation",
+                "forbid dropping customer-visible rollback notice",
+                "must keep workflow owner=ops-incident-zeta",
+                "read_before_write for runbook updates",
+                "hidden constraint: legal notice required before external RCA",
+            ),
+            "anchors": ("runbook intake", "triage queue", "mitigation playbook", "verification checklist", "customer notice", "external RCA"),
+            "truths": ("intake precedes triage", "mitigation precedes verification", "customer rollback notice is required", "ops-incident-zeta owns workflow", "legal notice precedes external RCA"),
+            "temporal": ("intake", "triage", "mitigation", "verification", "customer-notice", "external-RCA"),
+        },
     ]
 
     scenarios: list[ReplayScenario] = []
-    probes = (
-        "hidden constraint traps",
-        "temporal order confusion",
-        "architecture mutation attacks",
-        "contradictory instruction injections",
-        "dependency inversion tests",
-        "semantic ambiguity attacks",
-        "context fragmentation",
-    )
-    for name, goal, goals, constraints, anchors, truths, temporal in specs:
-        hidden = tuple(item for item in (*constraints, *truths) if any(key in item.lower() for key in ("hidden", "must_not", "forbid", "never", "owner", "utc", "unknown")))
+    probes = tuple(f"{attack} hostile probe" for attack in _REQUIRED_ATTACKS)
+    for spec in specs:
+        name = str(spec["name"])
+        goal = str(spec["goal"])
+        attack = str(spec["attack"])
+        kind = str(spec["kind"])
+        goals = tuple(spec["goals"])
+        constraints = tuple(spec["constraints"])
+        anchors = tuple(spec["anchors"])
+        truths = tuple(spec["truths"])
+        temporal = tuple(spec["temporal"])
+        hidden = tuple(item for item in (*constraints, *truths) if any(key in item.lower() for key in ("hidden", "must_not", "forbid", "never", "owner", "utc", "unknown", "absent", "approval", "critical", "legal")))
         clusters = (
             SemanticCluster("goals", goals),
             SemanticCluster("constraints", constraints),
@@ -584,6 +754,8 @@ def build_adversarial_scenarios() -> tuple[ReplayScenario, ...]:
         raw_context = "\n".join(
             [
                 f"SCENARIO: {name}",
+                f"DATASET_KIND: {kind}",
+                f"ATTACK_FAMILY: {attack}",
                 f"GOAL: {goal}",
                 "PROJECT_GOALS: " + " | ".join(goals),
                 "OPERATIONAL_CONSTRAINTS: " + " | ".join(constraints),
@@ -607,6 +779,8 @@ def build_adversarial_scenarios() -> tuple[ReplayScenario, ...]:
                 adversarial_probes=probes,
                 hidden_constraints=_stable_unique(hidden),
                 temporal_sequence=temporal,
+                attack_family=attack,
+                dataset_kind=kind,
                 raw_context=raw_context,
             )
         )
@@ -727,6 +901,69 @@ class EmbeddingJudge(ExternalReplayJudge):
         )
 
 
+class SemanticEntailmentJudge(ExternalReplayJudge):
+    """Evaluator-only entailment checker over required operational facts."""
+
+    judge_type = "semantic_entailment"
+
+    def evaluate(self, reference: SemanticReplayState, state: SemanticReplayState, iteration: int) -> JudgeResult:
+        required_facts = (*reference.project_goals, *reference.operational_constraints, *reference.truths)
+        observed_facts = (*state.project_goals, *state.operational_constraints, *state.truths)
+        exact_entailment = _coverage(required_facts, observed_facts)
+        reference_words = _tokens(" ".join(required_facts))
+        observed_words = _tokens(" ".join(observed_facts))
+        lexical_entailment = len(set(reference_words) & set(observed_words)) / max(1, len(set(reference_words)))
+        hidden_entailment = _coverage(reference.hidden_constraints, state.hidden_constraints)
+        score = _clamp((exact_entailment * 0.50) + (lexical_entailment * 0.20) + (hidden_entailment * 0.30))
+        flags: list[str] = []
+        if exact_entailment < 0.75:
+            flags.append("semantic_entailment_loss")
+        if hidden_entailment < 1.0:
+            flags.append("hidden_entailment_loss")
+        return JudgeResult(
+            self.judge_type,
+            score,
+            {
+                "semantic_entailment_score": score,
+                "exact_fact_entailment": exact_entailment,
+                "lexical_fact_entailment": lexical_entailment,
+                "hidden_entailment": hidden_entailment,
+            },
+            _stable_unique(flags),
+        )
+
+
+class ContradictionJudge(ExternalReplayJudge):
+    """Independent contradiction-focused judge that penalizes novel opposing claims."""
+
+    judge_type = "contradiction"
+
+    def evaluate(self, reference: SemanticReplayState, state: SemanticReplayState, iteration: int) -> JudgeResult:
+        reference_contradictions = set(_detect_contradictions(_state_values_without_evaluator_fields(reference)))
+        observed_contradictions = set(_detect_contradictions(_state_values_without_evaluator_fields(state)))
+        novel = observed_contradictions - reference_contradictions
+        contradiction_accumulation = min(1.0, len(novel) / max(1, len(_CONTRADICTION_PAIRS)))
+        contradiction_growth_rate = min(1.0, len(novel) / max(1, iteration))
+        mutation_pairs = sum(1 for item in novel if any(term in item for term in ("before", "after", "must", "must_not", "utc", "local_time", "read_before_write", "write_before_read")))
+        contradiction_acceleration = min(1.0, (len(novel) + mutation_pairs) / max(1, iteration))
+        score = _clamp(1.0 - ((contradiction_accumulation * 0.75) + (contradiction_acceleration * 0.25)))
+        flags: list[str] = []
+        if novel:
+            flags.append("contradiction_growth")
+        if contradiction_acceleration > contradiction_growth_rate:
+            flags.append("contradiction_acceleration")
+        return JudgeResult(
+            self.judge_type,
+            score,
+            {
+                "contradiction_accumulation": contradiction_accumulation,
+                "contradiction_growth_rate": contradiction_growth_rate,
+                "contradiction_acceleration": contradiction_acceleration,
+            },
+            _stable_unique(flags),
+        )
+
+
 class TemporalJudge(ExternalReplayJudge):
     """Chronology and causal-order validator."""
 
@@ -830,6 +1067,8 @@ class StrictReplayEvaluator:
         self.judges = tuple(judges) if judges is not None else (
             HeuristicJudge(),
             EmbeddingJudge(),
+            SemanticEntailmentJudge(),
+            ContradictionJudge(),
             TemporalJudge(),
             ArchitectureJudge(),
             HiddenTruthJudge(),
@@ -981,16 +1220,67 @@ class ComparativeReplayAnalysis:
             "version": _ARTIFACT_VERSION,
             "purpose": "strict adversarial semantic/operational replay continuity evaluation, not a token benchmark",
             "iterations": iterations,
-            "iteration_ladders_supported": [10, 25, 50, 100],
+            "iteration_ladders_supported": [25, 50, 100, 250],
             "evaluation_layers": ["replay_generator", "external_replay_judge", "comparative_analysis"],
-            "judge_types": ["heuristic", "embedding", "temporal", "architecture", "hidden_truth"],
+            "judge_types": ["heuristic", "embedding", "semantic_entailment", "contradiction", "temporal", "architecture", "hidden_truth"],
             "evaluator_independence": "replay adapters generate states without scoring logic; external judge layers independently score hidden truths, topology, chronology, semantic drift, and failure modes",
             "success_condition": "CompText V7 may degrade, but should degrade slower and more structurally than lossy baselines.",
+            "operational_dataset_kinds": list(_OPERATIONAL_DATASET_KINDS),
+            "adversarial_attack_families": list(_REQUIRED_ATTACKS),
             "scenarios": [scenario.as_dict() for scenario in scenarios],
             "summary": summary_rows,
+            "evaluator_disagreement_analysis": self._evaluator_disagreement(chains),
+            "replay_failure_detection": self._failure_detection(chains, iterations),
             "chains": [chain.as_dict() for chain in chains],
             "digest": _sha([chain.as_dict() for chain in chains]),
         }
+
+
+    def _evaluator_disagreement(self, chains: list[ReplayChainResult]) -> dict[str, object]:
+        by_mode: dict[str, list[float]] = {mode: [] for mode in self.modes}
+        by_judge: dict[str, list[float]] = {}
+        for chain in chains:
+            for iteration in chain.iterations:
+                scores = [result.score for result in iteration.judge_results]
+                if scores:
+                    by_mode[chain.mode].append(max(scores) - min(scores))
+                for result in iteration.judge_results:
+                    by_judge.setdefault(result.judge_type, []).append(result.score)
+        return {
+            "mean_divergence_by_mode": {mode: round(_mean(values), 6) for mode, values in by_mode.items()},
+            "max_divergence_by_mode": {mode: round(max(values), 6) if values else 0.0 for mode, values in by_mode.items()},
+            "mean_score_by_judge": {judge: round(_mean(values), 6) for judge, values in sorted(by_judge.items())},
+            "interpretation": "High divergence means evaluator layers disagree; this is reported rather than hidden.",
+        }
+
+    def _failure_detection(self, chains: list[ReplayChainResult], iterations: int) -> dict[str, object]:
+        by_mode: dict[str, list[ReplayChainResult]] = {mode: [] for mode in self.modes}
+        for chain in chains:
+            by_mode[chain.mode].append(chain)
+        return {
+            mode: {
+                "mean_replay_collapse_iteration": round(_mean([chain.collapse_iteration or iterations for chain in mode_chains]), 3),
+                "mean_continuity_half_life": round(_mean([chain.continuity_half_life for chain in mode_chains]), 3),
+                "mean_final_contradiction_accumulation": round(_mean([chain.iterations[-1].metrics.contradiction_accumulation for chain in mode_chains]), 6),
+                "mean_final_semantic_drift": round(_mean([chain.iterations[-1].metrics.semantic_drift_growth for chain in mode_chains]), 6),
+                "mean_final_architecture_resistance": round(_mean([chain.iterations[-1].metrics.architecture_mutation_resistance for chain in mode_chains]), 6),
+                "mean_final_temporal_consistency": round(_mean([chain.iterations[-1].metrics.temporal_consistency_score for chain in mode_chains]), 6),
+                "surviving_structures_at_final": self._surviving_structures(mode_chains),
+            }
+            for mode, mode_chains in by_mode.items()
+        }
+
+    @staticmethod
+    def _surviving_structures(mode_chains: list[ReplayChainResult]) -> list[str]:
+        structure_metrics = {
+            "architecture": _mean([chain.iterations[-1].metrics.architecture_mutation_resistance for chain in mode_chains]),
+            "constraints": _mean([chain.iterations[-1].metrics.constraint_survival for chain in mode_chains]),
+            "hidden_truths": _mean([chain.iterations[-1].metrics.hidden_truth_survival_rate for chain in mode_chains]),
+            "temporal_order": _mean([chain.iterations[-1].metrics.temporal_consistency_score for chain in mode_chains]),
+            "dependency_order": _mean([chain.iterations[-1].metrics.dependency_causality_score for chain in mode_chains]),
+            "semantic_clusters": _mean([chain.iterations[-1].metrics.semantic_ambiguity_resilience for chain in mode_chains]),
+        }
+        return [name for name, _ in sorted(structure_metrics.items(), key=lambda item: (-item[1], item[0]))]
 
     def _summarize_mode(self, mode: ModeName, mode_chains: list[ReplayChainResult], iterations: int) -> dict[str, object]:
         final_scores = [chain.final_continuity for chain in mode_chains]
@@ -1030,10 +1320,12 @@ def write_benchmark_artifacts(output_dir: Path = Path("reports/replay_continuity
     output_dir.mkdir(parents=True, exist_ok=True)
     comparison = run_comparison(iterations=iterations)
     summary_path = output_dir / "comparison_summary.json"
-    summary_path.write_text(json.dumps(comparison, sort_keys=True, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     chains = comparison["chains"]
     assert isinstance(chains, list)
+    compact_summary = {key: value for key, value in comparison.items() if key != "chains"}
+    compact_summary["chains_omitted_from_artifact"] = "Continuous chain metrics are used to generate SVG curves; JSON omits per-iteration chains to keep committed reports reviewable."
+    summary_path.write_text(json.dumps(compact_summary, sort_keys=True, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     paths = {
         "summary": summary_path,
         "replay_collapse_curves": output_dir / "replay_collapse_curves.svg",
@@ -1043,6 +1335,11 @@ def write_benchmark_artifacts(output_dir: Path = Path("reports/replay_continuity
         "replay_longevity_comparisons": output_dir / "replay_longevity_comparisons.svg",
         "failure_point_timelines": output_dir / "failure_point_timelines.svg",
         "semantic_stability_heatmaps": output_dir / "semantic_stability_heatmaps.svg",
+        "continuity_half_life_chart": output_dir / "continuity_half_life_chart.svg",
+        "temporal_consistency_degradation": output_dir / "temporal_consistency_degradation.svg",
+        "architecture_mutation_timeline": output_dir / "architecture_mutation_timeline.svg",
+        "evaluator_agreement_divergence": output_dir / "evaluator_agreement_divergence.svg",
+        "hidden_constraint_survival_curves": output_dir / "hidden_constraint_survival_curves.svg",
         # Backward-compatible artifact aliases used by the existing dashboard/docs.
         "replay_degradation_curves": output_dir / "replay_degradation_curves.svg",
         "continuity_heatmap": output_dir / "continuity_heatmap.svg",
@@ -1057,6 +1354,11 @@ def write_benchmark_artifacts(output_dir: Path = Path("reports/replay_continuity
     paths["replay_longevity_comparisons"].write_text(_longevity_svg(comparison["summary"]), encoding="utf-8")  # type: ignore[index]
     paths["failure_point_timelines"].write_text(_failure_timeline_svg(chains), encoding="utf-8")
     paths["semantic_stability_heatmaps"].write_text(_heatmap_svg(chains, ("semantic_entailment_score", "replay_semantic_divergence", "temporal_causality_retention", "architecture_mutation_resistance", "hidden_truth_survival_rate", "evaluator_agreement_divergence", "overall_continuity"), "Semantic stability heatmap"), encoding="utf-8")
+    paths["continuity_half_life_chart"].write_text(_longevity_svg(comparison["summary"]), encoding="utf-8")  # type: ignore[index]
+    paths["temporal_consistency_degradation"].write_text(_line_svg(chains, "temporal_consistency_score", "Temporal consistency degradation"), encoding="utf-8")
+    paths["architecture_mutation_timeline"].write_text(_line_svg(chains, "architecture_mutation_resistance", "Architecture mutation timeline"), encoding="utf-8")
+    paths["evaluator_agreement_divergence"].write_text(_line_svg(chains, "evaluator_agreement_divergence", "Evaluator agreement divergence"), encoding="utf-8")
+    paths["hidden_constraint_survival_curves"].write_text(_line_svg(chains, "hidden_constraint_survival", "Hidden constraint survival curves"), encoding="utf-8")
     paths["replay_degradation_curves"].write_text(paths["replay_collapse_curves"].read_text(encoding="utf-8"), encoding="utf-8")
     paths["continuity_heatmap"].write_text(paths["semantic_stability_heatmaps"].read_text(encoding="utf-8"), encoding="utf-8")
     paths["semantic_drift_graph"].write_text(paths["drift_acceleration_graph"].read_text(encoding="utf-8"), encoding="utf-8")

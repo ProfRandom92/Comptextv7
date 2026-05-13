@@ -1,53 +1,71 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="820" height="292" viewBox="0 0 820 292">
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="376" viewBox="0 0 820 376">
 <rect width="100%" height="100%" fill="#0f172a" />
 <text x="20" y="28" fill="#e2e8f0" font-size="22" font-family="sans-serif">Semantic stability heatmap</text>
 <text x="280" y="42" fill="#e2e8f0" font-size="13">naive</text>
 <text x="412" y="42" fill="#e2e8f0" font-size="13">baseline</text>
 <text x="544" y="42" fill="#e2e8f0" font-size="13">adaptive</text>
 <text x="676" y="42" fill="#e2e8f0" font-size="13">comptext_v7</text>
-<text x="20" y="84" fill="#e2e8f0" font-size="12">semantic_ambiguity_resilience</text>
-<rect x="280" y="58" width="128" height="38" fill="rgb(180,144,90)" />
-<text x="314" y="83" fill="#0f172a" font-size="13">0.429</text>
-<rect x="412" y="58" width="128" height="38" fill="rgb(178,145,90)" />
-<text x="446" y="83" fill="#0f172a" font-size="13">0.437</text>
-<rect x="544" y="58" width="128" height="38" fill="rgb(176,148,90)" />
-<text x="578" y="83" fill="#0f172a" font-size="13">0.454</text>
-<rect x="676" y="58" width="128" height="38" fill="rgb(140,186,90)" />
-<text x="710" y="83" fill="#0f172a" font-size="13">0.708</text>
-<text x="20" y="126" fill="#e2e8f0" font-size="12">temporal_consistency_score</text>
-<rect x="280" y="100" width="128" height="38" fill="rgb(240,80,90)" />
-<text x="314" y="125" fill="#0f172a" font-size="13">0.000</text>
-<rect x="412" y="100" width="128" height="38" fill="rgb(204,118,90)" />
-<text x="446" y="125" fill="#0f172a" font-size="13">0.255</text>
-<rect x="544" y="100" width="128" height="38" fill="rgb(204,118,90)" />
-<text x="578" y="125" fill="#0f172a" font-size="13">0.255</text>
-<rect x="676" y="100" width="128" height="38" fill="rgb(100,230,90)" />
-<text x="710" y="125" fill="#0f172a" font-size="13">1.000</text>
-<text x="20" y="168" fill="#e2e8f0" font-size="12">architecture_mutation_resistance</text>
-<rect x="280" y="142" width="128" height="38" fill="rgb(240,80,90)" />
-<text x="314" y="167" fill="#0f172a" font-size="13">0.000</text>
-<rect x="412" y="142" width="128" height="38" fill="rgb(208,113,90)" />
-<text x="446" y="167" fill="#0f172a" font-size="13">0.226</text>
-<rect x="544" y="142" width="128" height="38" fill="rgb(208,113,90)" />
-<text x="578" y="167" fill="#0f172a" font-size="13">0.226</text>
-<rect x="676" y="142" width="128" height="38" fill="rgb(131,196,90)" />
-<text x="710" y="167" fill="#0f172a" font-size="13">0.774</text>
-<text x="20" y="210" fill="#e2e8f0" font-size="12">hidden_truth_verification</text>
+<text x="20" y="84" fill="#e2e8f0" font-size="12">semantic_entailment_score</text>
+<rect x="280" y="58" width="128" height="38" fill="rgb(232,88,90)" />
+<text x="314" y="83" fill="#0f172a" font-size="13">0.055</text>
+<rect x="412" y="58" width="128" height="38" fill="rgb(206,115,90)" />
+<text x="446" y="83" fill="#0f172a" font-size="13">0.236</text>
+<rect x="544" y="58" width="128" height="38" fill="rgb(206,115,90)" />
+<text x="578" y="83" fill="#0f172a" font-size="13">0.236</text>
+<rect x="676" y="58" width="128" height="38" fill="rgb(176,147,90)" />
+<text x="710" y="83" fill="#0f172a" font-size="13">0.453</text>
+<text x="20" y="126" fill="#e2e8f0" font-size="12">replay_semantic_divergence</text>
+<rect x="280" y="100" width="128" height="38" fill="rgb(108,221,90)" />
+<text x="314" y="125" fill="#0f172a" font-size="13">0.943</text>
+<rect x="412" y="100" width="128" height="38" fill="rgb(143,183,90)" />
+<text x="446" y="125" fill="#0f172a" font-size="13">0.692</text>
+<rect x="544" y="100" width="128" height="38" fill="rgb(150,175,90)" />
+<text x="578" y="125" fill="#0f172a" font-size="13">0.637</text>
+<rect x="676" y="100" width="128" height="38" fill="rgb(176,147,90)" />
+<text x="710" y="125" fill="#0f172a" font-size="13">0.452</text>
+<text x="20" y="168" fill="#e2e8f0" font-size="12">temporal_causality_retention</text>
+<rect x="280" y="142" width="128" height="38" fill="rgb(233,87,90)" />
+<text x="314" y="167" fill="#0f172a" font-size="13">0.050</text>
+<rect x="412" y="142" width="128" height="38" fill="rgb(180,143,90)" />
+<text x="446" y="167" fill="#0f172a" font-size="13">0.425</text>
+<rect x="544" y="142" width="128" height="38" fill="rgb(180,143,90)" />
+<text x="578" y="167" fill="#0f172a" font-size="13">0.425</text>
+<rect x="676" y="142" width="128" height="38" fill="rgb(134,193,90)" />
+<text x="710" y="167" fill="#0f172a" font-size="13">0.754</text>
+<text x="20" y="210" fill="#e2e8f0" font-size="12">architecture_mutation_resistance</text>
 <rect x="280" y="184" width="128" height="38" fill="rgb(240,80,90)" />
 <text x="314" y="209" fill="#0f172a" font-size="13">0.000</text>
-<rect x="412" y="184" width="128" height="38" fill="rgb(202,119,90)" />
-<text x="446" y="209" fill="#0f172a" font-size="13">0.265</text>
-<rect x="544" y="184" width="128" height="38" fill="rgb(202,119,90)" />
-<text x="578" y="209" fill="#0f172a" font-size="13">0.265</text>
-<rect x="676" y="184" width="128" height="38" fill="rgb(139,188,90)" />
-<text x="710" y="209" fill="#0f172a" font-size="13">0.720</text>
-<text x="20" y="252" fill="#e2e8f0" font-size="12">overall_continuity</text>
-<rect x="280" y="226" width="128" height="38" fill="rgb(231,89,90)" />
-<text x="314" y="251" fill="#0f172a" font-size="13">0.064</text>
-<rect x="412" y="226" width="128" height="38" fill="rgb(196,126,90)" />
-<text x="446" y="251" fill="#0f172a" font-size="13">0.312</text>
-<rect x="544" y="226" width="128" height="38" fill="rgb(194,128,90)" />
-<text x="578" y="251" fill="#0f172a" font-size="13">0.323</text>
-<rect x="676" y="226" width="128" height="38" fill="rgb(129,198,90)" />
-<text x="710" y="251" fill="#0f172a" font-size="13">0.789</text>
+<rect x="412" y="184" width="128" height="38" fill="rgb(211,110,90)" />
+<text x="446" y="209" fill="#0f172a" font-size="13">0.203</text>
+<rect x="544" y="184" width="128" height="38" fill="rgb(211,110,90)" />
+<text x="578" y="209" fill="#0f172a" font-size="13">0.203</text>
+<rect x="676" y="184" width="128" height="38" fill="rgb(136,190,90)" />
+<text x="710" y="209" fill="#0f172a" font-size="13">0.737</text>
+<text x="20" y="252" fill="#e2e8f0" font-size="12">hidden_truth_survival_rate</text>
+<rect x="280" y="226" width="128" height="38" fill="rgb(240,80,90)" />
+<text x="314" y="251" fill="#0f172a" font-size="13">0.000</text>
+<rect x="412" y="226" width="128" height="38" fill="rgb(210,111,90)" />
+<text x="446" y="251" fill="#0f172a" font-size="13">0.211</text>
+<rect x="544" y="226" width="128" height="38" fill="rgb(210,111,90)" />
+<text x="578" y="251" fill="#0f172a" font-size="13">0.211</text>
+<rect x="676" y="226" width="128" height="38" fill="rgb(196,126,90)" />
+<text x="710" y="251" fill="#0f172a" font-size="13">0.308</text>
+<text x="20" y="294" fill="#e2e8f0" font-size="12">evaluator_agreement_divergence</text>
+<rect x="280" y="268" width="128" height="38" fill="rgb(100,230,90)" />
+<text x="314" y="293" fill="#0f172a" font-size="13">1.000</text>
+<rect x="412" y="268" width="128" height="38" fill="rgb(128,199,90)" />
+<text x="446" y="293" fill="#0f172a" font-size="13">0.798</text>
+<rect x="544" y="268" width="128" height="38" fill="rgb(128,199,90)" />
+<text x="578" y="293" fill="#0f172a" font-size="13">0.794</text>
+<rect x="676" y="268" width="128" height="38" fill="rgb(149,177,90)" />
+<text x="710" y="293" fill="#0f172a" font-size="13">0.649</text>
+<text x="20" y="336" fill="#e2e8f0" font-size="12">overall_continuity</text>
+<rect x="280" y="310" width="128" height="38" fill="rgb(234,85,90)" />
+<text x="314" y="335" fill="#0f172a" font-size="13">0.039</text>
+<rect x="412" y="310" width="128" height="38" fill="rgb(198,124,90)" />
+<text x="446" y="335" fill="#0f172a" font-size="13">0.294</text>
+<rect x="544" y="310" width="128" height="38" fill="rgb(197,125,90)" />
+<text x="578" y="335" fill="#0f172a" font-size="13">0.302</text>
+<rect x="676" y="310" width="128" height="38" fill="rgb(159,165,90)" />
+<text x="710" y="335" fill="#0f172a" font-size="13">0.572</text>
 </svg>

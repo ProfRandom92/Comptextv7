@@ -1,88 +1,124 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="940" height="420" viewBox="0 0 940 420">
 <rect width="100%" height="100%" fill="#0f172a" />
 <text x="18" y="28" fill="#e2e8f0" font-size="22" font-family="sans-serif">Failure point timelines</text>
-<text x="18" y="62" fill="#cbd5e1" font-size="9">naive:hidden_constraint_trap</text>
+<text x="18" y="62" fill="#cbd5e1" font-size="9">naive:pr_discussion_context_fragment</text>
 <line x1="220" y1="58" x2="900" y2="58" stroke="#334155" />
-<circle cx="226.80" cy="58" r="4" fill="#ef4444" />
-<text x="18" y="74" fill="#cbd5e1" font-size="9">baseline:hidden_constraint_trap</text>
+<circle cx="222.72" cy="58" r="4" fill="#ef4444" />
+<text x="18" y="74" fill="#cbd5e1" font-size="9">baseline:pr_discussion_context_fragment</text>
 <line x1="220" y1="70" x2="900" y2="70" stroke="#334155" />
-<circle cx="226.80" cy="70" r="4" fill="#f59e0b" />
-<text x="18" y="86" fill="#cbd5e1" font-size="9">adaptive:hidden_constraint_trap</text>
+<circle cx="222.72" cy="70" r="4" fill="#f59e0b" />
+<text x="18" y="86" fill="#cbd5e1" font-size="9">adaptive:pr_discussion_context_fragment</text>
 <line x1="220" y1="82" x2="900" y2="82" stroke="#334155" />
-<circle cx="226.80" cy="82" r="4" fill="#3b82f6" />
-<text x="18" y="98" fill="#cbd5e1" font-size="9">comptext_v7:hidden_constraint_trap</text>
+<circle cx="222.72" cy="82" r="4" fill="#3b82f6" />
+<text x="18" y="98" fill="#cbd5e1" font-size="9">comptext_v7:pr_discussion_context_fragment</text>
 <line x1="220" y1="94" x2="900" y2="94" stroke="#334155" />
-<circle cx="730.00" cy="94" r="4" fill="#22c55e" />
-<text x="18" y="110" fill="#cbd5e1" font-size="9">naive:temporal_order_confusion</text>
+<circle cx="315.20" cy="94" r="4" fill="#22c55e" />
+<text x="18" y="110" fill="#cbd5e1" font-size="9">naive:rfc_dependency_inversion</text>
 <line x1="220" y1="106" x2="900" y2="106" stroke="#334155" />
-<circle cx="226.80" cy="106" r="4" fill="#ef4444" />
-<text x="18" y="122" fill="#cbd5e1" font-size="9">baseline:temporal_order_confusion</text>
+<circle cx="222.72" cy="106" r="4" fill="#ef4444" />
+<text x="18" y="122" fill="#cbd5e1" font-size="9">baseline:rfc_dependency_inversion</text>
 <line x1="220" y1="118" x2="900" y2="118" stroke="#334155" />
-<circle cx="260.80" cy="118" r="4" fill="#f59e0b" />
-<text x="18" y="134" fill="#cbd5e1" font-size="9">adaptive:temporal_order_confusion</text>
+<circle cx="222.72" cy="118" r="4" fill="#f59e0b" />
+<text x="18" y="134" fill="#cbd5e1" font-size="9">adaptive:rfc_dependency_inversion</text>
 <line x1="220" y1="130" x2="900" y2="130" stroke="#334155" />
-<circle cx="322.00" cy="130" r="4" fill="#3b82f6" />
-<text x="18" y="146" fill="#cbd5e1" font-size="9">comptext_v7:temporal_order_confusion</text>
+<circle cx="222.72" cy="130" r="4" fill="#3b82f6" />
+<text x="18" y="146" fill="#cbd5e1" font-size="9">comptext_v7:rfc_dependency_inversion</text>
 <line x1="220" y1="142" x2="900" y2="142" stroke="#334155" />
-<circle cx="730.00" cy="142" r="4" fill="#22c55e" />
-<text x="18" y="158" fill="#cbd5e1" font-size="9">naive:architecture_mutation_attack</text>
+<circle cx="315.20" cy="142" r="4" fill="#22c55e" />
+<text x="18" y="158" fill="#cbd5e1" font-size="9">naive:bug_report_temporal_mutation</text>
 <line x1="220" y1="154" x2="900" y2="154" stroke="#334155" />
-<circle cx="226.80" cy="154" r="4" fill="#ef4444" />
-<text x="18" y="170" fill="#cbd5e1" font-size="9">baseline:architecture_mutation_attack</text>
+<circle cx="222.72" cy="154" r="4" fill="#ef4444" />
+<text x="18" y="170" fill="#cbd5e1" font-size="9">baseline:bug_report_temporal_mutation</text>
 <line x1="220" y1="166" x2="900" y2="166" stroke="#334155" />
-<circle cx="226.80" cy="166" r="4" fill="#f59e0b" />
-<text x="18" y="182" fill="#cbd5e1" font-size="9">adaptive:architecture_mutation_attack</text>
+<circle cx="222.72" cy="166" r="4" fill="#f59e0b" />
+<text x="18" y="182" fill="#cbd5e1" font-size="9">adaptive:bug_report_temporal_mutation</text>
 <line x1="220" y1="178" x2="900" y2="178" stroke="#334155" />
-<circle cx="226.80" cy="178" r="4" fill="#3b82f6" />
-<text x="18" y="194" fill="#cbd5e1" font-size="9">comptext_v7:architecture_mutation_attack</text>
+<circle cx="222.72" cy="178" r="4" fill="#3b82f6" />
+<text x="18" y="194" fill="#cbd5e1" font-size="9">comptext_v7:bug_report_temporal_mutation</text>
 <line x1="220" y1="190" x2="900" y2="190" stroke="#334155" />
-<circle cx="832.00" cy="190" r="4" fill="#22c55e" />
-<text x="18" y="206" fill="#cbd5e1" font-size="9">naive:contradictory_instruction_inje</text>
+<circle cx="315.20" cy="190" r="4" fill="#22c55e" />
+<text x="18" y="206" fill="#cbd5e1" font-size="9">naive:ci_incident_architecture_drift</text>
 <line x1="220" y1="202" x2="900" y2="202" stroke="#334155" />
-<circle cx="226.80" cy="202" r="4" fill="#ef4444" />
-<text x="18" y="218" fill="#cbd5e1" font-size="9">baseline:contradictory_instruction_inje</text>
+<circle cx="222.72" cy="202" r="4" fill="#ef4444" />
+<text x="18" y="218" fill="#cbd5e1" font-size="9">baseline:ci_incident_architecture_drift</text>
 <line x1="220" y1="214" x2="900" y2="214" stroke="#334155" />
-<circle cx="226.80" cy="214" r="4" fill="#f59e0b" />
-<text x="18" y="230" fill="#cbd5e1" font-size="9">adaptive:contradictory_instruction_inje</text>
+<circle cx="222.72" cy="214" r="4" fill="#f59e0b" />
+<text x="18" y="230" fill="#cbd5e1" font-size="9">adaptive:ci_incident_architecture_drift</text>
 <line x1="220" y1="226" x2="900" y2="226" stroke="#334155" />
-<circle cx="226.80" cy="226" r="4" fill="#3b82f6" />
-<text x="18" y="242" fill="#cbd5e1" font-size="9">comptext_v7:contradictory_instruction_inje</text>
+<circle cx="222.72" cy="226" r="4" fill="#3b82f6" />
+<text x="18" y="242" fill="#cbd5e1" font-size="9">comptext_v7:ci_incident_architecture_drift</text>
 <line x1="220" y1="238" x2="900" y2="238" stroke="#334155" />
-<circle cx="730.00" cy="238" r="4" fill="#22c55e" />
-<text x="18" y="254" fill="#cbd5e1" font-size="9">naive:dependency_inversion_test</text>
+<circle cx="315.20" cy="238" r="4" fill="#22c55e" />
+<text x="18" y="254" fill="#cbd5e1" font-size="9">naive:dependency_migration_contradic</text>
 <line x1="220" y1="250" x2="900" y2="250" stroke="#334155" />
-<circle cx="226.80" cy="250" r="4" fill="#ef4444" />
-<text x="18" y="266" fill="#cbd5e1" font-size="9">baseline:dependency_inversion_test</text>
+<circle cx="222.72" cy="250" r="4" fill="#ef4444" />
+<text x="18" y="266" fill="#cbd5e1" font-size="9">baseline:dependency_migration_contradic</text>
 <line x1="220" y1="262" x2="900" y2="262" stroke="#334155" />
-<circle cx="226.80" cy="262" r="4" fill="#f59e0b" />
-<text x="18" y="278" fill="#cbd5e1" font-size="9">adaptive:dependency_inversion_test</text>
+<circle cx="222.72" cy="262" r="4" fill="#f59e0b" />
+<text x="18" y="278" fill="#cbd5e1" font-size="9">adaptive:dependency_migration_contradic</text>
 <line x1="220" y1="274" x2="900" y2="274" stroke="#334155" />
-<circle cx="226.80" cy="274" r="4" fill="#3b82f6" />
-<text x="18" y="290" fill="#cbd5e1" font-size="9">comptext_v7:dependency_inversion_test</text>
+<circle cx="222.72" cy="274" r="4" fill="#3b82f6" />
+<text x="18" y="290" fill="#cbd5e1" font-size="9">comptext_v7:dependency_migration_contradic</text>
 <line x1="220" y1="286" x2="900" y2="286" stroke="#334155" />
-<circle cx="900.00" cy="286" r="4" fill="#22c55e" />
-<text x="18" y="302" fill="#cbd5e1" font-size="9">naive:semantic_ambiguity_attack</text>
+<circle cx="315.20" cy="286" r="4" fill="#22c55e" />
+<text x="18" y="302" fill="#cbd5e1" font-size="9">naive:production_hidden_constraint_r</text>
 <line x1="220" y1="298" x2="900" y2="298" stroke="#334155" />
-<circle cx="226.80" cy="298" r="4" fill="#ef4444" />
-<text x="18" y="314" fill="#cbd5e1" font-size="9">baseline:semantic_ambiguity_attack</text>
+<circle cx="222.72" cy="298" r="4" fill="#ef4444" />
+<text x="18" y="314" fill="#cbd5e1" font-size="9">baseline:production_hidden_constraint_r</text>
 <line x1="220" y1="310" x2="900" y2="310" stroke="#334155" />
-<circle cx="226.80" cy="310" r="4" fill="#f59e0b" />
-<text x="18" y="326" fill="#cbd5e1" font-size="9">adaptive:semantic_ambiguity_attack</text>
+<circle cx="222.72" cy="310" r="4" fill="#f59e0b" />
+<text x="18" y="326" fill="#cbd5e1" font-size="9">adaptive:production_hidden_constraint_r</text>
 <line x1="220" y1="322" x2="900" y2="322" stroke="#334155" />
-<circle cx="226.80" cy="322" r="4" fill="#3b82f6" />
-<text x="18" y="338" fill="#cbd5e1" font-size="9">comptext_v7:semantic_ambiguity_attack</text>
+<circle cx="222.72" cy="322" r="4" fill="#3b82f6" />
+<text x="18" y="338" fill="#cbd5e1" font-size="9">comptext_v7:production_hidden_constraint_r</text>
 <line x1="220" y1="334" x2="900" y2="334" stroke="#334155" />
-<circle cx="730.00" cy="334" r="4" fill="#22c55e" />
-<text x="18" y="350" fill="#cbd5e1" font-size="9">naive:context_fragmentation</text>
+<circle cx="315.20" cy="334" r="4" fill="#22c55e" />
+<text x="18" y="350" fill="#cbd5e1" font-size="9">naive:decision_log_semantic_ambiguit</text>
 <line x1="220" y1="346" x2="900" y2="346" stroke="#334155" />
-<circle cx="226.80" cy="346" r="4" fill="#ef4444" />
-<text x="18" y="362" fill="#cbd5e1" font-size="9">baseline:context_fragmentation</text>
+<circle cx="222.72" cy="346" r="4" fill="#ef4444" />
+<text x="18" y="362" fill="#cbd5e1" font-size="9">baseline:decision_log_semantic_ambiguit</text>
 <line x1="220" y1="358" x2="900" y2="358" stroke="#334155" />
-<circle cx="260.80" cy="358" r="4" fill="#f59e0b" />
-<text x="18" y="374" fill="#cbd5e1" font-size="9">adaptive:context_fragmentation</text>
+<circle cx="222.72" cy="358" r="4" fill="#f59e0b" />
+<text x="18" y="374" fill="#cbd5e1" font-size="9">adaptive:decision_log_semantic_ambiguit</text>
 <line x1="220" y1="370" x2="900" y2="370" stroke="#334155" />
-<circle cx="322.00" cy="370" r="4" fill="#3b82f6" />
-<text x="18" y="386" fill="#cbd5e1" font-size="9">comptext_v7:context_fragmentation</text>
+<circle cx="222.72" cy="370" r="4" fill="#3b82f6" />
+<text x="18" y="386" fill="#cbd5e1" font-size="9">comptext_v7:decision_log_semantic_ambiguit</text>
 <line x1="220" y1="382" x2="900" y2="382" stroke="#334155" />
-<circle cx="730.00" cy="382" r="4" fill="#22c55e" />
+<circle cx="315.20" cy="382" r="4" fill="#22c55e" />
+<text x="18" y="398" fill="#cbd5e1" font-size="9">naive:roadmap_replay_truncation</text>
+<line x1="220" y1="394" x2="900" y2="394" stroke="#334155" />
+<circle cx="222.72" cy="394" r="4" fill="#ef4444" />
+<text x="18" y="410" fill="#cbd5e1" font-size="9">baseline:roadmap_replay_truncation</text>
+<line x1="220" y1="406" x2="900" y2="406" stroke="#334155" />
+<circle cx="222.72" cy="406" r="4" fill="#f59e0b" />
+<text x="18" y="422" fill="#cbd5e1" font-size="9">adaptive:roadmap_replay_truncation</text>
+<line x1="220" y1="418" x2="900" y2="418" stroke="#334155" />
+<circle cx="222.72" cy="418" r="4" fill="#3b82f6" />
+<text x="18" y="434" fill="#cbd5e1" font-size="9">comptext_v7:roadmap_replay_truncation</text>
+<line x1="220" y1="430" x2="900" y2="430" stroke="#334155" />
+<circle cx="315.20" cy="430" r="4" fill="#22c55e" />
+<text x="18" y="446" fill="#cbd5e1" font-size="9">naive:change_log_partial_reconstruct</text>
+<line x1="220" y1="442" x2="900" y2="442" stroke="#334155" />
+<circle cx="222.72" cy="442" r="4" fill="#ef4444" />
+<text x="18" y="458" fill="#cbd5e1" font-size="9">baseline:change_log_partial_reconstruct</text>
+<line x1="220" y1="454" x2="900" y2="454" stroke="#334155" />
+<circle cx="222.72" cy="454" r="4" fill="#f59e0b" />
+<text x="18" y="470" fill="#cbd5e1" font-size="9">adaptive:change_log_partial_reconstruct</text>
+<line x1="220" y1="466" x2="900" y2="466" stroke="#334155" />
+<circle cx="222.72" cy="466" r="4" fill="#3b82f6" />
+<text x="18" y="482" fill="#cbd5e1" font-size="9">comptext_v7:change_log_partial_reconstruct</text>
+<line x1="220" y1="478" x2="900" y2="478" stroke="#334155" />
+<circle cx="315.20" cy="478" r="4" fill="#22c55e" />
+<text x="18" y="494" fill="#cbd5e1" font-size="9">naive:workflow_recursive_recompressi</text>
+<line x1="220" y1="490" x2="900" y2="490" stroke="#334155" />
+<circle cx="222.72" cy="490" r="4" fill="#ef4444" />
+<text x="18" y="506" fill="#cbd5e1" font-size="9">baseline:workflow_recursive_recompressi</text>
+<line x1="220" y1="502" x2="900" y2="502" stroke="#334155" />
+<circle cx="222.72" cy="502" r="4" fill="#f59e0b" />
+<text x="18" y="518" fill="#cbd5e1" font-size="9">adaptive:workflow_recursive_recompressi</text>
+<line x1="220" y1="514" x2="900" y2="514" stroke="#334155" />
+<circle cx="222.72" cy="514" r="4" fill="#3b82f6" />
+<text x="18" y="530" fill="#cbd5e1" font-size="9">comptext_v7:workflow_recursive_recompressi</text>
+<line x1="220" y1="526" x2="900" y2="526" stroke="#334155" />
+<circle cx="315.20" cy="526" r="4" fill="#22c55e" />
 </svg>
