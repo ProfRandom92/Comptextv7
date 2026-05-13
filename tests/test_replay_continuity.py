@@ -19,14 +19,43 @@ from src.validation.replay_continuity import (
 def test_adversarial_suite_covers_required_hostile_scenarios() -> None:
     names = {scenario.name for scenario in build_adversarial_scenarios()}
 
-    assert names == {
-        "hidden_constraint_trap",
-        "temporal_order_confusion",
-        "architecture_mutation_attack",
-        "contradictory_instruction_injection",
-        "dependency_inversion_test",
-        "semantic_ambiguity_attack",
+    scenarios = build_adversarial_scenarios()
+    assert {scenario.attack_family for scenario in scenarios} == {
         "context_fragmentation",
+        "dependency_inversion",
+        "temporal_mutation",
+        "architecture_drift_injection",
+        "contradictory_goal_injection",
+        "hidden_constraint_removal",
+        "semantic_ambiguity_noise",
+        "replay_truncation",
+        "partial_reconstruction",
+        "recursive_recompression",
+    }
+    assert {scenario.dataset_kind for scenario in scenarios} == {
+        "real_pr_discussion",
+        "architecture_rfc",
+        "bug_report",
+        "ci_cd_incident",
+        "dependency_migration_discussion",
+        "production_issue_timeline",
+        "contradictory_engineering_decisions",
+        "roadmap_revision",
+        "temporal_change_log",
+        "multi_step_operational_workflow",
+    }
+
+    assert names == {
+        "pr_discussion_context_fragmentation",
+        "rfc_dependency_inversion",
+        "bug_report_temporal_mutation",
+        "ci_incident_architecture_drift",
+        "dependency_migration_contradictory_goals",
+        "production_hidden_constraint_removal",
+        "decision_log_semantic_ambiguity",
+        "roadmap_replay_truncation",
+        "change_log_partial_reconstruction",
+        "workflow_recursive_recompression",
     }
 
 
@@ -35,7 +64,7 @@ def test_v7_degrades_honestly_but_remains_structurally_better_at_100_iterations(
     summary = {row["mode"]: row for row in comparison["summary"]}
 
     assert comparison["purpose"] == "strict adversarial semantic/operational replay continuity evaluation, not a token benchmark"
-    assert comparison["iteration_ladders_supported"] == [10, 25, 50, 100]
+    assert comparison["iteration_ladders_supported"] == [25, 50, 100, 250]
     assert summary["comptext_v7"]["mean_final_continuity"] < 1.0
     assert summary["comptext_v7"]["mean_final_continuity"] > summary["adaptive"]["mean_final_continuity"]
     assert summary["adaptive"]["mean_final_continuity"] > summary["baseline"]["mean_final_continuity"]
@@ -56,13 +85,13 @@ def test_strict_evaluator_exposes_v7_long_horizon_failure_flags() -> None:
     assert chain.collapse_iteration == 0
 
 
-def test_replay_chains_support_10_25_50_and_100_iterations() -> None:
+def test_replay_chains_support_25_50_100_and_250_iterations() -> None:
     scenario = build_adversarial_scenarios()[2]
 
-    assert len(run_replay_chain(scenario, "comptext_v7", iterations=10).iterations) == 10
     assert len(run_replay_chain(scenario, "comptext_v7", iterations=25).iterations) == 25
     assert len(run_replay_chain(scenario, "comptext_v7", iterations=50).iterations) == 50
     assert len(run_replay_chain(scenario, "comptext_v7", iterations=100).iterations) == 100
+    assert len(run_replay_chain(scenario, "comptext_v7", iterations=250).iterations) == 250
 
 
 def test_evaluator_is_separate_from_replay_generation() -> None:
@@ -82,6 +111,8 @@ def test_external_replay_judge_architecture_reports_all_independent_judges() -> 
     assert {result.judge_type for result in final_iteration.judge_results} == {
         "heuristic",
         "embedding",
+        "semantic_entailment",
+        "contradiction",
         "temporal",
         "architecture",
         "hidden_truth",
@@ -103,7 +134,7 @@ def test_comparative_analysis_exposes_new_external_judge_metrics() -> None:
     row = next(item for item in comparison["summary"] if item["mode"] == "comptext_v7")
 
     assert comparison["evaluation_layers"] == ["replay_generator", "external_replay_judge", "comparative_analysis"]
-    assert comparison["judge_types"] == ["heuristic", "embedding", "temporal", "architecture", "hidden_truth"]
+    assert comparison["judge_types"] == ["heuristic", "embedding", "semantic_entailment", "contradiction", "temporal", "architecture", "hidden_truth"]
     assert "mean_evaluator_agreement_divergence" in row
     assert "mean_semantic_entailment_score" in row
     assert "mean_replay_semantic_divergence" in row
@@ -129,6 +160,11 @@ def test_benchmark_artifacts_are_deterministic_and_include_adversarial_visualiza
         "replay_longevity_comparisons",
         "failure_point_timelines",
         "semantic_stability_heatmaps",
+        "continuity_half_life_chart",
+        "temporal_consistency_degradation",
+        "architecture_mutation_timeline",
+        "evaluator_agreement_divergence",
+        "hidden_constraint_survival_curves",
     }.issubset(paths)
     for path in paths.values():
         assert path.exists()
