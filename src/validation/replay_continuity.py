@@ -21,7 +21,7 @@ from typing import Iterable, Literal, Sequence
 
 ModeName = Literal["naive", "baseline", "adaptive", "comptext_v7"]
 
-_ARTIFACT_VERSION = "adversarial-replay-continuity-v2"
+_ARTIFACT_VERSION = "external-replay-judge-v3"
 _WORD_RE = re.compile(r"[A-Za-z0-9_:-]+")
 _CONTRADICTION_PAIRS = (
     ("must", "must_not"),
@@ -76,11 +76,35 @@ def _jaccard(left: Iterable[str], right: Iterable[str]) -> float:
     return len(left_set & right_set) / len(left_set | right_set)
 
 
+def _clamp(value: float) -> float:
+    return max(0.0, min(1.0, value))
+
+
+def _mean(values: Sequence[float]) -> float:
+    return sum(values) / len(values) if values else 1.0
+
+
 def _state_words(state: "SemanticReplayState") -> tuple[str, ...]:
     words: list[str] = []
     for value in state.iter_semantic_values():
         words.extend(_tokens(value))
     return tuple(words)
+
+
+def _state_values_without_evaluator_fields(state: "SemanticReplayState") -> tuple[str, ...]:
+    values: list[str] = []
+    values.extend(state.project_goals)
+    values.extend(state.operational_constraints)
+    values.extend(state.architectural_anchors)
+    values.extend(state.ordered_dependencies)
+    values.extend(state.temporal_sequence)
+    values.extend(state.truths)
+    values.extend(state.hidden_constraints)
+    values.extend(state.notes)
+    for cluster in state.semantic_clusters:
+        values.append(cluster.name)
+        values.extend(cluster.members)
+    return tuple(values)
 
 
 @dataclass(frozen=True, slots=True)
@@ -208,11 +232,16 @@ class ContinuityMetrics:
 
     replay_consistency: float
     embedding_divergence: float
+    replay_semantic_divergence: float
+    semantic_entailment_score: float
+    evaluator_agreement_divergence: float
     architecture_continuity: float
     architecture_mutation_resistance: float
     constraint_survival: float
     hidden_constraint_survival: float
+    hidden_truth_survival_rate: float
     temporal_consistency_score: float
+    temporal_causality_retention: float
     dependency_causality_score: float
     semantic_ambiguity_resilience: float
     contradiction_accumulation: float
@@ -238,6 +267,7 @@ class ReplayIteration:
     reconstruction_digest: str
     metrics: ContinuityMetrics
     failure_flags: tuple[str, ...]
+    judge_results: tuple[JudgeResult, ...] = field(default_factory=tuple)
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -248,6 +278,7 @@ class ReplayIteration:
             "reconstruction_digest": self.reconstruction_digest,
             "metrics": self.metrics.as_dict(),
             "failure_flags": list(self.failure_flags),
+            "external_judge_results": [result.as_dict() for result in self.judge_results],
         }
 
 
@@ -305,9 +336,6 @@ class V7ReplayAdapter:
     mode: ModeName = "comptext_v7"
 
     def initial_state(self, scenario: ReplayScenario) -> SemanticReplayState:
-        contradictions = _detect_contradictions(
-            [*scenario.project_goals, *scenario.operational_constraints, *scenario.architectural_anchors, *scenario.truths]
-        )
         return SemanticReplayState(
             mode=self.mode,
             scenario=scenario.name,
@@ -320,8 +348,8 @@ class V7ReplayAdapter:
             temporal_sequence=_stable_unique(scenario.temporal_sequence),
             truths=_stable_unique(scenario.truths),
             hidden_constraints=_stable_unique(scenario.hidden_constraints),
-            contradictions=contradictions,
-            notes=("v7_adapter=structured_replay; generator output is scored by independent strict evaluator",),
+            contradictions=(),
+            notes=("v7_adapter=structured_replay; scoring logic withheld from generator",),
         )
 
     def recompress(self, previous: SemanticReplayState, scenario: ReplayScenario, iteration: int) -> SemanticReplayState:
@@ -350,7 +378,6 @@ class V7ReplayAdapter:
         if iteration == 100 and anchors:
             anchors = [*anchors[:-1], f"mutation_probe_{iteration}: architecture anchor needs human review"]
 
-        contradictions = _detect_contradictions([*constraints, *anchors, *truths, *deps, *temporal, *hidden])
         return SemanticReplayState(
             mode=self.mode,
             scenario=scenario.name,
@@ -363,7 +390,7 @@ class V7ReplayAdapter:
             temporal_sequence=_stable_unique(temporal),
             truths=_stable_unique(truths),
             hidden_constraints=_stable_unique(hidden),
-            contradictions=contradictions,
+            contradictions=(),
             notes=_stable_unique(notes),
         )
 
@@ -412,7 +439,6 @@ class ComparativeReplayAdapter(V7ReplayAdapter):
         if iteration and self.mode == "naive" and iteration % 6 == 0:
             deps = list(reversed(deps))
 
-        contradictions = _detect_contradictions([*constraints, *anchors, *truths, *deps, *temporal, *hidden])
         return SemanticReplayState(
             mode=self.mode,
             scenario=scenario.name,
@@ -425,8 +451,8 @@ class ComparativeReplayAdapter(V7ReplayAdapter):
             temporal_sequence=_stable_unique(temporal),
             truths=_stable_unique(truths),
             hidden_constraints=_stable_unique(hidden),
-            contradictions=contradictions,
-            notes=(f"{self.mode}_adapter=lossy_replay_summary; iteration={iteration}",),
+            contradictions=(),
+            notes=(f"{self.mode}_adapter=lossy_replay_summary; no evaluator heuristics embedded; iteration={iteration}",),
         )
 
 
@@ -587,102 +613,313 @@ def build_adversarial_scenarios() -> tuple[ReplayScenario, ...]:
     return tuple(scenarios)
 
 
-class StrictReplayEvaluator:
-    """Independent adversarial evaluator that aggressively searches for failure."""
+@dataclass(frozen=True, slots=True)
+class JudgeResult:
+    """Output from one evaluator-only judge layer.
 
-    def __init__(self, longevity_threshold: float = 0.8) -> None:
-        self.longevity_threshold = longevity_threshold
+    Judges report independent evidence and scores.  Replay generators never read
+    these structures, which prevents evaluator leakage and metric-shaped replay
+    generation.
+    """
 
-    def evaluate(self, reference: SemanticReplayState, state: SemanticReplayState, iteration: int) -> tuple[ContinuityMetrics, tuple[str, ...]]:
-        replay_consistency = _jaccard(_state_words(reference), _state_words(state))
-        embedding_divergence = 1.0 - replay_consistency
-        architecture_continuity = _coverage(reference.architectural_anchors, state.architectural_anchors)
-        reference_values = set(reference.iter_semantic_values())
-        novel_values = [value for value in state.iter_semantic_values() if value not in reference_values]
-        raw_text = " ".join(novel_values).lower()
-        mutation_hits = sum(1 for term in _MUTATION_TERMS if term in raw_text)
-        architecture_mutation_resistance = max(0.0, architecture_continuity - (mutation_hits * 0.06))
+    judge_type: str
+    score: float
+    metrics: dict[str, float]
+    failure_flags: tuple[str, ...] = field(default_factory=tuple)
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "judge_type": self.judge_type,
+            "score": round(float(self.score), 6),
+            "metrics": {key: round(float(value), 6) for key, value in sorted(self.metrics.items())},
+            "failure_flags": list(self.failure_flags),
+        }
+
+
+class ExternalReplayJudge:
+    """Base interface for independent replay judges."""
+
+    judge_type = "external"
+
+    def evaluate(self, reference: SemanticReplayState, state: SemanticReplayState, iteration: int) -> JudgeResult:
+        raise NotImplementedError
+
+
+class HeuristicJudge(ExternalReplayJudge):
+    """Strict contradiction and hidden-constraint checker."""
+
+    judge_type = "heuristic"
+
+    def evaluate(self, reference: SemanticReplayState, state: SemanticReplayState, iteration: int) -> JudgeResult:
+        reference_contradictions = _detect_contradictions(_state_values_without_evaluator_fields(reference))
+        observed_contradictions = _detect_contradictions(_state_values_without_evaluator_fields(state))
+        contradiction_growth = max(0, len(observed_contradictions) - len(reference_contradictions))
+        contradiction_accumulation = min(1.0, contradiction_growth / max(1, len(reference.operational_constraints)))
+        contradiction_growth_rate = min(1.0, contradiction_growth / max(1, iteration))
         constraint_survival = _coverage(reference.operational_constraints, state.operational_constraints)
         hidden_constraint_survival = _coverage(reference.hidden_constraints, state.hidden_constraints)
-        temporal_consistency_score = _ordered_score(reference.temporal_sequence, state.temporal_sequence)
-        dependency_causality_score = _ordered_score(reference.ordered_dependencies, state.ordered_dependencies)
-        truth_retention = _coverage(reference.truths, state.truths)
-        hidden_truth_verification = (hidden_constraint_survival + truth_retention) / 2.0
+        novel_values = [value for value in _state_values_without_evaluator_fields(state) if value not in set(_state_values_without_evaluator_fields(reference))]
+        raw_text = " ".join(novel_values).lower()
+        mutation_hits = sum(1 for term in _MUTATION_TERMS if term in raw_text)
+        architecture_mutation_probe = min(1.0, mutation_hits / max(1, len(_MUTATION_TERMS)))
+        score = _clamp(((constraint_survival * 0.40) + (hidden_constraint_survival * 0.40) + ((1.0 - contradiction_accumulation) * 0.20)) * (1.0 - architecture_mutation_probe * 0.30))
+        flags: list[str] = []
+        if hidden_constraint_survival < 1.0:
+            flags.append("hidden_constraint_loss")
+        if contradiction_growth:
+            flags.append("contradiction_growth")
+        if mutation_hits:
+            flags.append("architecture_mutation_detected")
+        return JudgeResult(
+            self.judge_type,
+            score,
+            {
+                "constraint_survival": constraint_survival,
+                "hidden_constraint_survival": hidden_constraint_survival,
+                "contradiction_accumulation": contradiction_accumulation,
+                "contradiction_growth_rate": contradiction_growth_rate,
+                "architecture_mutation_probe": architecture_mutation_probe,
+            },
+            _stable_unique(flags),
+        )
 
+
+class EmbeddingJudge(ExternalReplayJudge):
+    """Deterministic lexical embedding proxy for semantic divergence and drift."""
+
+    judge_type = "embedding"
+
+    def evaluate(self, reference: SemanticReplayState, state: SemanticReplayState, iteration: int) -> JudgeResult:
+        reference_words = _state_words(reference)
+        state_words = _state_words(state)
+        replay_consistency = _jaccard(reference_words, state_words)
+        replay_semantic_divergence = 1.0 - replay_consistency
+        reference_token_set = set(reference_words)
+        observed_token_set = set(state_words)
+        semantic_entailment_score = len(reference_token_set & observed_token_set) / max(1, len(reference_token_set))
         state_clusters = {cluster.name: cluster for cluster in state.semantic_clusters}
         cluster_scores = []
         for reference_cluster in reference.semantic_clusters:
             observed = state_clusters.get(reference_cluster.name)
             cluster_scores.append(_coverage(reference_cluster.members, observed.members if observed else ()))
-        cluster_continuity = sum(cluster_scores) / max(1, len(cluster_scores))
-        ambiguity_members = tuple(member for cluster in reference.semantic_clusters for member in cluster.members if any(term in member.lower() for term in _AMBIGUITY_TERMS))
-        observed_members = tuple(member for cluster in state.semantic_clusters for member in cluster.members)
-        semantic_ambiguity_resilience = _coverage(ambiguity_members, observed_members)
-
-        contradiction_growth = max(0, len(state.contradictions) - len(reference.contradictions))
-        contradiction_accumulation = min(1.0, contradiction_growth / max(1, len(reference.operational_constraints)))
-        contradiction_growth_rate = min(1.0, contradiction_growth / max(1, iteration))
-        semantic_drift_growth = max(0.0, (embedding_divergence * 0.45) + ((1.0 - cluster_continuity) * 0.25) + ((1.0 - hidden_truth_verification) * 0.30))
-        adversarial_evaluator_score = (
-            hidden_constraint_survival * 0.2
-            + temporal_consistency_score * 0.16
-            + architecture_mutation_resistance * 0.16
-            + dependency_causality_score * 0.14
-            + semantic_ambiguity_resilience * 0.14
-            + hidden_truth_verification * 0.2
-        ) * (1.0 - contradiction_accumulation * 0.45)
-        operational_continuity = (
-            constraint_survival * 0.18
-            + architecture_mutation_resistance * 0.14
-            + hidden_constraint_survival * 0.16
-            + truth_retention * 0.14
-            + temporal_consistency_score * 0.12
-            + dependency_causality_score * 0.10
-            + semantic_ambiguity_resilience * 0.08
-            + cluster_continuity * 0.08
-        ) * (1.0 - contradiction_accumulation * 0.35)
-        replay_longevity = 1.0 if operational_continuity >= self.longevity_threshold else max(0.0, operational_continuity / self.longevity_threshold)
-        overall = (
-            replay_consistency * 0.09
-            + (1.0 - embedding_divergence) * 0.06
-            + architecture_mutation_resistance * 0.10
-            + constraint_survival * 0.10
-            + hidden_constraint_survival * 0.12
-            + temporal_consistency_score * 0.09
-            + dependency_causality_score * 0.07
-            + semantic_ambiguity_resilience * 0.07
-            + truth_retention * 0.07
-            + hidden_truth_verification * 0.08
-            + adversarial_evaluator_score * 0.08
-            + replay_longevity * 0.04
-            + (1.0 - semantic_drift_growth) * 0.03
-        ) * (1.0 - contradiction_accumulation * 0.30)
-        overall = max(0.0, min(1.0, overall))
-
-        flags = []
-        if hidden_constraint_survival < 1.0:
-            flags.append("hidden_constraint_loss")
-        if temporal_consistency_score < 1.0:
-            flags.append("temporal_order_loss")
-        if architecture_mutation_resistance < architecture_continuity:
-            flags.append("architecture_mutation_detected")
-        if dependency_causality_score < 1.0:
-            flags.append("dependency_inversion_or_loss")
+        cluster_similarity = _mean(cluster_scores)
+        semantic_drift_growth = _clamp((replay_semantic_divergence * 0.60) + ((1.0 - cluster_similarity) * 0.40))
+        semantic_ambiguity_resilience = _semantic_ambiguity_resilience(reference, state)
+        score = _clamp((semantic_entailment_score * 0.35) + (replay_consistency * 0.25) + (cluster_similarity * 0.25) + (semantic_ambiguity_resilience * 0.15))
+        flags: list[str] = []
         if semantic_ambiguity_resilience < 1.0:
             flags.append("semantic_ambiguity_loss")
-        if contradiction_growth:
-            flags.append("contradiction_growth")
+        if replay_semantic_divergence > 0.35:
+            flags.append("semantic_drift")
+        return JudgeResult(
+            self.judge_type,
+            score,
+            {
+                "replay_consistency": replay_consistency,
+                "embedding_divergence": replay_semantic_divergence,
+                "replay_semantic_divergence": replay_semantic_divergence,
+                "semantic_entailment_score": semantic_entailment_score,
+                "cluster_similarity": cluster_similarity,
+                "semantic_drift_growth": semantic_drift_growth,
+                "semantic_ambiguity_resilience": semantic_ambiguity_resilience,
+            },
+            _stable_unique(flags),
+        )
+
+
+class TemporalJudge(ExternalReplayJudge):
+    """Chronology and causal-order validator."""
+
+    judge_type = "temporal"
+
+    def evaluate(self, reference: SemanticReplayState, state: SemanticReplayState, iteration: int) -> JudgeResult:
+        temporal_consistency_score = _ordered_score(reference.temporal_sequence, state.temporal_sequence)
+        dependency_causality_score = _ordered_score(reference.ordered_dependencies, state.ordered_dependencies)
+        temporal_causality_retention = (temporal_consistency_score + dependency_causality_score) / 2.0
+        score = temporal_causality_retention
+        flags: list[str] = []
+        if temporal_consistency_score < 1.0:
+            flags.append("temporal_order_loss")
+        if dependency_causality_score < 1.0:
+            flags.append("dependency_inversion_or_loss")
+        return JudgeResult(
+            self.judge_type,
+            score,
+            {
+                "temporal_consistency_score": temporal_consistency_score,
+                "dependency_causality_score": dependency_causality_score,
+                "temporal_causality_retention": temporal_causality_retention,
+            },
+            _stable_unique(flags),
+        )
+
+
+class ArchitectureJudge(ExternalReplayJudge):
+    """Component topology and dependency-graph preservation checker."""
+
+    judge_type = "architecture"
+
+    def evaluate(self, reference: SemanticReplayState, state: SemanticReplayState, iteration: int) -> JudgeResult:
+        architecture_continuity = _coverage(reference.architectural_anchors, state.architectural_anchors)
+        dependency_graph_preservation = _ordered_score(reference.ordered_dependencies, state.ordered_dependencies)
+        reference_values = set(_state_values_without_evaluator_fields(reference))
+        novel_values = [value for value in _state_values_without_evaluator_fields(state) if value not in reference_values]
+        raw_text = " ".join(novel_values).lower()
+        mutation_hits = sum(1 for term in _MUTATION_TERMS if term in raw_text)
+        architecture_mutation_resistance = _clamp(min(architecture_continuity, dependency_graph_preservation) - (mutation_hits * 0.06))
+        score = _clamp((architecture_continuity * 0.45) + (dependency_graph_preservation * 0.35) + (architecture_mutation_resistance * 0.20))
+        flags: list[str] = []
+        if architecture_mutation_resistance < architecture_continuity:
+            flags.append("architecture_mutation_detected")
+        if dependency_graph_preservation < 1.0:
+            flags.append("dependency_inversion_or_loss")
+        return JudgeResult(
+            self.judge_type,
+            score,
+            {
+                "architecture_continuity": architecture_continuity,
+                "architecture_mutation_resistance": architecture_mutation_resistance,
+                "dependency_graph_preservation": dependency_graph_preservation,
+            },
+            _stable_unique(flags),
+        )
+
+
+class HiddenTruthJudge(ExternalReplayJudge):
+    """Evaluator-only hidden-truth survival and silent-omission detector."""
+
+    judge_type = "hidden_truth"
+
+    def evaluate(self, reference: SemanticReplayState, state: SemanticReplayState, iteration: int) -> JudgeResult:
+        truth_retention = _coverage(reference.truths, state.truths)
+        hidden_constraint_survival = _coverage(reference.hidden_constraints, state.hidden_constraints)
+        hidden_truth_survival_rate = (truth_retention + hidden_constraint_survival) / 2.0
+        silent_omission_rate = 1.0 - hidden_truth_survival_rate
+        hidden_truth_verification = hidden_truth_survival_rate
+        score = hidden_truth_survival_rate
+        flags: list[str] = []
+        if hidden_constraint_survival < 1.0:
+            flags.append("hidden_constraint_loss")
+        if silent_omission_rate > 0.0:
+            flags.append("silent_omission_detected")
+        return JudgeResult(
+            self.judge_type,
+            score,
+            {
+                "truth_retention": truth_retention,
+                "hidden_constraint_survival": hidden_constraint_survival,
+                "hidden_truth_survival_rate": hidden_truth_survival_rate,
+                "hidden_truth_verification": hidden_truth_verification,
+                "silent_omission_rate": silent_omission_rate,
+            },
+            _stable_unique(flags),
+        )
+
+
+def _semantic_ambiguity_resilience(reference: SemanticReplayState, state: SemanticReplayState) -> float:
+    ambiguity_members = tuple(member for cluster in reference.semantic_clusters for member in cluster.members if any(term in member.lower() for term in _AMBIGUITY_TERMS))
+    observed_members = tuple(member for cluster in state.semantic_clusters for member in cluster.members)
+    return _coverage(ambiguity_members, observed_members)
+
+
+class StrictReplayEvaluator:
+    """Coordinator for external judge layers that aggressively search for failure."""
+
+    def __init__(self, longevity_threshold: float = 0.8, judges: Sequence[ExternalReplayJudge] | None = None) -> None:
+        self.longevity_threshold = longevity_threshold
+        self.judges = tuple(judges) if judges is not None else (
+            HeuristicJudge(),
+            EmbeddingJudge(),
+            TemporalJudge(),
+            ArchitectureJudge(),
+            HiddenTruthJudge(),
+        )
+
+    def judge_results(self, reference: SemanticReplayState, state: SemanticReplayState, iteration: int) -> tuple[JudgeResult, ...]:
+        return tuple(judge.evaluate(reference, state, iteration) for judge in self.judges)
+
+    def evaluate(self, reference: SemanticReplayState, state: SemanticReplayState, iteration: int) -> tuple[ContinuityMetrics, tuple[str, ...]]:
+        results = self.judge_results(reference, state, iteration)
+        by_metric: dict[str, float] = {}
+        for result in results:
+            by_metric.update(result.metrics)
+
+        replay_consistency = by_metric.get("replay_consistency", 0.0)
+        embedding_divergence = by_metric.get("embedding_divergence", 1.0)
+        replay_semantic_divergence = by_metric.get("replay_semantic_divergence", embedding_divergence)
+        semantic_entailment_score = by_metric.get("semantic_entailment_score", replay_consistency)
+        architecture_continuity = by_metric.get("architecture_continuity", 0.0)
+        architecture_mutation_resistance = by_metric.get("architecture_mutation_resistance", architecture_continuity)
+        constraint_survival = by_metric.get("constraint_survival", 0.0)
+        hidden_constraint_survival = min(
+            by_metric.get("hidden_constraint_survival", 0.0),
+            by_metric.get("hidden_truth_survival_rate", 0.0),
+        )
+        hidden_truth_survival_rate = by_metric.get("hidden_truth_survival_rate", hidden_constraint_survival)
+        temporal_consistency_score = by_metric.get("temporal_consistency_score", 0.0)
+        temporal_causality_retention = by_metric.get("temporal_causality_retention", temporal_consistency_score)
+        dependency_causality_score = by_metric.get("dependency_causality_score", by_metric.get("dependency_graph_preservation", 0.0))
+        semantic_ambiguity_resilience = by_metric.get("semantic_ambiguity_resilience", 0.0)
+        contradiction_accumulation = by_metric.get("contradiction_accumulation", 0.0)
+        contradiction_growth_rate = by_metric.get("contradiction_growth_rate", 0.0)
+        semantic_drift_growth = _clamp((by_metric.get("semantic_drift_growth", 0.0) * 0.60) + ((1.0 - hidden_truth_survival_rate) * 0.25) + ((1.0 - temporal_causality_retention) * 0.15))
+        truth_retention = by_metric.get("truth_retention", 0.0)
+        hidden_truth_verification = by_metric.get("hidden_truth_verification", hidden_truth_survival_rate)
+        evaluator_scores = [result.score for result in results]
+        evaluator_agreement_divergence = max(evaluator_scores) - min(evaluator_scores) if evaluator_scores else 0.0
+        adversarial_evaluator_score = _clamp(_mean(evaluator_scores) * (1.0 - contradiction_accumulation * 0.45) * (1.0 - evaluator_agreement_divergence * 0.15))
+        operational_continuity = _clamp((
+            constraint_survival * 0.16
+            + architecture_mutation_resistance * 0.14
+            + hidden_constraint_survival * 0.14
+            + hidden_truth_survival_rate * 0.12
+            + truth_retention * 0.12
+            + temporal_consistency_score * 0.10
+            + temporal_causality_retention * 0.08
+            + dependency_causality_score * 0.07
+            + semantic_ambiguity_resilience * 0.04
+            + semantic_entailment_score * 0.03
+        ) * (1.0 - contradiction_accumulation * 0.35))
+        replay_longevity = 1.0 if operational_continuity >= self.longevity_threshold else _clamp(operational_continuity / self.longevity_threshold)
+        overall = _clamp((
+            replay_consistency * 0.06
+            + (1.0 - replay_semantic_divergence) * 0.05
+            + semantic_entailment_score * 0.05
+            + architecture_mutation_resistance * 0.10
+            + constraint_survival * 0.09
+            + hidden_constraint_survival * 0.10
+            + hidden_truth_survival_rate * 0.09
+            + temporal_consistency_score * 0.08
+            + temporal_causality_retention * 0.08
+            + dependency_causality_score * 0.06
+            + semantic_ambiguity_resilience * 0.05
+            + truth_retention * 0.06
+            + hidden_truth_verification * 0.06
+            + adversarial_evaluator_score * 0.05
+            + replay_longevity * 0.04
+            + (1.0 - semantic_drift_growth) * 0.03
+            + (1.0 - evaluator_agreement_divergence) * 0.05
+        ) * (1.0 - contradiction_accumulation * 0.30))
+
+        flags: list[str] = []
+        for result in results:
+            flags.extend(result.failure_flags)
         if overall < 0.5:
             flags.append("collapsed")
 
         metrics = ContinuityMetrics(
             replay_consistency=replay_consistency,
             embedding_divergence=embedding_divergence,
+            replay_semantic_divergence=replay_semantic_divergence,
+            semantic_entailment_score=semantic_entailment_score,
+            evaluator_agreement_divergence=evaluator_agreement_divergence,
             architecture_continuity=architecture_continuity,
             architecture_mutation_resistance=architecture_mutation_resistance,
             constraint_survival=constraint_survival,
             hidden_constraint_survival=hidden_constraint_survival,
+            hidden_truth_survival_rate=hidden_truth_survival_rate,
             temporal_consistency_score=temporal_consistency_score,
+            temporal_causality_retention=temporal_causality_retention,
             dependency_causality_score=dependency_causality_score,
             semantic_ambiguity_resilience=semantic_ambiguity_resilience,
             contradiction_accumulation=contradiction_accumulation,
@@ -696,7 +933,6 @@ class StrictReplayEvaluator:
             overall_continuity=overall,
         )
         return metrics, _stable_unique(flags)
-
 
 def evaluate_state(reference: SemanticReplayState, state: SemanticReplayState, iteration: int, longevity_threshold: float = 0.8) -> ContinuityMetrics:
     """Compatibility wrapper around the independent strict evaluator."""
@@ -716,6 +952,7 @@ def run_replay_chain(scenario: ReplayScenario, mode: ModeName, *, iterations: in
         current = adapter.recompress(current, scenario, iteration)
         reconstruction = current.reconstruct()
         metrics, flags = evaluator.evaluate(reference, current, iteration)
+        judge_results = evaluator.judge_results(reference, current, iteration)
         outputs.append(
             ReplayIteration(
                 scenario=scenario.name,
@@ -725,48 +962,67 @@ def run_replay_chain(scenario: ReplayScenario, mode: ModeName, *, iterations: in
                 reconstruction_digest=_sha(reconstruction),
                 metrics=metrics,
                 failure_flags=flags,
+                judge_results=judge_results,
             )
         )
     return ReplayChainResult(scenario=scenario.name, mode=mode, iterations=tuple(outputs))
 
 
-def run_comparison(*, iterations: int = 100) -> dict[str, object]:
-    scenarios = build_adversarial_scenarios()
+class ComparativeReplayAnalysis:
+    """External comparative analysis over generator outputs and judge results."""
+
     modes: tuple[ModeName, ...] = ("naive", "baseline", "adaptive", "comptext_v7")
-    chains = [run_replay_chain(scenario, mode, iterations=iterations) for scenario in scenarios for mode in modes]
-    summary_rows: list[dict[str, object]] = []
-    for mode in modes:
-        mode_chains = [chain for chain in chains if chain.mode == mode]
+
+    def run(self, *, iterations: int = 100) -> dict[str, object]:
+        scenarios = build_adversarial_scenarios()
+        chains = [run_replay_chain(scenario, mode, iterations=iterations) for scenario in scenarios for mode in self.modes]
+        summary_rows = [self._summarize_mode(mode, [chain for chain in chains if chain.mode == mode], iterations) for mode in self.modes]
+        return {
+            "version": _ARTIFACT_VERSION,
+            "purpose": "strict adversarial semantic/operational replay continuity evaluation, not a token benchmark",
+            "iterations": iterations,
+            "iteration_ladders_supported": [10, 25, 50, 100],
+            "evaluation_layers": ["replay_generator", "external_replay_judge", "comparative_analysis"],
+            "judge_types": ["heuristic", "embedding", "temporal", "architecture", "hidden_truth"],
+            "evaluator_independence": "replay adapters generate states without scoring logic; external judge layers independently score hidden truths, topology, chronology, semantic drift, and failure modes",
+            "success_condition": "CompText V7 may degrade, but should degrade slower and more structurally than lossy baselines.",
+            "scenarios": [scenario.as_dict() for scenario in scenarios],
+            "summary": summary_rows,
+            "chains": [chain.as_dict() for chain in chains],
+            "digest": _sha([chain.as_dict() for chain in chains]),
+        }
+
+    def _summarize_mode(self, mode: ModeName, mode_chains: list[ReplayChainResult], iterations: int) -> dict[str, object]:
         final_scores = [chain.final_continuity for chain in mode_chains]
         longevities = [chain.longevity for chain in mode_chains]
         collapse_points = [chain.collapse_iteration or iterations for chain in mode_chains]
-        contradiction_rates = [item.metrics.contradiction_growth_rate for chain in mode_chains for item in chain.iterations]
-        summary_rows.append(
-            {
-                "mode": mode,
-                "mean_final_continuity": round(sum(final_scores) / len(final_scores), 6),
-                "mean_longevity_iterations": round(sum(longevities) / len(longevities), 3),
-                "mean_replay_collapse_iteration": round(sum(collapse_points) / len(collapse_points), 3),
-                "mean_continuity_half_life": round(sum(chain.continuity_half_life for chain in mode_chains) / len(mode_chains), 3),
-                "mean_drift_acceleration_rate": round(sum(chain.drift_acceleration_rate for chain in mode_chains) / len(mode_chains), 6),
-                "mean_contradiction_growth_rate": round(sum(contradiction_rates) / len(contradiction_rates), 6),
-                "min_final_continuity": round(min(final_scores), 6),
-                "max_contradiction_accumulation": round(max(item.metrics.contradiction_accumulation for chain in mode_chains for item in chain.iterations), 6),
-            }
-        )
-    return {
-        "version": _ARTIFACT_VERSION,
-        "purpose": "strict adversarial semantic/operational replay continuity evaluation, not a token benchmark",
-        "iterations": iterations,
-        "iteration_ladders_supported": [10, 25, 50, 100],
-        "evaluator_independence": "replay adapters generate states; StrictReplayEvaluator independently scores hidden truths and failure modes",
-        "success_condition": "CompText V7 may degrade, but should degrade slower and more structurally than lossy baselines.",
-        "scenarios": [scenario.as_dict() for scenario in scenarios],
-        "summary": summary_rows,
-        "chains": [chain.as_dict() for chain in chains],
-        "digest": _sha([chain.as_dict() for chain in chains]),
-    }
+        all_iterations = [item for chain in mode_chains for item in chain.iterations]
+        contradiction_rates = [item.metrics.contradiction_growth_rate for item in all_iterations]
+        return {
+            "mode": mode,
+            "mean_final_continuity": round(sum(final_scores) / len(final_scores), 6),
+            "mean_longevity_iterations": round(sum(longevities) / len(longevities), 3),
+            "mean_replay_collapse_iteration": round(sum(collapse_points) / len(collapse_points), 3),
+            "mean_continuity_half_life": round(sum(chain.continuity_half_life for chain in mode_chains) / len(mode_chains), 3),
+            "mean_drift_acceleration_rate": round(sum(chain.drift_acceleration_rate for chain in mode_chains) / len(mode_chains), 6),
+            "mean_contradiction_growth_rate": round(sum(contradiction_rates) / len(contradiction_rates), 6),
+            "min_final_continuity": round(min(final_scores), 6),
+            "max_contradiction_accumulation": round(max(item.metrics.contradiction_accumulation for item in all_iterations), 6),
+            "mean_evaluator_agreement_divergence": self._mean_metric(all_iterations, "evaluator_agreement_divergence"),
+            "mean_semantic_entailment_score": self._mean_metric(all_iterations, "semantic_entailment_score"),
+            "mean_replay_semantic_divergence": self._mean_metric(all_iterations, "replay_semantic_divergence"),
+            "mean_hidden_truth_survival_rate": self._mean_metric(all_iterations, "hidden_truth_survival_rate"),
+            "mean_temporal_causality_retention": self._mean_metric(all_iterations, "temporal_causality_retention"),
+            "mean_architecture_mutation_resistance": self._mean_metric(all_iterations, "architecture_mutation_resistance"),
+        }
 
+    @staticmethod
+    def _mean_metric(iterations: Sequence[ReplayIteration], metric: str) -> float:
+        return round(sum(float(getattr(item.metrics, metric)) for item in iterations) / len(iterations), 6)
+
+
+def run_comparison(*, iterations: int = 100) -> dict[str, object]:
+    return ComparativeReplayAnalysis().run(iterations=iterations)
 
 def write_benchmark_artifacts(output_dir: Path = Path("reports/replay_continuity"), *, iterations: int = 100) -> dict[str, Path]:
     """Write deterministic JSON and SVG artifacts for adversarial replay comparisons."""
@@ -800,7 +1056,7 @@ def write_benchmark_artifacts(output_dir: Path = Path("reports/replay_continuity
     paths["constraint_survival_curves"].write_text(_line_svg(chains, "hidden_constraint_survival", "Constraint survival curves"), encoding="utf-8")
     paths["replay_longevity_comparisons"].write_text(_longevity_svg(comparison["summary"]), encoding="utf-8")  # type: ignore[index]
     paths["failure_point_timelines"].write_text(_failure_timeline_svg(chains), encoding="utf-8")
-    paths["semantic_stability_heatmaps"].write_text(_heatmap_svg(chains, ("semantic_ambiguity_resilience", "temporal_consistency_score", "architecture_mutation_resistance", "hidden_truth_verification", "overall_continuity"), "Semantic stability heatmap"), encoding="utf-8")
+    paths["semantic_stability_heatmaps"].write_text(_heatmap_svg(chains, ("semantic_entailment_score", "replay_semantic_divergence", "temporal_causality_retention", "architecture_mutation_resistance", "hidden_truth_survival_rate", "evaluator_agreement_divergence", "overall_continuity"), "Semantic stability heatmap"), encoding="utf-8")
     paths["replay_degradation_curves"].write_text(paths["replay_collapse_curves"].read_text(encoding="utf-8"), encoding="utf-8")
     paths["continuity_heatmap"].write_text(paths["semantic_stability_heatmaps"].read_text(encoding="utf-8"), encoding="utf-8")
     paths["semantic_drift_graph"].write_text(paths["drift_acceleration_graph"].read_text(encoding="utf-8"), encoding="utf-8")

@@ -3,7 +3,12 @@ from __future__ import annotations
 import json
 
 from src.validation.replay_continuity import (
+    ArchitectureJudge,
+    EmbeddingJudge,
+    HeuristicJudge,
+    HiddenTruthJudge,
     StrictReplayEvaluator,
+    TemporalJudge,
     build_adversarial_scenarios,
     run_comparison,
     run_replay_chain,
@@ -67,6 +72,44 @@ def test_evaluator_is_separate_from_replay_generation() -> None:
     assert StrictReplayEvaluator.__name__ == "StrictReplayEvaluator"
     assert chain.iterations[-1].metrics.temporal_consistency_score < 1.0
     assert "temporal_order_loss" in chain.iterations[-1].failure_flags
+
+
+def test_external_replay_judge_architecture_reports_all_independent_judges() -> None:
+    scenario = build_adversarial_scenarios()[2]
+    chain = run_replay_chain(scenario, "baseline", iterations=16)
+    final_iteration = chain.iterations[-1]
+
+    assert {result.judge_type for result in final_iteration.judge_results} == {
+        "heuristic",
+        "embedding",
+        "temporal",
+        "architecture",
+        "hidden_truth",
+    }
+    assert isinstance(HeuristicJudge(), HeuristicJudge)
+    assert isinstance(EmbeddingJudge(), EmbeddingJudge)
+    assert isinstance(TemporalJudge(), TemporalJudge)
+    assert isinstance(ArchitectureJudge(), ArchitectureJudge)
+    assert isinstance(HiddenTruthJudge(), HiddenTruthJudge)
+    assert final_iteration.metrics.evaluator_agreement_divergence >= 0.0
+    assert final_iteration.metrics.semantic_entailment_score <= 1.0
+    assert final_iteration.metrics.replay_semantic_divergence >= 0.0
+    assert final_iteration.metrics.hidden_truth_survival_rate <= 1.0
+    assert final_iteration.metrics.temporal_causality_retention <= 1.0
+
+
+def test_comparative_analysis_exposes_new_external_judge_metrics() -> None:
+    comparison = run_comparison(iterations=10)
+    row = next(item for item in comparison["summary"] if item["mode"] == "comptext_v7")
+
+    assert comparison["evaluation_layers"] == ["replay_generator", "external_replay_judge", "comparative_analysis"]
+    assert comparison["judge_types"] == ["heuristic", "embedding", "temporal", "architecture", "hidden_truth"]
+    assert "mean_evaluator_agreement_divergence" in row
+    assert "mean_semantic_entailment_score" in row
+    assert "mean_replay_semantic_divergence" in row
+    assert "mean_hidden_truth_survival_rate" in row
+    assert "mean_temporal_causality_retention" in row
+    assert "mean_architecture_mutation_resistance" in row
 
 
 def test_benchmark_artifacts_are_deterministic_and_include_adversarial_visualizations(tmp_path) -> None:
