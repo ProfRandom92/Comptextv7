@@ -16,9 +16,34 @@ Comptextv7 validates whether compact replay-safe operational state can preserve 
 Values below are read from committed deterministic artifacts only: [`artifacts/paper_replay_results.json`](artifacts/paper_replay_results.json) and [`artifacts/agent_trace_replay_results.json`](artifacts/agent_trace_replay_results.json).
 
 | Benchmark | Count | Avg compression ratio | Replay consistency | Operational drift |
-|---|---:|---:|---:|---:|
+| --- | ---: | ---: | ---: | ---: |
 | Paper Replay Benchmark | 3 papers | 1.347063 | 0.791667 | Not reported |
 | Agent Trace Replay Benchmark | 3 traces | 1.773954 | 1.000000 | 0.000000 |
+
+## What exists now
+
+| Capability | Status |
+| --- | --- |
+| Paper Replay Benchmark | Implemented |
+| Agent Trace Replay Benchmark | Implemented |
+| Deterministic Replay Metrics | Implemented |
+| CI Artifact Publishing | Implemented |
+| No LLM Judging | Enforced |
+| No Embeddings / Vector DB | Enforced |
+
+## Replay collapse problem
+
+Long-running agents often fail because replayed context becomes operationally untrustworthy before compute runs out. Compression can preserve fluent text while losing blockers, chronology, owners, constraints, or the reason a decision mattered.
+
+| Failure mode | Operational impact |
+| --- | --- |
+| Replay collapse | The system can no longer continue the original task safely. |
+| Context fragmentation | Decisions, constraints, and owners separate from the work they govern. |
+| Operational forgetting | The agent forgets what must not change, not just what should be done. |
+| Semantic degradation | The replay looks plausible but no longer entails the original state. |
+| Recursive recompression | Each replay cycle amplifies prior omissions and distortions. |
+
+Comptextv7 tests whether explicit operational state can survive compression, reconstruction, and adversarial replay better than naive or baseline replay methods.
 
 ## Architecture
 
@@ -32,84 +57,101 @@ flowchart LR
     E --> F[CI Artifact]
 ```
 
-## What exists now
+| Stage | What it preserves or tests |
+| --- | --- |
+| Raw context / trace | Goals, constraints, blockers, chronology, dependencies, and tool sequence. |
+| Operational state extraction | Converts source context into compact replay-safe structure. |
+| Compact replay state | Stores the minimum state expected to support reconstruction. |
+| Replay reconstruction | Rebuilds task context from the compact state. |
+| Deterministic validation | Scores continuity, drift, survival, and replay consistency. |
+| CI artifact | Publishes JSON evidence for review and audit. |
 
-| Capability | Status |
-|---|---|
-| Paper Replay Benchmark | Implemented |
-| Agent Trace Replay Benchmark | Implemented |
-| Deterministic Replay Metrics | Implemented |
-| CI Artifact Publishing | Implemented |
-| No LLM Judging | Enforced |
-| No Embeddings / Vector DB | Enforced |
+## Long-horizon adversarial replay
+
+The replay-continuity suite is a hostile semantic/operational evaluation, not a token benchmark. The committed report was generated with:
+
+```bash
+python benchmarks/run_replay_continuity.py --iterations 250 --output-dir reports/replay_continuity
+```
+
+Mean final continuity at each iteration ladder:
+
+| System | Iteration 25 | Iteration 50 | Iteration 100 | Iteration 250 |
+| --- | ---: | ---: | ---: | ---: |
+| Naive Replay | 0.039 | 0.039 | 0.043 | 0.039 |
+| Baseline Replay | 0.294 | 0.294 | 0.294 | 0.294 |
+| Adaptive Replay | 0.679 | 0.476 | 0.302 | 0.302 |
+| Comptextv7 | 1.000 | 0.995 | 0.824 | 0.572 |
+
+The 250-iteration report records Comptextv7 mean final continuity at `0.571783`; the table rounds it to `0.572`.
+
+### Replay longevity
+
+| System | Approx replay longevity / collapse point |
+| --- | ---: |
+| Naive Replay | ~1 iteration |
+| Baseline Replay | ~10 iterations |
+| Adaptive Replay | ~45 iterations |
+| Comptextv7 | censored at ~250 iterations in this suite |
+
+Comptextv7 did not cross the collapse threshold during the 250-iteration run, so the result is censored at 250 rather than evidence of indefinite persistence.
+
+## Visualization artifacts
+
+The repository commits deterministic SVG reports for visual inspection without restoring header graphics or broken previews.
+
+| Artifact | Link |
+| --- | --- |
+| Continuity degradation | [`reports/replay_continuity/replay_degradation_curves.svg`](reports/replay_continuity/replay_degradation_curves.svg) |
+| Replay half-life / longevity | [`reports/replay_continuity/continuity_half_life_chart.svg`](reports/replay_continuity/continuity_half_life_chart.svg) |
+| Adversarial drift | [`reports/replay_continuity/semantic_drift_graph.svg`](reports/replay_continuity/semantic_drift_graph.svg) |
+| Replay collapse curves | [`reports/replay_continuity/replay_collapse_curves.svg`](reports/replay_continuity/replay_collapse_curves.svg) |
+| Evaluator divergence | [`reports/replay_continuity/evaluator_agreement_divergence.svg`](reports/replay_continuity/evaluator_agreement_divergence.svg) |
+| Hidden constraint survival | [`reports/replay_continuity/hidden_constraint_survival_curves.svg`](reports/replay_continuity/hidden_constraint_survival_curves.svg) |
 
 ## Integrity model
 
 Comptextv7 is designed for replay checks that can be inspected without trusting a live model call or opaque vector store.
 
-- **No LLM judging:** replay quality is scored by deterministic benchmark code, not by model preference or rubric calls.
-- **No embeddings:** validation does not depend on vector similarity, external embedding APIs, or vector databases.
-- **No external APIs:** committed benchmark fixtures and local code produce the replay artifacts.
-- **Deterministic JSON artifacts:** replay outputs are serialized for review, diffing, and CI artifact publication.
-- **CI reproducible:** GitHub Actions run the validation path and publish machine-readable evidence.
+- **No LLM judging:** replay quality is scored by deterministic benchmark code, not model preference calls.
+- **No embeddings:** validation does not depend on vector similarity, embedding APIs, or vector databases.
+- **No external APIs:** committed fixtures and local code produce replay artifacts.
+- **Deterministic JSON artifacts:** outputs are serialized for review, diffing, and CI artifact publication.
+- **CI reproducible:** GitHub Actions run validation paths and publish machine-readable evidence.
 - **Audit friendly:** metrics, fixture counts, and replay outputs remain inspectable in the repository.
 
-## Limitations
+## Important limitations
 
-- Current benchmarks use curated fixtures, not broad production traffic.
+- Current benchmarks use curated synthetic/static fixtures, not broad production traffic.
 - This is not solved AI memory and does not claim general long-term recall.
-- This is not an autonomous agent framework.
-- Iterative replay degradation is the next validation target.
-- Real-world trace coverage is still expanding.
+- This is not an autonomous agent framework or production telemetry system.
+- Detail fidelity still degrades; at 250 iterations, hidden truth survival is `0.570173`.
+- Evaluator divergence remains material; Comptextv7 divergence is `0.421743` at 250 iterations.
+- Current continuity metrics are comparative research metrics, not production guarantees.
+- Iterative replay degradation and real-world trace coverage are active next steps.
+- No vendor certification, proprietary-data integration, or AGI claim is made.
 
-## What is Comptextv7?
+## Why this matters
 
-Comptextv7 is an experimental replay-state validation project. It tests whether a compact operational state can preserve the constraints, blockers, dependencies, tool sequence, and paper-specific facts needed to reconstruct useful workflow context after compression.
+Replay-safe operational state is relevant to systems that must continue work beyond a single context window:
 
-It is not a generic summarizer, byte-for-byte compressor, production telemetry system, vendor certification claim, or AGI memory claim.
+- coding agents that need to preserve architecture decisions, blockers, and reviewer constraints;
+- long-running copilots that must resume workflows without silently rewriting task history;
+- persistent workflow agents that hand off state between sessions, tools, and operators;
+- enterprise assistants that must preserve audit-sensitive constraints and chronology.
 
-## Reproducibility
+The goal is not omniscient memory. The goal is to measure whether replayed operational state remains trustworthy enough to continue work.
 
-### Primary replay-continuity benchmark
+## Research direction
 
-```bash
-python -m pip install -e ".[test]"
-python benchmarks/run_replay_continuity.py --iterations 250 --output-dir reports/replay_continuity
-python -m pytest tests/test_replay_continuity.py
-```
-
-### General validation commands
-
-```bash
-python -m pytest
-python scripts/validate.py replay
-python scripts/validate.py token
-python scripts/validate.py forensic
-python benchmarks/run_kvtc_v7_benchmarks.py --iterations 1 --warmups 0
-python dashboard/industrial_dashboard.py --once
-```
-
-Dashboard frontend checks:
-
-```bash
-cd dashboard/app
-npm install
-npm run typecheck
-npm run build
-npm run smoke:release-health
-```
-
-Agent/report tooling:
-
-```bash
-python scripts/repo_intake.py
-python scripts/run_checks.py
-python scripts/validate_contracts.py
-python scripts/generate_contract_fixtures.py
-python scripts/validate_api_exports.py
-python scripts/generate_project_health_report.py
-python scripts/generate_dashboard_health_summary.py
-```
+| Area | Next step |
+| --- | --- |
+| Iterative replay degradation | Extend replay ladders and report degradation curves, not just endpoints. |
+| Entailment checks | Verify reconstructed states still entail original constraints and truths. |
+| Hidden truth verification | Stress test facts that are easy to omit but operationally critical. |
+| Graph-based operational memory | Preserve owners, dependencies, architecture nodes, temporal edges, and blocked states. |
+| External validation | Add independent rules-based/model-based judges with transparent disagreement reporting. |
+| Trace coverage | Expand approved real-world-style traces while preserving privacy boundaries. |
 
 ## Showcase and review surfaces
 
@@ -132,39 +174,13 @@ Comptextv7 remains biased toward artifact-backed review rather than local machin
 | [`agent-checks.yml`](.github/workflows/agent-checks.yml) | Repository/report/contract checks plus dashboard typecheck, build, and release-health smoke coverage. |
 | [`validation_runner.yml`](.github/workflows/validation_runner.yml) | Compact cloud validation result contract and artifact publishing. |
 
-The Cloud Feedback Interface (CFI) artifact model keeps validation status small enough for dashboards, companion UIs, pull-request comments, and reviewer checklists.
+The Cloud Feedback Interface (CFI) model publishes compact validation status for dashboards, companion UIs, pull-request comments, and reviewer checklists.
 
-| CFI item | Plain-English meaning | Primary evidence |
-| --- | --- | --- |
-| CFI-01 | A compact Cloud CI result contract exists for status metadata. | [`contracts/hash-chilli-cloud-ci-result.schema.json`](contracts/hash-chilli-cloud-ci-result.schema.json), [`docs/hash-companion/cloud-ci-result-contract.md`](docs/hash-companion/cloud-ci-result-contract.md) |
-| CFI-02 | A GitHub Actions validation runner can produce authoritative cloud validation status. | [`.github/workflows/validation_runner.yml`](.github/workflows/validation_runner.yml), [`docs/hash-companion/validation-runner-workflow.md`](docs/hash-companion/validation-runner-workflow.md) |
-| CFI-03 | The workflow publishes compact result artifacts for reviewer/companion consumption. | `validation-runner-cfi-artifacts`, `reports/hash-chilli-cloud-ci-result.json`, `reports/hash-chilli-cloud-ci-summary.json` |
+## Reproducibility
 
-## Repository map
-
-```text
-Comptextv7/
-├── artifacts/                  # committed deterministic replay benchmark JSON
-├── benchmarks/                 # deterministic compression, replay, and audit runners
-├── contracts/                  # machine-readable handoff contracts
-├── dashboard/                  # backend plus React operations console
-├── datasets/golden/            # immutable synthetic replay fixtures
-├── docs/                       # showcase, reports, wiki, and Hash/chilli docs
-├── reports/replay_continuity/  # adversarial continuity metrics and SVG charts
-├── scripts/                    # validation, reporting, and artifact tooling
-├── src/                        # KVTC engine, audit, and semantic validation modules
-├── tests/                      # Python regression and validation tests
-└── README.md
+```bash
+python -m pip install -e ".[test]"
+python -m pytest
+python scripts/validate.py replay
+python benchmarks/run_replay_continuity.py --iterations 250 --output-dir reports/replay_continuity
 ```
-
-## Safety boundaries
-
-Do not commit:
-
-- real Daimler payloads or proprietary customer data;
-- secrets, API keys, tokens, cookies, or credentials;
-- raw production logs;
-- unsanitized replay fixtures;
-- private deployment credentials or environment dumps.
-
-Comptextv7 is a deterministic, synthetic-only research prototype for operational replay persistence and reviewable diagnostic infrastructure.
