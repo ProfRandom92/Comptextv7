@@ -2,40 +2,40 @@
   "benchmark": "paper_replay_bench",
   "papers": [
     {
-      "compact_token_count": 231,
-      "compression_ratio": 1.059633,
-      "entity_retention_rate": 1.0,
-      "limitation_survival_rate": 1.0,
-      "metric_survival_rate": 1.0,
+      "compact_token_count": 153,
+      "compression_ratio": 1.424837,
+      "entity_retention_rate": 0.863636,
+      "limitation_survival_rate": 0.75,
+      "metric_survival_rate": 0.774194,
       "original_token_count": 218,
       "paper": "PrefixGuard",
-      "replay_consistency": 1.0,
-      "replay_token_count": 231,
-      "section_survival_rate": 1.0
+      "replay_consistency": 0.75,
+      "replay_token_count": 164,
+      "section_survival_rate": 0.833333
     },
     {
-      "compact_token_count": 195,
-      "compression_ratio": 0.955882,
-      "entity_retention_rate": 1.0,
-      "limitation_survival_rate": 1.0,
-      "metric_survival_rate": 1.0,
+      "compact_token_count": 159,
+      "compression_ratio": 1.283019,
+      "entity_retention_rate": 0.875,
+      "limitation_survival_rate": 0.75,
+      "metric_survival_rate": 0.857143,
       "original_token_count": 204,
       "paper": "FATE",
-      "replay_consistency": 1.0,
-      "replay_token_count": 195,
+      "replay_consistency": 0.875,
+      "replay_token_count": 169,
       "section_survival_rate": 1.0
     },
     {
-      "compact_token_count": 231,
-      "compression_ratio": 1.132353,
-      "entity_retention_rate": 1.0,
-      "limitation_survival_rate": 1.0,
-      "metric_survival_rate": 1.0,
+      "compact_token_count": 153,
+      "compression_ratio": 1.333333,
+      "entity_retention_rate": 0.857143,
+      "limitation_survival_rate": 0.818182,
+      "metric_survival_rate": 0.92,
       "original_token_count": 204,
       "paper": "Self-Consolidating Language Models",
-      "replay_consistency": 1.0,
-      "replay_token_count": 231,
-      "section_survival_rate": 1.0
+      "replay_consistency": 0.75,
+      "replay_token_count": 166,
+      "section_survival_rate": 0.833333
     }
   ]
 }

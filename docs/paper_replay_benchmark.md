@@ -43,8 +43,10 @@ operations only:
   `limitations`, and `deployment_relevance`;
 - sentence-window selection for the derived `baselines` field;
 - exact keyword matching for required entities;
+- deterministic entity extraction for canonical operational entities;
 - deterministic word-token counting with a repository-local regular expression;
 - normalized keyword extraction with a fixed stop-word list;
+- bounded keyword budgets per field to avoid storing large verbatim excerpts;
 - field-presence checks for every operational field.
 
 The structured operational state contains these fields:
@@ -57,6 +59,7 @@ The structured operational state contains these fields:
   "baselines": "...",
   "limitations": "...",
   "deployment_relevance": "...",
+  "entities": ["..."],
   "required_entities": ["..."]
 }
 ```
@@ -67,10 +70,13 @@ and no heavyweight dependency.
 
 ## Compact representation and replay reconstruction
 
-The compact representation stores normalized operational keywords and retained
-required entities rather than raw paper prose. Replay reconstruction rebuilds the
-operational-state object from that compact representation. The validator compares
-`original_state` and `replayed_state`; it does not compare free-form summaries.
+The compact representation stores bounded normalized keyword lists, a sorted
+required-entity list, and a deliberately reduced sorted operational-entity list
+rather than raw paper prose. It uses short transport keys and per-field keyword
+budgets so the compact representation is smaller than the fixture excerpt. Replay
+reconstruction rebuilds the operational-state object from that compact
+representation. The validator compares `original_state` and `replayed_state`; it
+does not compare free-form summaries.
 
 This matters because the benchmark is replay/state-preservation oriented. A
 successful replay means that the typed operational fields needed for audit are
@@ -87,15 +93,15 @@ The public artifact schema is:
   "papers": [
     {
       "paper": "<paper_name>",
-      "entity_retention_rate": 1.0,
-      "section_survival_rate": 1.0,
-      "limitation_survival_rate": 1.0,
-      "metric_survival_rate": 1.0,
-      "compression_ratio": 1.059633,
-      "replay_consistency": 1.0,
+      "entity_retention_rate": 0.863636,
+      "section_survival_rate": 0.833333,
+      "limitation_survival_rate": 0.75,
+      "metric_survival_rate": 0.774194,
+      "compression_ratio": 1.424837,
+      "replay_consistency": 0.75,
       "original_token_count": 218,
-      "compact_token_count": 231,
-      "replay_token_count": 231
+      "compact_token_count": 153,
+      "replay_token_count": 164
     }
   ]
 }
@@ -107,8 +113,9 @@ truth.
 
 Metrics are derived as follows:
 
-- `entity_retention_rate`: required entities retained in replay divided by
-  required entities extracted from the original fixture.
+- `entity_retention_rate`: replayed canonical operational entities divided by
+  canonical operational entities extracted from the original fixture. Required
+  entities are retained separately and must remain present after replay.
 - `section_survival_rate`: survived operational text fields divided by the six
   text fields (`problem`, `method`, `metrics`, `baselines`, `limitations`, and
   `deployment_relevance`).
@@ -116,13 +123,14 @@ Metrics are derived as follows:
   replayed `limitations` fields.
 - `metric_survival_rate`: normalized keyword overlap between original and
   replayed `metrics` fields.
-- `compression_ratio`: deterministic compact token count divided by original
-  fixture token count. Because these fixtures are intentionally small, JSON
-  metadata can make the ratio greater than `1.0`; that is recorded rather than
-  hidden.
+- `compression_ratio`: deterministic original fixture token count divided by
+  compact token count, so values greater than `1.0` indicate actual compression.
 - `replay_consistency`: mathematically derived as
-  `surviving_operational_fields / total_operational_fields`, where the seven
-  operational fields are the six text fields plus `required_entities`.
+  `surviving_operational_fields / total_operational_fields`, where the eight
+  operational fields are the six text fields plus `entities` and
+  `required_entities`. Text-field survival is determined by fixed normalized
+  keyword-overlap thresholds; list-field survival is determined by deterministic
+  entity retention or exact required-entity retention.
 - `original_token_count`, `compact_token_count`, and `replay_token_count`:
   deterministic regex token counts over the fixture excerpt, compact
   representation, and replay representation respectively.
@@ -140,8 +148,8 @@ path.
 Semantic evaluation often depends on model judgments, embeddings, fuzzy
 similarity, or external scoring services. This benchmark intentionally avoids
 all of those. Every score is computed by local string operations, keyword-set
-overlap, exact entity retention, and field-presence checks. That keeps CI runs
-reproducible and audit-friendly.
+overlap, exact required-entity retention, bounded operational-entity retention,
+and field-presence checks. That keeps CI runs reproducible and audit-friendly.
 
 ## Showcase readiness
 
