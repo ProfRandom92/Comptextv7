@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   ArrowRight,
@@ -8,11 +8,15 @@ import {
   FileJson,
   Gauge,
   GitBranch,
+  Menu,
   Link2,
   LockKeyhole,
   Network,
+  RadioTower,
   ShieldCheck,
+  Sparkles,
   Workflow,
+  X,
   Zap
 } from 'lucide-react';
 import { artifactLinks, benchmarkArtifacts, repoBaseUrl } from './data/benchmarkArtifacts';
@@ -100,21 +104,35 @@ const heroMetrics = [
 ];
 
 function App() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <>
       <header className="topbar">
-        <a className="brand" href="#overview" aria-label="Comptextv7 overview">
-          <span className="brand-mark">C7</span>
-          <span>
-            <strong>Comptextv7</strong>
-            <small>Replay validation console</small>
-          </span>
-        </a>
-        <nav aria-label="Showcase sections">
-          {navItems.map(([label, href]) => (
-            <a href={href} key={href}>{label}</a>
-          ))}
-        </nav>
+        <div className="nav-frame">
+          <a className="brand" href="#overview" aria-label="Comptextv7 overview" onClick={() => setMenuOpen(false)}>
+            <span className="brand-mark">C7</span>
+            <span>
+              <strong>Comptextv7</strong>
+              <small>Replay validation console</small>
+            </span>
+          </a>
+          <button
+            className="menu-toggle"
+            type="button"
+            aria-expanded={menuOpen}
+            aria-controls="showcase-nav"
+            aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+          </button>
+          <nav id="showcase-nav" className={menuOpen ? 'open' : ''} aria-label="Showcase sections">
+            {navItems.map(([label, href]) => (
+              <a href={href} key={href} onClick={() => setMenuOpen(false)}>{label}</a>
+            ))}
+          </nav>
+        </div>
       </header>
 
       <main>
@@ -127,9 +145,22 @@ function App() {
               <a className="button primary" href="#benchmarks">Inspect benchmarks <ArrowRight size={16} /></a>
               <a className="button" href={repoHref('reports/replay_continuity/validation_report.md')}>Open replay report <Link2 size={16} /></a>
             </div>
+            <div className="hero-trust-rail" aria-label="Showcase integrity constraints">
+              <span><CheckCircle2 size={15} /> Artifact-backed</span>
+              <span><CheckCircle2 size={15} /> No synthetic metrics</span>
+              <span><CheckCircle2 size={15} /> Static reviewer console</span>
+            </div>
           </div>
 
           <aside className="hero-panel" aria-label="Replay artifact summary">
+            <div className="visual-orbit" aria-hidden="true">
+              <span className="orbit-ring one" />
+              <span className="orbit-ring two" />
+              <span className="signal-node node-a" />
+              <span className="signal-node node-b" />
+              <span className="signal-node node-c" />
+              <div className="replay-core"><RadioTower size={32} /></div>
+            </div>
             <div className="panel-topline">
               <span>Artifact-backed</span>
               <strong>no synthetic showcase metrics</strong>
@@ -183,19 +214,27 @@ function App() {
           </div>
         </section>
 
-        <section className="section-shell" id="pipeline" aria-labelledby="pipeline-title">
+        <section className="section-shell pipeline-showcase" id="pipeline" aria-labelledby="pipeline-title">
           <div className="section-heading compact">
             <div className="eyebrow"><GitBranch size={16} /> Replay pipeline</div>
             <h2 id="pipeline-title">From noisy context to auditable continuity checks.</h2>
+            <p>A cinematic read of the same deterministic flow: context is compressed, replayed, and checked against committed artifacts.</p>
           </div>
-          <div className="pipeline" role="list">
-            {pipeline.map((step, index) => (
-              <div className="pipeline-step" role="listitem" key={step}>
-                <span>{String(index + 1).padStart(2, '0')}</span>
-                <strong>{step}</strong>
-                {index < pipeline.length - 1 && <ArrowRight aria-hidden="true" className="pipeline-arrow" />}
-              </div>
-            ))}
+          <div className="pipeline-stage">
+            <div className="pipeline-visual" aria-hidden="true">
+              <Sparkles size={20} />
+              <span>Replay continuity</span>
+              <strong>JSON evidence</strong>
+            </div>
+            <div className="pipeline" role="list">
+              {pipeline.map((step, index) => (
+                <div className="pipeline-step" role="listitem" key={step}>
+                  <span>{String(index + 1).padStart(2, '0')}</span>
+                  <strong>{step}</strong>
+                  {index < pipeline.length - 1 && <ArrowRight aria-hidden="true" className="pipeline-arrow" />}
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
