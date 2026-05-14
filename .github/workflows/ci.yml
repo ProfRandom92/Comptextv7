@@ -17,6 +17,15 @@ jobs:
         run: python -m pip install -e ".[test]"
       - name: pytest
         run: python -m pytest
+      - name: Generate paper replay artifact
+        run: python -m tests.utils.paper_replay_runner
+      - name: Upload paper replay artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-replay-results
+          path: artifacts/paper_replay_results.json
+          if-no-files-found: error
+          retention-days: 14
       - name: deterministic replay
         run: python scripts/validate.py replay
       - name: token telemetry validation

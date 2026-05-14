@@ -1,0 +1,41 @@
+{
+  "benchmark": "paper_replay_bench",
+  "papers": [
+    {
+      "compact_token_count": 231,
+      "compression_ratio": 1.059633,
+      "entity_retention_rate": 1.0,
+      "limitation_survival_rate": 1.0,
+      "metric_survival_rate": 1.0,
+      "original_token_count": 218,
+      "paper": "PrefixGuard",
+      "replay_consistency": 1.0,
+      "replay_token_count": 231,
+      "section_survival_rate": 1.0
+    },
+    {
+      "compact_token_count": 195,
+      "compression_ratio": 0.955882,
+      "entity_retention_rate": 1.0,
+      "limitation_survival_rate": 1.0,
+      "metric_survival_rate": 1.0,
+      "original_token_count": 204,
+      "paper": "FATE",
+      "replay_consistency": 1.0,
+      "replay_token_count": 195,
+      "section_survival_rate": 1.0
+    },
+    {
+      "compact_token_count": 231,
+      "compression_ratio": 1.132353,
+      "entity_retention_rate": 1.0,
+      "limitation_survival_rate": 1.0,
+      "metric_survival_rate": 1.0,
+      "original_token_count": 204,
+      "paper": "Self-Consolidating Language Models",
+      "replay_consistency": 1.0,
+      "replay_token_count": 231,
+      "section_survival_rate": 1.0
+    }
+  ]
+}

@@ -1,97 +1,174 @@
-# Paper Replay Benchmark
+# Paper replay benchmark
 
-The paper replay benchmark is a focused Comptextv7 validation scenario for deterministic operational-state preservation from dense academic text under compression and replay. It uses compact, curated excerpts from three recent technical papers rather than full PDFs or raw paper dumps:
+The paper replay benchmark is a deterministic Comptextv7 validation scenario for
+operational-state preservation from dense academic text. It uses checked-in text
+fixtures for three papers and produces a reproducible JSON artifact at
+`artifacts/paper_replay_results.json`.
+
+Target fixtures:
 
 - `prefixguard`: **PrefixGuard: From LLM-Agent Traces to Online Failure-Warning Monitors**
 - `fate`: **FATE: Future-State-Aware Scheduling for Heterogeneous LLM Workflows**
 - `self_consolidating`: **Self-Consolidating Language Models: Continual Knowledge Incorporation from Context**
 
-## What this benchmark validates
+## Replay pipeline
 
-The benchmark models a deterministic replay pipeline:
+The implemented pipeline is:
 
 ```text
-paper input
-→ typed extraction
-→ compressed operational state
+excerpt
+→ state extraction
+→ compact representation
 → replay reconstruction
-→ retention audit
+→ deterministic validator
+→ metrics JSON
 ```
 
-The important claim is that Comptextv7 preserves operational state, not raw conversational history. Each paper fixture is reduced to typed context classes that are useful for replay and audit:
+The runner lives in `tests/utils/paper_replay_runner.py`. It can be executed
+locally or in CI with:
 
-- `problem`
-- `method`
-- `metrics`
-- `limitations`
-- `deployment_relevance`
+```bash
+python -m tests.utils.paper_replay_runner
+```
 
-The test then verifies that these labels, required entities, replay hashes, compression metadata, and JSON artifact fields survive the compression/replay path deterministically.
+That command rewrites `artifacts/paper_replay_results.json` using deterministic
+ordering, sorted JSON keys, stable separators, and checked-in fixtures only.
 
-## Why dense papers are strong stress tests
+## Deterministic extraction
 
-Dense academic papers are useful replay stress tests because they combine many failure-prone features in a compact space:
+The extraction stage does not infer meaning. It uses deterministic text
+operations only:
 
-- tightly coupled method, evaluation, and limitation claims;
-- named systems, benchmarks, metrics, and artifacts;
-- operational dependencies that matter more than prose style;
-- high information density where losing one entity can break auditability;
-- deployment caveats that must remain attached to the method they qualify.
+- exact `SECTION: ...` headers for `problem`, `method`, `metrics`,
+  `limitations`, and `deployment_relevance`;
+- sentence-window selection for the derived `baselines` field;
+- exact keyword matching for required entities;
+- deterministic word-token counting with a repository-local regular expression;
+- normalized keyword extraction with a fixed stop-word list;
+- field-presence checks for every operational field.
 
-This makes papers a better showcase for state survival than casual summaries. A benchmark must preserve entities such as `StepView`, `AUPRC`, `DFA`, `WebArena`, `TerminalBench`, `workflow DAG`, `execution state`, `SCoL`, `SQuAD`, and `LongBench v2` because those entities anchor the operational state needed for replay.
+The structured operational state contains these fields:
 
-## Why this is not PDF ingestion
+```json
+{
+  "problem": "...",
+  "method": "...",
+  "metrics": "...",
+  "baselines": "...",
+  "limitations": "...",
+  "deployment_relevance": "...",
+  "required_entities": ["..."]
+}
+```
 
-This benchmark intentionally avoids PDF parsing, OCR, citation recovery, layout reconstruction, and document ingestion workflows. The fixtures are small text excerpts checked into the repository so CI can run without network access, external APIs, hidden model calls, or flaky document-processing dependencies.
+All values are produced from fixture text. There is no LLM judge, no embedding
+model, no cosine similarity, no vector database, no external API, no PDF parser,
+and no heavyweight dependency.
 
-The purpose is not to prove that Comptextv7 can ingest arbitrary PDFs. The purpose is to prove that once dense technical content is represented as text, the operational state extracted from that text can be compressed, replayed, and audited deterministically.
+## Compact representation and replay reconstruction
 
-## Why this tests operational-state survival
+The compact representation stores normalized operational keywords and retained
+required entities rather than raw paper prose. Replay reconstruction rebuilds the
+operational-state object from that compact representation. The validator compares
+`original_state` and `replayed_state`; it does not compare free-form summaries.
 
-The benchmark treats each paper as a source of replay-relevant state:
+This matters because the benchmark is replay/state-preservation oriented. A
+successful replay means that the typed operational fields needed for audit are
+still present after compaction and reconstruction, not that a generated summary
+sounds good.
 
-- problem definition;
-- methodology;
-- evaluation setup and metrics;
-- limitations;
-- deployment relevance;
-- key entities that must remain recoverable.
+## Metric derivation
 
-The replay artifact records the typed state, hashes, retention checks, lost entities, partial recovery indicators, integrity score, and compression metadata. If a required entity or context class disappears, the test fails with a deterministic regression rather than a subjective quality judgment.
+The public artifact schema is:
 
-## Why deterministic replay matters
+```json
+{
+  "benchmark": "paper_replay_bench",
+  "papers": [
+    {
+      "paper": "<paper_name>",
+      "entity_retention_rate": 1.0,
+      "section_survival_rate": 1.0,
+      "limitation_survival_rate": 1.0,
+      "metric_survival_rate": 1.0,
+      "compression_ratio": 1.059633,
+      "replay_consistency": 1.0,
+      "original_token_count": 218,
+      "compact_token_count": 231,
+      "replay_token_count": 231
+    }
+  ]
+}
+```
 
-Enterprise validation requires repeatability. This benchmark uses only deterministic checks:
+The values above are examples of the schema shape; the checked-in artifact is
+regenerated from the fixtures and should be treated as the measured source of
+truth.
 
-- required entity retention;
-- expected section labels;
-- expected context classes;
-- expected JSON artifact fields;
-- replay integrity indicators;
-- compression metadata emitted through existing Comptextv7 infrastructure.
+Metrics are derived as follows:
 
-It does not use LLM judging, embeddings, semantic similarity APIs, fuzzy scoring, or external services. The artifact is JSON-serializable with stable hashes, which makes it suitable for CI, release gates, and audit diffs.
+- `entity_retention_rate`: required entities retained in replay divided by
+  required entities extracted from the original fixture.
+- `section_survival_rate`: survived operational text fields divided by the six
+  text fields (`problem`, `method`, `metrics`, `baselines`, `limitations`, and
+  `deployment_relevance`).
+- `limitation_survival_rate`: normalized keyword overlap between original and
+  replayed `limitations` fields.
+- `metric_survival_rate`: normalized keyword overlap between original and
+  replayed `metrics` fields.
+- `compression_ratio`: deterministic compact token count divided by original
+  fixture token count. Because these fixtures are intentionally small, JSON
+  metadata can make the ratio greater than `1.0`; that is recorded rather than
+  hidden.
+- `replay_consistency`: mathematically derived as
+  `surviving_operational_fields / total_operational_fields`, where the seven
+  operational fields are the six text fields plus `required_entities`.
+- `original_token_count`, `compact_token_count`, and `replay_token_count`:
+  deterministic regex token counts over the fixture excerpt, compact
+  representation, and replay representation respectively.
 
-## Showcase and enterprise relevance
+## Why this differs from summarization
 
-For the Comptextv7 showcase, this benchmark demonstrates a cloud-first and audit-oriented story: dense technical inputs can be compacted into replayable operational state while retaining the entities and labels that explain what happened. That is useful for enterprise reliability because reviewers can inspect exactly what state survived, what would be considered lost, and which deterministic checks protect against regression.
+Summarization rewards fluent condensation. This benchmark rewards deterministic
+state survival. The replay validator does not ask whether prose is elegant,
+complete, or semantically equivalent. It asks whether specific operational
+fields and required paper entities survived a reproducible compaction/replay
+path.
 
-The benchmark supports reliability conversations around:
+## Why this differs from semantic evaluation
 
-- operational continuity across compression/replay;
-- replay fidelity for typed state rather than raw transcript text;
-- auditability through hashes and explicit lost-entity lists;
-- deterministic regression visibility in CI;
-- small, reusable fixtures without local-only workflows or external APIs.
+Semantic evaluation often depends on model judgments, embeddings, fuzzy
+similarity, or external scoring services. This benchmark intentionally avoids
+all of those. Every score is computed by local string operations, keyword-set
+overlap, exact entity retention, and field-presence checks. That keeps CI runs
+reproducible and audit-friendly.
+
+## Showcase readiness
+
+For the Comptextv7 showcase, the benchmark demonstrates that dense technical
+inputs can be converted into compact, replayable operational state with visible
+retention metrics. Enterprise reviewers can inspect:
+
+- exactly which papers were replayed;
+- exactly which token counts were measured;
+- exactly how field survival contributed to `replay_consistency`;
+- the deterministic artifact emitted by CI;
+- the absence of external services or subjective model judging.
+
+This makes the benchmark suitable for cloud-first CI artifact publishing,
+release gating, and audit diffs while remaining small enough to run on every
+pull request.
 
 ## Non-goals
 
 This benchmark is not:
 
-- a PDF ingestion platform;
+- a PDF ingestion system;
+- an OCR/layout reconstruction workflow;
 - an LLM evaluation framework;
-- a semantic summarization benchmark;
+- an embedding or semantic-similarity benchmark;
 - a generic academic-paper leaderboard;
 - a test of full-paper recall.
 
-It is a compact deterministic replay benchmark for state preservation under compression.
+It is a deterministic replay benchmark for operational-state preservation under
+compaction and reconstruction.
