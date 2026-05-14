@@ -176,7 +176,20 @@ Detail fidelity still degrades: hidden truth survival is `0.570173`, and evaluat
 | API surface | [`docs/API_SURFACE.md`](docs/API_SURFACE.md) |
 
 ## Repository map
-Core review surfaces live in [`artifacts/`](artifacts/), [`docs/benchmarks/`](docs/benchmarks/), [`reports/replay_continuity/`](reports/replay_continuity/), and [`tests/`](tests/).
+
+```text
+Comptextv7/
+├── artifacts/                  # committed deterministic replay benchmark JSON
+├── benchmarks/                 # deterministic compression, replay, and audit runners
+├── contracts/                  # machine-readable validation and handoff contracts
+├── dashboard/                  # backend plus React operations console
+├── docs/                       # benchmark, showcase, and reviewer documentation
+├── reports/replay_continuity/  # adversarial continuity metrics and SVG charts
+├── scripts/                    # validation, reporting, and artifact tooling
+├── src/                        # KVTC engine, audit, and semantic validation modules
+├── tests/                      # Python regression and replay validation tests
+└── README.md
+```
 
 ## Safety boundaries
 Do not commit:
