@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://github.com/ProfRandom92/Comptextv7/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ProfRandom92/Comptextv7/actions/workflows/ci.yml/badge.svg" /></a>
-  <img alt="Python" src="https://img.shields.io/badge/Python-3.x-3776ab" />
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.11%2B-3776ab" />
   <img alt="Deterministic Replay" src="https://img.shields.io/badge/Deterministic%20Replay-CI%20audited-0f766e" />
   <img alt="No LLM Judging" src="https://img.shields.io/badge/No%20LLM%20Judging-deterministic-7c3aed" />
   <img alt="Replay Artifacts" src="https://img.shields.io/badge/Replay%20Artifacts-JSON-2563eb" />
@@ -206,9 +206,9 @@ Comptextv7 is biased toward artifact-backed review rather than local machine tru
 
 | Workflow | Role |
 |---|---|
-| `ci.yml` | Runs deterministic replay, tests, telemetry, and validation gates. |
-| `agent-checks.yml` | Runs repository/report/contract checks plus dashboard validation. |
-| `validation_runner.yml` | Publishes compact cloud validation result artifacts. |
+| [`ci.yml`](.github/workflows/ci.yml) | Runs deterministic replay, tests, telemetry, and validation gates. |
+| [`agent-checks.yml`](.github/workflows/agent-checks.yml) | Runs repository/report/contract checks plus dashboard validation. |
+| [`validation_runner.yml`](.github/workflows/validation_runner.yml) | Publishes compact cloud validation result artifacts. |
 
 ## Reproducibility
 Install the test dependency set:
