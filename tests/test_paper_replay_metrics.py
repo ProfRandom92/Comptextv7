@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 
 from tests.utils.paper_replay_runner import (
     BENCHMARK_NAME,
@@ -10,7 +11,9 @@ from tests.utils.paper_replay_runner import (
     build_paper_replay_artifact,
     canonical_json,
     field_survived,
+    normalize_float,
     run_paper_replay,
+    stable_json_dump,
 )
 
 EXPECTED_PAPER_ORDER = [str(spec["paper"]) for spec in PAPER_SPECS]
@@ -26,6 +29,36 @@ PUBLIC_ROW_FIELDS = {
     "compact_token_count",
     "replay_token_count",
 }
+AGGREGATE_FIELDS = {
+    "avg_entity_retention_rate",
+    "avg_metric_survival_rate",
+    "avg_limitation_survival_rate",
+    "avg_section_survival_rate",
+    "avg_replay_consistency",
+    "avg_compression_ratio",
+    "paper_count",
+}
+NORMALIZED_RATE_FIELDS = (
+    "entity_retention_rate",
+    "section_survival_rate",
+    "limitation_survival_rate",
+    "metric_survival_rate",
+    "replay_consistency",
+)
+AGGREGATE_RATE_FIELDS = (
+    "avg_entity_retention_rate",
+    "avg_metric_survival_rate",
+    "avg_limitation_survival_rate",
+    "avg_section_survival_rate",
+    "avg_replay_consistency",
+)
+
+
+def _decimal_places(value: float) -> int:
+    text = repr(value)
+    if "e" in text.lower() or "." not in text:
+        return 0
+    return len(text.split(".", maxsplit=1)[1])
 
 
 def test_paper_replay_outputs_are_deterministic_across_repeated_runs() -> None:
@@ -37,35 +70,71 @@ def test_paper_replay_outputs_are_deterministic_across_repeated_runs() -> None:
 
 def test_paper_replay_artifact_schema_is_valid() -> None:
     artifact = build_paper_replay_artifact()
-    assert set(artifact) == {"benchmark", "papers"}
+    assert set(artifact) == {"benchmark", "aggregate", "papers"}
     assert artifact["benchmark"] == BENCHMARK_NAME
     assert isinstance(artifact["papers"], list)
     assert len(artifact["papers"]) == 3
 
+    aggregate = artifact["aggregate"]
+    assert isinstance(aggregate, dict)
+    assert set(aggregate) == AGGREGATE_FIELDS
+    assert aggregate["paper_count"] == len(artifact["papers"])
+    assert aggregate["paper_count"] > 0
+
     for row in artifact["papers"]:
         assert set(row) == PUBLIC_ROW_FIELDS
         assert isinstance(row["paper"], str)
-        for field in (
-            "entity_retention_rate",
-            "section_survival_rate",
-            "limitation_survival_rate",
-            "metric_survival_rate",
-            "compression_ratio",
-            "replay_consistency",
-        ):
+        assert "replay_consistency" in row
+        for field in NORMALIZED_RATE_FIELDS + ("compression_ratio",):
             assert isinstance(row[field], float)
-            assert row[field] >= 0.0
+            assert math.isfinite(row[field])
+            assert _decimal_places(row[field]) <= 6
+        for field in NORMALIZED_RATE_FIELDS:
+            assert 0.0 <= row[field] <= 1.0
+        assert row["compression_ratio"] > 1.0
         for field in ("original_token_count", "compact_token_count", "replay_token_count"):
             assert isinstance(row[field], int)
             assert row[field] > 0
 
+    for field in AGGREGATE_RATE_FIELDS + ("avg_compression_ratio",):
+        assert isinstance(aggregate[field], float)
+        assert math.isfinite(aggregate[field])
+        assert _decimal_places(aggregate[field]) <= 6
+    for field in AGGREGATE_RATE_FIELDS:
+        assert 0.0 <= aggregate[field] <= 1.0
+    assert aggregate["avg_compression_ratio"] > 1.0
 
-def test_paper_replay_serialization_is_stable_and_sorted() -> None:
+
+def test_paper_replay_aggregate_matches_recomputed_values() -> None:
     artifact = build_paper_replay_artifact()
-    serialized = artifact_json(artifact)
+    papers = artifact["papers"]
+    aggregate = artifact["aggregate"]
+    assert isinstance(papers, list)
+    assert isinstance(aggregate, dict)
+
+    field_pairs = {
+        "avg_compression_ratio": "compression_ratio",
+        "avg_entity_retention_rate": "entity_retention_rate",
+        "avg_limitation_survival_rate": "limitation_survival_rate",
+        "avg_metric_survival_rate": "metric_survival_rate",
+        "avg_replay_consistency": "replay_consistency",
+        "avg_section_survival_rate": "section_survival_rate",
+    }
+    for aggregate_field, paper_field in field_pairs.items():
+        recomputed = normalize_float(sum(float(row[paper_field]) for row in papers) / len(papers))
+        assert aggregate[aggregate_field] == recomputed
+
+
+def test_paper_replay_serialization_is_stable_pretty_sorted_and_newline_terminated() -> None:
+    artifact = build_paper_replay_artifact()
+    serialized = stable_json_dump(artifact)
     reparsed = json.loads(serialized)
     assert reparsed == artifact
+    assert serialized == artifact_json(artifact)
     assert serialized == json.dumps(artifact, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    assert serialized.endswith("\n")
+    assert serialized.startswith('{\n  "aggregate"')
+    assert '\n  "papers": [\n' in serialized
 
 
 def test_paper_replay_meets_compression_and_retention_ranges() -> None:
@@ -114,7 +183,7 @@ def test_replay_consistency_is_derived_from_field_survival() -> None:
             for field in OPERATIONAL_FIELDS
             if field_survived(field, original_fields[field], replayed_fields[field])
         )
-        expected_consistency = round(survived / len(OPERATIONAL_FIELDS), 6)
+        expected_consistency = normalize_float(survived / len(OPERATIONAL_FIELDS))
         assert run.artifact_row["replay_consistency"] == expected_consistency
 
 

@@ -24,6 +24,7 @@ excerpt
 → metrics JSON
 ```
 
+The detailed methodology is documented in `docs/benchmarks/paper_replay.md`.
 The runner lives in `tests/utils/paper_replay_runner.py`. It can be executed
 locally or in CI with:
 
@@ -89,6 +90,15 @@ The public artifact schema is:
 
 ```json
 {
+  "aggregate": {
+    "avg_compression_ratio": 1.347063,
+    "avg_entity_retention_rate": 0.86526,
+    "avg_limitation_survival_rate": 0.772727,
+    "avg_metric_survival_rate": 0.850446,
+    "avg_replay_consistency": 0.791667,
+    "avg_section_survival_rate": 0.888889,
+    "paper_count": 3
+  },
   "benchmark": "paper_replay_bench",
   "papers": [
     {
@@ -107,9 +117,9 @@ The public artifact schema is:
 }
 ```
 
-The values above are examples of the schema shape; the checked-in artifact is
-regenerated from the fixtures and should be treated as the measured source of
-truth.
+The values above are examples of the schema shape, including the deterministic
+aggregate block. The checked-in artifact is regenerated from the fixtures and
+should be treated as the measured source of truth.
 
 Metrics are derived as follows:
 
@@ -134,6 +144,8 @@ Metrics are derived as follows:
 - `original_token_count`, `compact_token_count`, and `replay_token_count`:
   deterministic regex token counts over the fixture excerpt, compact
   representation, and replay representation respectively.
+- `aggregate`: deterministic averages over all paper rows plus `paper_count`,
+  with normalized float precision for stable CI diffs.
 
 ## Why this differs from summarization
 

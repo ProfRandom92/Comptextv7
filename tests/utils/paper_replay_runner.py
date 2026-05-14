@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import math
 import re
 from pathlib import Path
 from typing import Iterable
@@ -173,16 +174,45 @@ class ReplayRun:
     replayed_state: dict[str, object]
 
 
-def canonical_json(value: object) -> str:
-    """Serialize with stable separators and key ordering for CI diffs."""
+def normalize_float(value: float) -> float:
+    """Return a finite float rounded for stable benchmark artifacts."""
 
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    if not math.isfinite(value):
+        raise ValueError(f"non-finite benchmark value: {value!r}")
+    return round(float(value), 6)
+
+
+def _normalize_for_json(value: object) -> object:
+    if isinstance(value, float):
+        return normalize_float(value)
+    if isinstance(value, dict):
+        return {str(key): _normalize_for_json(value[key]) for key in sorted(value)}
+    if isinstance(value, list):
+        return [_normalize_for_json(item) for item in value]
+    return value
+
+
+def canonical_json(value: object) -> str:
+    """Serialize compact JSON with stable numeric precision and key ordering."""
+
+    return json.dumps(
+        _normalize_for_json(value),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def stable_json_dump(value: object) -> str:
+    """Serialize pretty, UTF-8 clean, sorted, newline-terminated artifact JSON."""
+
+    return json.dumps(_normalize_for_json(value), ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
 
 def artifact_json(value: object) -> str:
-    """Human-readable deterministic artifact serialization."""
+    """Backward-compatible alias for stable benchmark artifact serialization."""
 
-    return json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    return stable_json_dump(value)
 
 
 def token_count(text: str) -> int:
@@ -407,16 +437,16 @@ def validate_replay(
 
     return {
         "paper": paper,
-        "entity_retention_rate": round(_retention_rate(original_entities, replayed_entities), 6),
-        "section_survival_rate": round(sum(section_survivals) / len(section_survivals), 6),
-        "limitation_survival_rate": round(
-            normalized_keyword_overlap(str(original_fields["limitations"]), str(replayed_fields["limitations"])), 6
+        "entity_retention_rate": normalize_float(_retention_rate(original_entities, replayed_entities)),
+        "section_survival_rate": normalize_float(sum(section_survivals) / len(section_survivals)),
+        "limitation_survival_rate": normalize_float(
+            normalized_keyword_overlap(str(original_fields["limitations"]), str(replayed_fields["limitations"]))
         ),
-        "metric_survival_rate": round(
-            normalized_keyword_overlap(str(original_fields["metrics"]), str(replayed_fields["metrics"])), 6
+        "metric_survival_rate": normalize_float(
+            normalized_keyword_overlap(str(original_fields["metrics"]), str(replayed_fields["metrics"]))
         ),
-        "compression_ratio": round(original_token_count / compact_token_count, 6) if compact_token_count else 0.0,
-        "replay_consistency": round(surviving_operational_fields / total_operational_fields, 6),
+        "compression_ratio": normalize_float(original_token_count / compact_token_count) if compact_token_count else 0.0,
+        "replay_consistency": normalize_float(surviving_operational_fields / total_operational_fields),
         "original_token_count": original_token_count,
         "compact_token_count": compact_token_count,
         "replay_token_count": replay_token_count,
@@ -451,19 +481,51 @@ def run_paper_replay() -> list[ReplayRun]:
     return runs
 
 
+def build_aggregate(papers: list[dict[str, object]]) -> dict[str, object]:
+    """Compute deterministic aggregate metrics from paper rows."""
+
+    paper_count = len(papers)
+    if paper_count == 0:
+        return {
+            "avg_compression_ratio": 0.0,
+            "avg_entity_retention_rate": 0.0,
+            "avg_limitation_survival_rate": 0.0,
+            "avg_metric_survival_rate": 0.0,
+            "avg_replay_consistency": 0.0,
+            "avg_section_survival_rate": 0.0,
+            "paper_count": 0,
+        }
+
+    def average(field: str) -> float:
+        values = [float(row[field]) for row in papers]
+        return normalize_float(sum(values) / paper_count)
+
+    return {
+        "avg_compression_ratio": average("compression_ratio"),
+        "avg_entity_retention_rate": average("entity_retention_rate"),
+        "avg_limitation_survival_rate": average("limitation_survival_rate"),
+        "avg_metric_survival_rate": average("metric_survival_rate"),
+        "avg_replay_consistency": average("replay_consistency"),
+        "avg_section_survival_rate": average("section_survival_rate"),
+        "paper_count": paper_count,
+    }
+
+
 def build_paper_replay_artifact() -> dict[str, object]:
     """Build the public benchmark artifact schema."""
 
+    papers = [run.artifact_row for run in run_paper_replay()]
     return {
         "benchmark": BENCHMARK_NAME,
-        "papers": [run.artifact_row for run in run_paper_replay()],
+        "aggregate": build_aggregate(papers),
+        "papers": papers,
     }
 
 
 def write_paper_replay_artifact(path: Path = DEFAULT_ARTIFACT_PATH) -> dict[str, object]:
     artifact = build_paper_replay_artifact()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(artifact_json(artifact), encoding="utf-8")
+    path.write_text(stable_json_dump(artifact), encoding="utf-8")
     return artifact
 
 

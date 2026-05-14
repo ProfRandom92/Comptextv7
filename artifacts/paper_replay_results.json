@@ -1,4 +1,13 @@
 {
+  "aggregate": {
+    "avg_compression_ratio": 1.347063,
+    "avg_entity_retention_rate": 0.86526,
+    "avg_limitation_survival_rate": 0.772727,
+    "avg_metric_survival_rate": 0.850446,
+    "avg_replay_consistency": 0.791667,
+    "avg_section_survival_rate": 0.888889,
+    "paper_count": 3
+  },
   "benchmark": "paper_replay_bench",
   "papers": [
     {
