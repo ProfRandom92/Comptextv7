@@ -112,10 +112,10 @@ function App() {
               <strong>no synthetic showcase metrics</strong>
             </div>
             <div className="quick-metrics">
-              <Metric label="Papers" value="3" />
-              <Metric label="Traces" value="3" />
-              <Metric label="Agent drift" value="0.000000" />
-              <Metric label="Paper consistency" value="0.791667" />
+              <Metric label="Papers" value={benchmarkArtifacts[0].metrics[0].value} />
+              <Metric label="Traces" value={benchmarkArtifacts[1].metrics[0].value} />
+              <Metric label="Agent drift" value={benchmarkArtifacts[1].metrics[3].value} />
+              <Metric label="Paper consistency" value={benchmarkArtifacts[0].metrics[2].value} />
             </div>
             <p>Values are copied from committed JSON replay artifacts and surfaced as a static, cloud-first reviewer console.</p>
           </aside>
