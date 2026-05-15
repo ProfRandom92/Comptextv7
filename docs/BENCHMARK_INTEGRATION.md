@@ -65,7 +65,32 @@ Required experiment repository artifacts:
 - `docs/reports/sanitization-summary.json`
 - `docs/reports/report-contract-validation-report.md`
 
-Required Comptextv7 validation commands:
+Required Comptextv7 validation commands are layout-specific; see [`docs/validation.md`](validation.md). Run Python checks from the repository root and npm checks only inside the app directory that owns the change. Root npm commands are intentionally invalid because the repository root has no `package.json`.
+
+```bash
+pytest -q
+pytest tests/test_core_foundation_ts.py -q
+pytest tests/test_paper_replay_bench.py tests/test_agent_trace_replay.py tests/test_replay_continuity.py -q
+```
+
+Dashboard app validation:
+
+```bash
+cd dashboard/app
+npm run typecheck
+npm run build
+```
+
+Showcase app validation:
+
+```bash
+cd showcase/app
+npm run typecheck
+npm run validate
+npm run build
+```
+
+Additional helper commands for contract/report surfaces:
 
 ```bash
 python scripts/repo_intake.py
