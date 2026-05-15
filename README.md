@@ -226,7 +226,18 @@ python tests/utils/agent_trace_replay_runner.py
 python benchmarks/run_replay_continuity.py --iterations 250 --output-dir reports/replay_continuity
 ```
 
-Use the layout-specific validation commands in [`docs/validation.md`](docs/validation.md). The repository root intentionally has no `package.json`, so root npm commands are expected to fail with `ENOENT` and should not be used as validation evidence.
+Use the validation commands in [`docs/validation.md`](docs/validation.md). The root `package.json` is a wrapper for reviewer convenience. App dependencies remain in `dashboard/app` and `showcase/app`.
+
+Root wrapper checks:
+
+```bash
+npm run layout
+npm run typecheck
+npm run validate
+npm run build
+npm test
+npm run check
+```
 
 Dashboard app checks:
 
