@@ -1,3 +1,4 @@
+import { CompressionSignalEngine, type CompressionSignalInput } from './compressionSignals';
 import { DecisionQualityEngine } from './decisionQuality';
 import { InMemoryExecutionEventStore, appendExecutionEvent, getExecutionTimeline, summarizeExecutionEvents } from './executionEventLog';
 import { createReplaySnapshot } from './replaySnapshot';
@@ -30,6 +31,66 @@ const event = appendExecutionEvent(eventStore, {
   compactPayload: { manifestId: manifest.manifestId },
 });
 
+const compressionSignalWindows: CompressionSignalInput[] = [
+  {
+    executionId: 'exec-sample',
+    windowId: 'signal-stable-known-family',
+    timestamp: '2026-05-15T00:00:03.000Z',
+    profileId: 'known-family',
+    compressionRatio: 0.79,
+    baselineCompressionRatio: 0.8,
+    sparseFrameRate: 0.11,
+    baselineSparseFrameRate: 0.1,
+    unseenSignatureRate: 0.02,
+  },
+  {
+    executionId: 'exec-sample',
+    windowId: 'signal-minor-fluctuation',
+    timestamp: '2026-05-15T00:00:04.000Z',
+    profileId: 'known-family',
+    compressionRatio: 0.72,
+    baselineCompressionRatio: 0.8,
+    sparseFrameRate: 0.18,
+    baselineSparseFrameRate: 0.1,
+    unseenSignatureRate: 0.08,
+  },
+  {
+    executionId: 'exec-sample',
+    windowId: 'signal-sparse-signature-spike-a',
+    timestamp: '2026-05-15T00:00:05.000Z',
+    profileId: 'known-family',
+    compressionRatio: 0.42,
+    baselineCompressionRatio: 0.8,
+    sparseFrameRate: 0.26,
+    baselineSparseFrameRate: 0.1,
+    unseenSignatureRate: 0.72,
+  },
+  {
+    executionId: 'exec-sample',
+    windowId: 'signal-sparse-signature-spike-b',
+    timestamp: '2026-05-15T00:00:06.000Z',
+    profileId: 'known-family',
+    compressionRatio: 0.44,
+    baselineCompressionRatio: 0.8,
+    sparseFrameRate: 0.25,
+    baselineSparseFrameRate: 0.1,
+    unseenSignatureRate: 0.7,
+  },
+  {
+    executionId: 'exec-sample',
+    windowId: 'signal-severe-unknown-pattern',
+    timestamp: '2026-05-15T00:00:07.000Z',
+    profileId: 'known-family',
+    compressionRatio: 0.08,
+    baselineCompressionRatio: 0.8,
+    sparseFrameRate: 0.31,
+    baselineSparseFrameRate: 0.1,
+    unseenSignatureRate: 0.95,
+  },
+];
+
+const compressionSignalResults = new CompressionSignalEngine().evaluateSignalSequence(compressionSignalWindows);
+
 export const coreFoundationSample = Object.freeze({
   reference,
   manifest,
@@ -52,4 +113,6 @@ export const coreFoundationSample = Object.freeze({
     replaySnapshotIds: [],
     tokenUsed: manifest.totalTokenEstimate,
   }),
+  compressionSignalWindows: Object.freeze(compressionSignalWindows),
+  compressionSignalResults: Object.freeze(compressionSignalResults),
 });

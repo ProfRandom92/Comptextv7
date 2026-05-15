@@ -1,3 +1,4 @@
+export * from './compressionSignals';
 export * from './decisionQuality';
 export * from './executionEventLog';
 export * from './replaySnapshot';
