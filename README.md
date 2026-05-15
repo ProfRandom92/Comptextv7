@@ -186,6 +186,7 @@ Comptextv7/
 ├── docs/                       # benchmark, showcase, and reviewer documentation
 ├── reports/replay_continuity/  # adversarial continuity metrics and SVG charts
 ├── scripts/                    # validation, reporting, and artifact tooling
+├── showcase/app/               # Vite + TypeScript showcase application
 ├── src/                        # KVTC engine, audit, and semantic validation modules
 ├── tests/                      # Python regression and replay validation tests
 └── README.md
@@ -211,7 +212,7 @@ Comptextv7 is biased toward artifact-backed review rather than local machine tru
 | [`validation_runner.yml`](.github/workflows/validation_runner.yml) | Publishes compact cloud validation result artifacts. |
 
 ## Reproducibility
-Install the test dependency set:
+Install the Python test dependency set:
 
 ```bash
 python -m pip install -e '.[test]'
@@ -225,16 +226,36 @@ python tests/utils/agent_trace_replay_runner.py
 python benchmarks/run_replay_continuity.py --iterations 250 --output-dir reports/replay_continuity
 ```
 
-Run focused checks:
+Use the layout-specific validation commands in [`docs/validation.md`](docs/validation.md). The repository root intentionally has no `package.json`, so root npm commands are expected to fail with `ENOENT` and should not be used as validation evidence.
+
+Dashboard app checks:
 
 ```bash
-pytest tests/test_paper_replay_bench.py tests/test_agent_trace_replay.py tests/test_replay_continuity.py
+cd dashboard/app
+npm run typecheck
+npm run build
 ```
 
-Run the broader local gate:
+Showcase app checks:
 
 ```bash
-python -m pytest
+cd showcase/app
+npm run typecheck
+npm run validate
+npm run build
+```
+
+Python checks from the repository root:
+
+```bash
+pytest -q
+pytest tests/test_core_foundation_ts.py -q
+pytest tests/test_paper_replay_bench.py tests/test_agent_trace_replay.py tests/test_replay_continuity.py -q
+```
+
+Additional repository validation helpers remain available when their surfaces are touched:
+
+```bash
 python scripts/validate.py replay
 python scripts/validate.py token
 python scripts/validate.py forensic

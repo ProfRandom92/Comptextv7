@@ -50,10 +50,12 @@ changes:
    records repository structure, project files, tests, workflows, and likely
    API/dashboard/report areas in `docs/reports/repo-intake-report.md` without
    reading sensitive payloads or requiring network access.
-2. Run `python scripts/run_checks.py` as the local validation step. It compiles
-   Python helper scripts, runs pytest only when tests and pytest are available,
-   and runs Node test/lint scripts only when package scripts exist. Missing
-   optional tools or tests are reported as skips instead of false failures.
+2. Use the layout-specific commands in [`docs/validation.md`](validation.md)
+   as the local validation step. Run Python tests from the repository root, run
+   dashboard npm commands from `dashboard/app`, and run showcase npm commands
+   from `showcase/app`. Root npm commands are intentionally invalid because the
+   repository root has no `package.json`; an `ENOENT` package.json error at the
+   root is expected layout behavior, not validation evidence.
 3. Run `python scripts/generate_contract_fixtures.py` when API/dashboard/export
    contracts are touched. It regenerates
    `contracts/examples/api-dashboard.example.json` and writes
