@@ -1,0 +1,14 @@
+{
+  "name": "comptextv7-root",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix dashboard/app run build && npm --prefix showcase/app run build",
+    "typecheck": "npm --prefix dashboard/app run typecheck && npm --prefix showcase/app run typecheck",
+    "validate": "npm --prefix showcase/app run validate",
+    "test": "pytest -q",
+    "test:core": "pytest tests/test_core_foundation_ts.py -q",
+    "test:replay": "pytest tests/test_paper_replay_bench.py tests/test_agent_trace_replay.py tests/test_replay_continuity.py -q",
+    "layout": "python scripts/check_repo_layout.py",
+    "check": "npm run layout && npm run typecheck && npm run validate && npm run build && npm run test"
+  }
+}
