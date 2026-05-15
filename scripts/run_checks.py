@@ -123,6 +123,8 @@ def main() -> int:
     if node_project and package_files:
         npm = shutil.which("npm")
         for package_file in package_files:
+            if python_project and package_file.parent == ROOT:
+                continue
             rel_dir = package_file.parent.relative_to(ROOT).as_posix() or "."
             scripts_map = package_scripts(package_file)
             for script_name in ("test", "lint"):
