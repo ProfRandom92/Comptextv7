@@ -102,6 +102,7 @@ Comptextv7 turns noisy context into compact operational state, then validates wh
 ## Benchmark family
 
 ### Paper Replay Benchmark
+- **State Audit:** [`docs/paper_replay_state_audit.md`](docs/paper_replay_state_audit.md).
 
 - **Validates:** whether dense technical paper summaries preserve entities, metrics, limitations, and section structure after deterministic replay compression.
 - **Artifact:** [`artifacts/paper_replay_results.json`](artifacts/paper_replay_results.json).
