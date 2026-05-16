@@ -22,15 +22,32 @@ export interface StableStringifyOptions {
 /**
  * Deterministically stringifies a value with recursive key sorting,
  * NaN/Infinity handling, and depth/length limits.
+ *
+ * Rules:
+ * - Object properties with undefined/function/symbol are dropped.
+ * - Array entries with undefined/function/symbol use deterministic placeholders.
  */
 export function stableStringify(value: unknown, options: StableStringifyOptions = {}): string {
   const maxDepth = options.maxDepth ?? 8;
   const maxStringLength = options.maxStringLength ?? 1024;
 
-  function stringifyInternal(val: unknown, depth: number): string {
+  function stringifyInternal(val: unknown, depth: number, isArrayElement: boolean): string | undefined {
     if (depth > maxDepth) {
       return '"[MAX_DEPTH_EXCEEDED]"';
     }
+
+    if (val === undefined) {
+      return isArrayElement ? '"[UNDEFINED]"' : undefined;
+    }
+    if (typeof val === 'function') {
+      return isArrayElement ? '"[NON_SERIALIZABLE_FUNCTION]"' : undefined;
+    }
+    if (typeof val === 'symbol') {
+      return isArrayElement ? '"[NON_SERIALIZABLE_SYMBOL]"' : undefined;
+    }
+
+    if (val === null) return 'null';
+    if (typeof val === 'boolean') return val ? 'true' : 'false';
 
     if (typeof val === 'number') {
       if (Number.isNaN(val)) return '"[NON_FINITE_NUMBER_NAN]"';
@@ -47,27 +64,30 @@ export function stableStringify(value: unknown, options: StableStringifyOptions 
       return JSON.stringify(val);
     }
 
-    if (val === null || typeof val !== 'object') {
-      return JSON.stringify(val) ?? '';
-    }
-
     if (Array.isArray(val)) {
-      const parts = val.map((item) => stringifyInternal(item, depth + 1));
+      const parts = val.map((item) => stringifyInternal(item, depth + 1, true) ?? '"[UNDEFINED]"');
       return `[${parts.join(',')}]`;
     }
 
-    const entries = Object.entries(val as Record<string, unknown>)
-      .filter(([, entry]) => entry !== undefined && typeof entry !== 'function' && typeof entry !== 'symbol')
-      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
+    if (typeof val === 'object') {
+      const entries = Object.entries(val as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right));
 
-    const parts = entries.map(([key, entry]) => {
-      return `${JSON.stringify(key)}:${stringifyInternal(entry, depth + 1)}`;
-    });
+      const parts: string[] = [];
+      for (const [key, entry] of entries) {
+        const s = stringifyInternal(entry, depth + 1, false);
+        if (s !== undefined) {
+          parts.push(`${JSON.stringify(key)}:${s}`);
+        }
+      }
+      return `{${parts.join(',')}}`;
+    }
 
-    return `{${parts.join(',')}}`;
+    return '"[UNKNOWN_TYPE]"';
   }
 
-  return stringifyInternal(value, 0);
+  // Top-level value is treated like an array element (not dropped)
+  return stringifyInternal(value, 0, true) ?? '"[UNDEFINED]"';
 }
 
 /**

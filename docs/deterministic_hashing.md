@@ -11,7 +11,12 @@ A synchronous, dependency-free function that converts any value into a determini
 #### Rules
 - **Key Ordering**: Object keys are recursively sorted alphabetically.
 - **Array Order**: Preserved as-is.
-- **Undefined Fields**: Consistently dropped (not included in the output).
+- **Undefined / Non-Serializable Fields**:
+  - In **objects**, fields with values of `undefined`, `function`, or `symbol` are **dropped** (matching `JSON.stringify` behavior).
+  - In **arrays**, these values are replaced with deterministic placeholders to avoid invalid JSON and maintain array length:
+    - `undefined` -> `"[UNDEFINED]"`
+    - `function` -> `"[NON_SERIALIZABLE_FUNCTION]"`
+    - `symbol` -> `"[NON_SERIALIZABLE_SYMBOL]"`
 - **NaN**: Serialized as `"[NON_FINITE_NUMBER_NAN]"`.
 - **Infinity**: Serialized as `"[NON_FINITE_NUMBER_INFINITY]"`.
 - **-Infinity**: Serialized as `"[NON_FINITE_NUMBER_NEGATIVE_INFINITY]"`.

@@ -63,34 +63,48 @@ def test_stable_stringify_and_hashing(tmp_path):
             assert.equal(stableStringify([1, 2, 3]), '[1,2,3]');
             assert.notEqual(stableStringify([1, 2, 3]), stableStringify([3, 2, 1]));
 
-            // 3. Undefined fields dropped
+            // 3. Undefined fields dropped in objects
             assert.equal(stableStringify({ a: 1, b: undefined }), '{"a":1}');
+            assert.equal(stableStringify({ a: 1, b: () => {} }), '{"a":1}');
+            assert.equal(stableStringify({ a: 1, b: Symbol('test') }), '{"a":1}');
 
-            // 4. NaN / Infinity
+            // 4. Undefined / Function / Symbol in arrays
+            assert.equal(stableStringify([1, undefined, 2]), '[1,"[UNDEFINED]",2]');
+            assert.equal(stableStringify([undefined]), '["[UNDEFINED]"]');
+            assert.notEqual(stableStringify([undefined]), stableStringify([]));
+            assert.equal(stableStringify([() => {}]), '["[NON_SERIALIZABLE_FUNCTION]"]');
+            assert.equal(stableStringify([Symbol('test')]), '["[NON_SERIALIZABLE_SYMBOL]"]');
+
+            // 5. NaN / Infinity
             assert.equal(stableStringify(NaN), '"[NON_FINITE_NUMBER_NAN]"');
             assert.equal(stableStringify(Infinity), '"[NON_FINITE_NUMBER_INFINITY]"');
             assert.equal(stableStringify(-Infinity), '"[NON_FINITE_NUMBER_NEGATIVE_INFINITY]"');
 
-            // 5. maxDepth
+            // 6. maxDepth
             const deep = { a: { b: { c: { d: { e: { f: { g: { h: { i: 1 } } } } } } } } };
             assert.match(stableStringify(deep, { maxDepth: 4 }), /MAX_DEPTH_EXCEEDED/);
             assert.doesNotMatch(stableStringify(deep, { maxDepth: 10 }), /MAX_DEPTH_EXCEEDED/);
 
-            // 6. maxStringLength
+            // 7. maxStringLength
             const longStr = 'a'.repeat(20);
             const truncated = stableStringify(longStr, { maxStringLength: 10 });
             assert.match(truncated, /TRUNCATED_STRING_HASH_/);
             assert.match(truncated, /_LENGTH_20/);
 
-            // 7. Different oversized strings
+            // 8. Different oversized strings
             const longStr2 = 'b'.repeat(20);
             assert.notEqual(stableStringify(longStr, { maxStringLength: 10 }), stableStringify(longStr2, { maxStringLength: 10 }));
 
-            // 8. stableHash stability
+            // 9. stableHash stability and differentiation
             assert.equal(stableHash(obj1), stableHash(obj2));
             assert.notEqual(stableHash(obj1), stableHash({ ...obj1, a: 2 }));
+            assert.notEqual(stableHash([undefined]), stableHash([]));
 
-            // 9. Synchronous check (implicit in this script running to completion)
+            // 10. Synchronous check
+            const start = Date.now();
+            const h = stableHash({ large: 'a'.repeat(10000) });
+            assert.equal(typeof h, 'string');
+            assert.ok(!h.then); // Not a promise
 
             console.log(JSON.stringify({ success: true }));
             """
