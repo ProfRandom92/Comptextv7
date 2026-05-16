@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ArtifactCodePanel } from './ArtifactCodePanel';
 import { sampleArtifacts, type SampleArtifact } from '../lib/sampleArtifacts';
 
