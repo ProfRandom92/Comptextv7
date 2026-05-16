@@ -129,6 +129,7 @@ const sampleReplayArtifact = createReplayArtifact({
 export const coreFoundationSample = Object.freeze({
   events: Object.freeze([event]),
   sampleReplayArtifact,
+  events: [event],
 
   reference,
   referenceIndex,
