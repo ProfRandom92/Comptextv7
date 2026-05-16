@@ -10,6 +10,8 @@
 
 <p align="center">
   Comptextv7 tests whether compact, replay-safe operational state can preserve workflow continuity across compression, reconstruction, and CI-audited replay checks — without LLM judges, embeddings, vector databases, or external APIs.
+  <br/><br/>
+  See <a href="docs/research_positioning.md">docs/research_positioning.md</a> for conservative project positioning and scope boundaries.
 </p>
 
 <p align="center">
