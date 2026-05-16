@@ -58,7 +58,7 @@ export function ArtifactWorkbench() {
 
   const selected = sampleArtifacts.find((a) => a.artifactId === selectedId) ?? sampleArtifacts[0];
 
-  const editorContent = prettyJson(selected);
+  const editorContent = useMemo(() => prettyJson(selected), [selected]);
 
   return (
     <div
