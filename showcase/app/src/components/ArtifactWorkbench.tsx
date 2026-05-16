@@ -143,7 +143,7 @@ export function ArtifactWorkbench() {
           <span>read-only</span>
           <StatusBadge status={selected.validationStatus} />
         </div>
-        <div style={{ height: 'calc(640px - 37px)' }}>
+        <div style={{ flex: 1 }}>
           <ArtifactCodePanel value={editorContent} language="json" height="100%" />
         </div>
       </div>
