@@ -52,6 +52,6 @@ Current fixtures are **curated excerpts**. They are not raw PDFs or full-text sc
 ## Recommendation for Paper Replay Benchmark v1
 
 1. **Converge on KVTCV7Engine:** Update the runner to use the V7 engine for the compaction step.
-2. **Unified Extraction:** Extract the extraction logic into a shared utility in `src/validation/paper.py` (or similar) to avoid duplication.
+2. **Unified Extraction:** Extract the extraction logic into a shared utility in `tests/utils/paper_utils.py` (or similar) to avoid duplication.
 3. **Artifact Alignment:** Ensure `artifacts/paper_replay_results.json` reflects the performance of the actual engine.
 4. **Test Consolidation:** Merge the metric validation and the bench tests into a consistent suite that guards the V7-backed runner.
