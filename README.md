@@ -187,6 +187,7 @@ The system relies on the following deterministic foundations:
 | Surface | Link |
 | --- | --- |
 | Live showcase | [`comptextv7.vercel.app`](https://comptextv7.vercel.app) |
+| CI Artifact Narrative | [`docs/ci_artifact_narrative.md`](docs/ci_artifact_narrative.md) |
 | Demo walkthrough | [`docs/DEMO_WALKTHROUGH.md`](docs/DEMO_WALKTHROUGH.md) |
 | Showcase readiness | [`docs/SHOWCASE_READINESS.md`](docs/SHOWCASE_READINESS.md) |
 | Benchmark explanation | [`docs/BENCHMARK_EXPLANATION.md`](docs/BENCHMARK_EXPLANATION.md) |
