@@ -32,6 +32,14 @@
 
 ---
 
+
+## Safe Positioning
+
+Comptextv7 is a deterministic operational replay-validation prototype. It validates whether compact operational state survives compression and replay under controlled fixtures. It is complementary to learned context-compression research and durable workflow infrastructure, but it is not a workflow orchestrator, learned compressor, vector memory system, or universal AI-memory solution.
+
+For detailed positioning, see [Research Positioning](docs/research_positioning.md) and [Research Positioning Sources](docs/research_positioning_sources.md).
+
+
 ## Why this exists
 
 Long-running agents fail when replayed context becomes operationally untrustworthy:
@@ -42,7 +50,7 @@ Long-running agents fail when replayed context becomes operationally untrustwort
 - dependencies collapse;
 - summaries sound fluent but lose actionable state.
 
-Comptextv7 focuses on preserving the state needed to continue work, not preserving raw chat history.
+Comptextv7 focuses on preserving the operational state needed to continue work, not preserving raw chat history.
 The project treats replay as an auditable operational-state problem: extract the fields that matter, compact them, reconstruct them, and verify them with deterministic checks.
 
 ## Proof at a glance
@@ -144,15 +152,23 @@ Detail fidelity still degrades: hidden truth survival is `0.570173`, and evaluat
 
 ## Integrity model
 
-- no LLM judging;
-- no embeddings;
-- no external APIs;
-- deterministic JSON artifacts;
-- CI reproducible;
-- audit-friendly.
+- **no LLM judging**;
+- **no embeddings**;
+- **no vector DBs**;
+- **no external APIs**;
+- **artifact-backed JSON + CI checks**;
+- **deterministic hashing foundation** ([`docs/deterministic_hashing.md`](docs/deterministic_hashing.md));
+- **audit-friendly and CI reproducible**.
+
+### Foundational Components
+
+The system relies on the following deterministic foundations:
+- **`ReferenceIndex`** and **`EventLogArtifactAdapter`**: track context references and deterministically fingerprint event payloads ([`docs/reference_index_event_fingerprints.md`](docs/reference_index_event_fingerprints.md)).
+- **`ReplayArtifactWriter v1-alpha.1`**: generates deterministic, standalone JSON artifacts for verifiable snapshots ([`docs/replay_artifact_writer.md`](docs/replay_artifact_writer.md)).
 
 ## Limitations
 
+- Metrics mentioned in benchmarks are **fixture-bound baselines** and do not reflect real-world universal correctness.
 - Fixtures are curated and checked in.
 - Structured agent traces currently replay near-losslessly.
 - This is not solved AI memory.
