@@ -57,8 +57,8 @@ export function stableStringify(value: unknown, options: StableStringifyOptions 
     }
 
     const entries = Object.entries(val as Record<string, unknown>)
-      .filter(([, entry]) => entry !== undefined)
-      .sort(([left], [right]) => left.localeCompare(right));
+      .filter(([, entry]) => entry !== undefined && typeof entry !== 'function' && typeof entry !== 'symbol')
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
 
     const parts = entries.map(([key, entry]) => {
       return `${JSON.stringify(key)}:${stringifyInternal(entry, depth + 1)}`;
