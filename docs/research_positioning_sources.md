@@ -15,3 +15,6 @@
 | not zero semantic drift | not zero semantic drift | dense paper replay lossy | zero semantic drift | Yes | Yes | Yes |
 | not solved AI memory | not solved AI memory | what comptext is not | solved AI memory | Yes | Yes | Yes |
 | not outperforming learned compression | not outperforming learned compression | what comptext is not | outperforming learned compression | Yes | Yes | Yes |
+| CI artifacts as evidence records | CI artifacts are evidence records | controlled fixtures | universal guarantees | Yes | Yes | Yes |
+| replay artifacts as deterministic snapshots | deterministic snapshots | ReplayArtifactWriter | live autonomous execution | Yes | Yes | Yes |
+| artifactHash as non-cryptographic deterministic integrity | deterministic integrity | static hashing | cryptographic security | Yes | Yes | Yes |
