@@ -88,6 +88,7 @@ export function createReplayArtifact(input: ReplayArtifactWriterInput): ReplayAr
   let triggeredSignals = input.compressionSignals.filter(s => s.triggered).length;
 
   let totalTokenIn: number | null = null;
+  // totalTokenOut remains null because output token estimates are not supported by the current CompressionSignalInput model.
   let totalTokenOut: number | null = null;
   let compressionRatioSum = 0;
   let compressionRatioCount = 0;
@@ -106,20 +107,22 @@ export function createReplayArtifact(input: ReplayArtifactWriterInput): ReplayAr
 
   const averageCompressionRatio = compressionRatioCount > 0 ? compressionRatioSum / compressionRatioCount : null;
 
-  let mappedStepCount = 0;
-  let unmappedStepCount = 0;
+  const mappedStepIds = new Set<string>();
+  const unmappedStepIds = new Set<string>();
   const unmappedReasonsSet = new Set<string>();
 
   for (const mapping of compressionSignalMappings) {
-    mappedStepCount += mapping.associatedStepIds.length;
+    for (const id of mapping.associatedStepIds) mappedStepIds.add(id);
     if (mapping.unmappedStepIds) {
-      unmappedStepCount += mapping.unmappedStepIds.length;
+      for (const id of mapping.unmappedStepIds) unmappedStepIds.add(id);
     }
     if (mapping.unmappedReason) {
       unmappedReasonsSet.add(mapping.unmappedReason);
     }
   }
 
+  let mappedStepCount = mappedStepIds.size;
+  let unmappedStepCount = unmappedStepIds.size;
   const unmappedReasons = Array.from(unmappedReasonsSet).sort((a, b) => a.localeCompare(b));
 
   const compressionSummary: ReplayArtifactCompressionSummary = {
@@ -280,6 +283,8 @@ export function validateReplayArtifact(artifact: ReplayArtifact): ReplayArtifact
       errors.push('Missing compressionSignalMappings');
   }
 
+
+
   for (const stepId of allStepIds) {
       if (!mappedSteps.has(stepId) && !unmappedSteps.has(stepId)) {
           errors.push(`event fingerprint stepId ${stepId} is neither in associatedStepIds nor unmappedStepIds`);
@@ -290,12 +295,39 @@ export function validateReplayArtifact(artifact: ReplayArtifact): ReplayArtifact
       if (unmappedSteps.has(stepId)) {
           errors.push(`stepId ${stepId} appears in both associatedStepIds and unmappedStepIds`);
       }
+      if (!allStepIds.has(stepId)) {
+          errors.push(`compression mapping refers to unknown stepId: ${stepId}`);
+      }
   }
 
-  const serialized = JSON.stringify(artifact);
-  if (serialized.includes('"rawFileContents"') || serialized.includes('"fileData"')) {
+  for (const stepId of unmappedSteps) {
+      if (!allStepIds.has(stepId)) {
+          errors.push(`unmapped stepId refers to unknown stepId: ${stepId}`);
+      }
+  }
+
+
+
+  function containsUnsafeHydration(obj: any): boolean {
+    if (obj === null || typeof obj !== 'object') return false;
+    if (Array.isArray(obj)) {
+      return obj.some(containsUnsafeHydration);
+    }
+    for (const [key, value] of Object.entries(obj)) {
+      if (key === 'rawFileContents' || key === 'fileData' || key === 'content' || key === 'body') {
+        // Broadly we assume if these keys exist at all, we flag it.
+        // It's possible to refine if they must be strings, but the requirement is "reject raw hydration fields such as ... if they appear in unsafe artifact locations".
+        return true;
+      }
+      if (containsUnsafeHydration(value)) return true;
+    }
+    return false;
+  }
+
+  if (containsUnsafeHydration(artifact)) {
       errors.push('Artifact contains raw file hydration fields');
   }
 
   return { valid: errors.length === 0, errors };
+
 }

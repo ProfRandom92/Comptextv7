@@ -320,3 +320,70 @@ def test_replay_artifact_writer_unmapped_cases(tmp_path):
         )
     )
     assert result == "SUCCESS"
+
+
+
+def test_replay_artifact_writer_unknown_step_ids(tmp_path):
+    result = run_foundation_script(
+        tmp_path,
+        textwrap.dedent(
+            """
+            const assert = require('node:assert/strict');
+            const {
+              createReplayArtifact,
+              validateReplayArtifact
+            } = require('./core/foundation');
+            const { coreFoundationSample } = require('./core/foundation/sampleData');
+
+            const events = [
+              {
+                executionId: 'exec-1',
+                stepId: 'step-1',
+                agentId: 'agent-1',
+                timestamp: '2026-05-15T00:00:01.000Z',
+                eventType: 'context.selected',
+                inputRefIds: [],
+                outputRefIds: [],
+                tokenIn: 10,
+                tokenOut: 0,
+                latencyMs: 1,
+                status: 'succeeded',
+                compactPayload: { a: 1 }
+              }
+            ];
+
+            const artifactNoSignal = createReplayArtifact({
+              artifactId: 'art-1',
+              executionId: 'exec-1',
+              createdAt: '2026-05-15T00:00:00.000Z',
+              referenceIndex: coreFoundationSample.referenceIndex,
+              events: events,
+              compressionSignals: []
+            });
+
+            const badMapped = JSON.parse(JSON.stringify(artifactNoSignal));
+            badArtifact2 = badMapped; // reuse var name convention
+            badMapped.compressionSignalMappings.push({
+                windowId: 'win-bad',
+                associatedStepIds: ['unknown-step'],
+                unmappedStepIds: []
+            });
+            const valMapped = validateReplayArtifact(badMapped);
+            assert.equal(valMapped.valid, false);
+            assert.ok(valMapped.errors.some(e => e.includes('compression mapping refers to unknown stepId: unknown-step')));
+
+            const badUnmapped = JSON.parse(JSON.stringify(artifactNoSignal));
+            badUnmapped.compressionSignalMappings.push({
+                windowId: 'win-bad2',
+                associatedStepIds: [],
+                unmappedStepIds: ['unknown-step']
+            });
+            const valUnmapped = validateReplayArtifact(badUnmapped);
+            assert.equal(valUnmapped.valid, false);
+            assert.ok(valUnmapped.errors.some(e => e.includes('unmapped stepId refers to unknown stepId: unknown-step')));
+
+            console.log("SUCCESS");
+            """
+        )
+    )
+    assert result == "SUCCESS"
