@@ -22,3 +22,5 @@ export {
   buildReplaySnapshotsFromEvents,
   mapCompressionSignalsToStepIds
 } from './eventLogArtifactAdapter';
+
+export * from './replayArtifactWriter';
