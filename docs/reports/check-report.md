@@ -1,42 +1,28 @@
 # Agent Check Report
 
-- timestamp: `2026-05-11T09:19:59Z`
+- timestamp: `2026-05-15T22:11:55Z`
 - detected_project_type: `mixed Python/Node`
 - safety: `local deterministic checks only; no dependency installation; no network required`
 
 ## Results
 
-### python -m py_compile scripts/repo_intake.py scripts/run_checks.py scripts/validate.py
+### python -m py_compile scripts/check_repo_layout.py scripts/generate_contract_fixtures.py scripts/generate_dashboard_health_summary.py scripts/generate_project_health_report.py scripts/publish_hash_chilli_ci_artifacts.py scripts/repo_intake.py scripts/run_checks.py scripts/validate.py scripts/validate_api_exports.py scripts/validate_contracts.py
 
 - status: `pass`
-- command: `python -m py_compile scripts/repo_intake.py scripts/run_checks.py scripts/validate.py`
+- command: `python -m py_compile scripts/check_repo_layout.py scripts/generate_contract_fixtures.py scripts/generate_dashboard_health_summary.py scripts/generate_project_health_report.py scripts/publish_hash_chilli_ci_artifacts.py scripts/repo_intake.py scripts/run_checks.py scripts/validate.py scripts/validate_api_exports.py scripts/validate_contracts.py`
 - returncode: `0`
 
 ```text
 completed with no output
 ```
 
-### python -m pytest
+### pytest
 
-- status: `pass`
+- status: `skip`
 - command: `python -m pytest`
-- returncode: `0`
 
 ```text
-============================= test session starts ==============================
-platform linux -- Python 3.14.4, pytest-9.0.3, pluggy-1.6.0
-rootdir: /workspace/Comptextv7
-configfile: pyproject.toml
-testpaths: tests
-collected 19 items
-
-tests/test_benchmarks.py ..                                              [ 10%]
-tests/test_industrial_audit.py ...                                       [ 26%]
-tests/test_industry_audit.py ...                                         [ 42%]
-tests/test_kvtc_v7.py .......                                            [ 78%]
-tests/test_validation_hardening.py ....                                  [100%]
-
-============================== 19 passed in 8.14s ==============================
+pytest is not available; optional tool missing
 ```
 
 ### npm test (dashboard/app)
@@ -55,6 +41,24 @@ no test script detected in dashboard/app/package.json
 
 ```text
 no lint script detected in dashboard/app/package.json
+```
+
+### npm test (showcase/app)
+
+- status: `skip`
+- command: `npm test`
+
+```text
+no test script detected in showcase/app/package.json
+```
+
+### npm run lint (showcase/app)
+
+- status: `skip`
+- command: `npm run lint`
+
+```text
+no lint script detected in showcase/app/package.json
 ```
 
 ## Outcome

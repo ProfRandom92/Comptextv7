@@ -2,10 +2,12 @@
   "name": "comptextv7-root",
   "private": true,
   "scripts": {
+    "postinstall": "npm run bootstrap",
+    "bootstrap": "npm --prefix dashboard/app install && npm --prefix showcase/app install",
     "build": "npm --prefix dashboard/app run build && npm --prefix showcase/app run build",
     "typecheck": "npm --prefix dashboard/app run typecheck && npm --prefix showcase/app run typecheck",
     "validate": "npm --prefix showcase/app run validate",
-    "test": "pytest -q",
+    "test": "pytest",
     "test:core": "pytest tests/test_core_foundation_ts.py -q",
     "test:replay": "pytest tests/test_paper_replay_bench.py tests/test_agent_trace_replay.py tests/test_replay_continuity.py -q",
     "layout": "python scripts/check_repo_layout.py",
