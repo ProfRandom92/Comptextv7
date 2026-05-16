@@ -176,6 +176,7 @@ export function parseReplayArtifact(serialized: string): ReplayArtifact {
   return parsed as ReplayArtifact;
 }
 
+
 export function validateReplayArtifact(artifact: ReplayArtifact): ReplayArtifactValidationResult {
   const errors: string[] = [];
 
@@ -185,6 +186,14 @@ export function validateReplayArtifact(artifact: ReplayArtifact): ReplayArtifact
 
   if (!artifact.integrity || artifact.integrity.normalizationVersion !== 1) {
     errors.push(`Invalid normalizationVersion: expected 1, got ${artifact.integrity?.normalizationVersion}`);
+  }
+
+  if (!artifact.integrity || artifact.integrity.deterministicSerializationVersion !== 1) {
+    errors.push(`Invalid deterministicSerializationVersion: expected 1, got ${artifact.integrity?.deterministicSerializationVersion}`);
+  }
+
+  if (!artifact.integrity || artifact.integrity.artifactHashAlgorithm !== 'fnv1a-32') {
+    errors.push(`Invalid artifactHashAlgorithm: expected fnv1a-32, got ${artifact.integrity?.artifactHashAlgorithm}`);
   }
 
   if (!artifact.artifactId) errors.push('Missing artifactId');
@@ -210,14 +219,32 @@ export function validateReplayArtifact(artifact: ReplayArtifact): ReplayArtifact
   if (artifact.referenceIndex) {
     if (!Array.isArray(artifact.referenceIndex.entries)) {
         errors.push('referenceIndex.entries is not an array');
+    } else {
+        // Assume validateReferenceIndex exists or we do rudimentary validation.
+        for (const entry of artifact.referenceIndex.entries) {
+            if (!entry.id || !entry.uri || !entry.hash) {
+                errors.push('Invalid referenceIndex entry');
+            }
+        }
     }
   } else {
       errors.push('Missing referenceIndex');
   }
 
+  if (!artifact.replayTimelineSummary) {
+      errors.push('Missing replayTimelineSummary');
+  }
+
+  if (!artifact.replaySnapshots) {
+      errors.push('Missing replaySnapshots');
+  }
+
   const allStepIds = new Set<string>();
 
   if (artifact.eventFingerprints) {
+    if (artifact.eventFingerprints.length === 0 && artifact.replayTimelineSummary?.eventCount > 0) {
+        errors.push('eventFingerprints is empty while timelineSummary.eventCount > 0');
+    }
     for (let i = 0; i < artifact.eventFingerprints.length; i++) {
       const fp = artifact.eventFingerprints[i];
       if (fp.normalizationVersion !== 1) {
@@ -238,6 +265,9 @@ export function validateReplayArtifact(artifact: ReplayArtifact): ReplayArtifact
   if (artifact.compressionSignalMappings) {
       for (const mapping of artifact.compressionSignalMappings) {
           for (const stepId of mapping.associatedStepIds) {
+              if (mappedSteps.has(stepId)) {
+                  errors.push(`duplicate mapped stepId: ${stepId}`);
+              }
               mappedSteps.add(stepId);
           }
           if (mapping.unmappedStepIds) {
@@ -249,11 +279,16 @@ export function validateReplayArtifact(artifact: ReplayArtifact): ReplayArtifact
               }
           }
       }
+  } else {
+      errors.push('Missing compressionSignalMappings');
   }
 
   for (const stepId of allStepIds) {
       if (!mappedSteps.has(stepId) && !unmappedSteps.has(stepId)) {
           errors.push(`event fingerprint stepId ${stepId} is neither in associatedStepIds nor unmappedStepIds`);
+      }
+      if (mappedSteps.has(stepId) && unmappedSteps.has(stepId)) {
+          errors.push(`event fingerprint stepId ${stepId} is in both associatedStepIds and unmappedStepIds`);
       }
   }
 

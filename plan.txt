@@ -1,0 +1,7 @@
+1. Read existing validateReplayArtifact from replayArtifactWriter.ts
+2. Update validateReplayArtifact to check referenceIndex, overlaps in associated/unmapped, missing fields, integrity values.
+3. Read existing test_replay_artifact_writer_ts.py.
+4. Update tests to use actual deterministic events (mapped, gap successful, trailing failed). Add tests for all invariants (missing normalization, semantic change, etc).
+5. Update tests to test no-signal case.
+6. Regenerate exec-sample.replay.json.
+7. Run validation commands (npm run check).
