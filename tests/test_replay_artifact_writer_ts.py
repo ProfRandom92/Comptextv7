@@ -265,11 +265,10 @@ def test_replay_artifact_writer_unmapped_cases(tmp_path):
             } = require('./core/foundation');
             const { coreFoundationSample } = require('./core/foundation/sampleData');
 
-            const { event } = require('./core/foundation/sampleData');
             const events = [
-              { ...event, executionId: 'exec-1', stepId: 'step-1' },
-              { ...event, executionId: 'exec-1', stepId: 'step-2', eventType: 'tool.called' },
-              { ...event, executionId: 'exec-1', stepId: 'step-3', eventType: 'execution.failed', status: 'failed' }
+              { ...coreFoundationSample.events[0], executionId: 'exec-1', stepId: 'step-1' },
+              { ...coreFoundationSample.events[0], executionId: 'exec-1', stepId: 'step-2', eventType: 'tool.called' },
+              { ...coreFoundationSample.events[0], executionId: 'exec-1', stepId: 'step-3', eventType: 'execution.failed', status: 'failed' }
             ];
 
             // No signal case
@@ -327,11 +326,10 @@ def test_replay_artifact_writer_unknown_step_ids(tmp_path):
             } = require('./core/foundation');
             const { coreFoundationSample } = require('./core/foundation/sampleData');
 
-            const { event } = require('./core/foundation/sampleData');
             const events = [
-              { ...event, executionId: 'exec-1', stepId: 'step-1' },
-              { ...event, executionId: 'exec-1', stepId: 'step-2', eventType: 'tool.called' },
-              { ...event, executionId: 'exec-1', stepId: 'step-3', eventType: 'execution.failed', status: 'failed' }
+              { ...coreFoundationSample.events[0], executionId: 'exec-1', stepId: 'step-1' },
+              { ...coreFoundationSample.events[0], executionId: 'exec-1', stepId: 'step-2', eventType: 'tool.called' },
+              { ...coreFoundationSample.events[0], executionId: 'exec-1', stepId: 'step-3', eventType: 'execution.failed', status: 'failed' }
             ];
 
             const artifactNoSignal = createReplayArtifact({
@@ -344,8 +342,7 @@ def test_replay_artifact_writer_unknown_step_ids(tmp_path):
             });
 
             const badMapped = JSON.parse(JSON.stringify(artifactNoSignal));
-            badArtifact2 = badMapped; // reuse var name convention
-            badMapped.compressionSignalMappings.push({
+                        badMapped.compressionSignalMappings.push({
                 windowId: 'win-bad',
                 associatedStepIds: ['unknown-step'],
                 unmappedStepIds: []

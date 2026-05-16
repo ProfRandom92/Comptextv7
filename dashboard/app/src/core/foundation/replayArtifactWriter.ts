@@ -316,7 +316,7 @@ export function validateReplayArtifact(artifact: ReplayArtifact): ReplayArtifact
     }
     for (const [key, value] of Object.entries(obj)) {
       const currentPath = path ? path + '.' + key : key;
-      if (key === 'rawFileContents' || key === 'fileData') {
+      if (key === 'rawFileContents' || key === 'fileData' || key === 'rawPayload' || key === 'compactPayload') {
         return true;
       }
       if (key === 'content' || key === 'body') {

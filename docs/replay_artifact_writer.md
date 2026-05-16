@@ -17,7 +17,7 @@ A `ReplayArtifact` contains the following deterministic structures:
 - `replayTimelineSummary`: A summarized sequence of execution state changes.
 - `replaySnapshots`: A timeline of complete `ReplaySnapshot` structures.
 - `compressionSignalMappings`: Step-level mappings of triggered cognitive modes.
-- `compressionSummary`: Deterministic statistical summary of signal analysis. (Note: `totalTokenOut` remains `null` because the current `CompressionSignalInput` model has no output token estimates.)
+- `compressionSummary`: Deterministic statistical summary of signal analysis. totalTokenOut remains null in v1-alpha.1 because CompressionSignalInput currently has no output token estimate field. Do not invent tokenOut values.
 - `integrity`: Contains the computed deterministic hash and metadata to verify the artifact.
 
 ## Integrity Model
