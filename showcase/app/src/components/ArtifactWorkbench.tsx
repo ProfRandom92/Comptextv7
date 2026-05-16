@@ -214,9 +214,9 @@ export function ArtifactWorkbench() {
               color: '#4b5563',
               marginBottom: 8
             }}>Timeline</div>
-            <SummaryRow label="totalSteps" value={String(selected.timelineSummary.totalSteps)} />
-            <SummaryRow label="compressedSteps" value={String(selected.timelineSummary.compressedSteps)} />
-            <SummaryRow label="droppedSteps" value={String(selected.timelineSummary.droppedSteps)} />
+            <SummaryRow label="totalSteps" value={selected.timelineSummary.totalSteps} />
+            <SummaryRow label="compressedSteps" value={selected.timelineSummary.compressedSteps} />
+            <SummaryRow label="droppedSteps" value={selected.timelineSummary.droppedSteps} />
             <SummaryRow label="compressionRatio" value={selected.timelineSummary.compressionRatio} />
           </div>
         </div>
