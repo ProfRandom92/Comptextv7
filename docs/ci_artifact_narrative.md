@@ -32,7 +32,7 @@ The `artifactHash` used within these records provides deterministic integrity, n
 
 ## No External Dependencies
 
-To guarantee determinism, CompTextv7 relies on structural extraction and hashing. There are:
+To guarantee determinism, CompText V7 relies on structural extraction and hashing. There are:
 - **No LLM judges**
 - **No embeddings**
 - **No vector databases**
