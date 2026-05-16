@@ -35,7 +35,7 @@
 
 ## Safe Positioning
 
-CompTextv7 is a deterministic operational replay-validation prototype. It validates whether compact operational state survives compression and replay under controlled fixtures. It is complementary to learned context-compression research and durable workflow infrastructure, but it is not a workflow orchestrator, learned compressor, vector memory system, or universal AI-memory solution.
+Comptextv7 is a deterministic operational replay-validation prototype. It validates whether compact operational state survives compression and replay under controlled fixtures. It is complementary to learned context-compression research and durable workflow infrastructure, but it is not a workflow orchestrator, learned compressor, vector memory system, or universal AI-memory solution.
 
 For detailed positioning, see [Research Positioning](docs/research_positioning.md) and [Research Positioning Sources](docs/research_positioning_sources.md).
 
