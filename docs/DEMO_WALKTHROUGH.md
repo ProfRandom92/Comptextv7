@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This walkthrough gives reviewers a no-local-execution path for inspecting the CompText V7 evidence chain. It focuses on the CI artifact narrative, explaining how CompTextv7 evidence is produced, validated, and interpreted.
+This walkthrough gives reviewers a no-local-execution path for inspecting the CompText V7 evidence chain. It focuses on the CI artifact narrative, explaining how CompText V7 evidence is produced, validated, and interpreted.
 
 ## What this demo proves
 - **Deterministic state extraction**: The system can extract structured operational fields into a compact KVTC frame.
