@@ -124,7 +124,7 @@ export function ArtifactWorkbench() {
       </aside>
 
       {/* Center — Monaco editor */}
-      <div style={{ overflow: 'hidden', background: '#0d1117' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0d1117' }}>
         <div style={{
           padding: '8px 14px',
           fontSize: 11,
