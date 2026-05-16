@@ -3,6 +3,8 @@ import { DecisionQualityEngine } from './decisionQuality';
 import { InMemoryExecutionEventStore, appendExecutionEvent, getExecutionTimeline, summarizeExecutionEvents } from './executionEventLog';
 import { createReplaySnapshot } from './replaySnapshot';
 import { CompactPromptBuilder, ContextManifestBuilder, SemanticReferenceRegistry, TokenBudgetManager } from './semanticReferences';
+import { ReferenceIndexEntry, buildReferenceIndex } from './referenceIndex';
+import { eventFingerprint, mapCompressionSignalsToStepIds } from './eventLogArtifactAdapter';
 
 const registry = new SemanticReferenceRegistry();
 const reference = registry.register({
@@ -14,6 +16,24 @@ const reference = registry.register({
   createdAt: '2026-05-15T00:00:00.000Z',
   metadata: { rawTokenEstimate: 120 },
 });
+
+const referenceIndexEntries: ReferenceIndexEntry[] = [
+  {
+    id: reference.id,
+    uri: reference.uri,
+    type: reference.type,
+    summary: reference.summary,
+    tokenEstimate: reference.tokenEstimate,
+    relevanceScore: reference.relevanceScore,
+    hash: reference.hash,
+    resolver: reference.resolver,
+    createdAt: reference.createdAt,
+    expiresAt: reference.expiresAt,
+  }
+];
+
+const referenceIndex = buildReferenceIndex(referenceIndexEntries);
+
 const manifest = new ContextManifestBuilder(new TokenBudgetManager(64)).build('exec-sample', [reference], '2026-05-15T00:00:01.000Z');
 const eventStore = new InMemoryExecutionEventStore();
 const event = appendExecutionEvent(eventStore, {
@@ -28,8 +48,10 @@ const event = appendExecutionEvent(eventStore, {
   tokenOut: 0,
   latencyMs: 3,
   status: 'succeeded',
-  compactPayload: { manifestId: manifest.manifestId },
+  compactPayload: { manifestId: manifest.manifestId, requestId: 'req-123', traceId: 'trace-abc', durationMs: 45 },
 });
+
+const eventFingerprintSample = eventFingerprint(event, { normalizationVersion: 1 });
 
 const compressionSignalWindows: CompressionSignalInput[] = [
   {
@@ -91,12 +113,17 @@ const compressionSignalWindows: CompressionSignalInput[] = [
 
 const compressionSignalResults = new CompressionSignalEngine().evaluateSignalSequence(compressionSignalWindows);
 
+const compressionMappingSample = mapCompressionSignalsToStepIds(compressionSignalResults, [event]);
+
 export const coreFoundationSample = Object.freeze({
   reference,
+  referenceIndex,
   manifest,
   compactPrompt: new CompactPromptBuilder().build(manifest),
   timelineSummary: summarizeExecutionEvents(getExecutionTimeline(eventStore, 'exec-sample'), 'exec-sample'),
   replaySnapshot: createReplaySnapshot(event),
+  eventFingerprint: eventFingerprintSample,
+  compressionMapping: compressionMappingSample,
   quality: new DecisionQualityEngine({
     weights: { validity: 1, specificity: 1, correctness: 1, traceability: 1, rollbackSafety: 1, tokenEfficiency: 1 },
     tokenBudget: 64,
