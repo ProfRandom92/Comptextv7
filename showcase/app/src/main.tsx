@@ -11,11 +11,13 @@ import {
   Link2,
   LockKeyhole,
   Network,
+  ScanSearch,
   ShieldCheck,
   Workflow,
   Zap
 } from 'lucide-react';
 import { artifactLinks, benchmarkArtifacts, repoBaseUrl } from './data/benchmarkArtifacts';
+import { ArtifactWorkbench } from './components/ArtifactWorkbench';
 import './styles.css';
 
 
@@ -68,7 +70,8 @@ const navItems = [
   ['Pipeline', '#pipeline'],
   ['Integrity', '#integrity'],
   ['Artifacts', '#artifacts'],
-  ['Demo', '#demo']
+  ['Demo', '#demo'],
+  ['Workbench', '#workbench']
 ];
 
 function repoHref(path: string) {
@@ -241,6 +244,16 @@ function App() {
             <p>Comptextv7 preserves operational state under deterministic replay compression. The current benchmark family shows paper replay loss under dense prose and a near-lossless structured agent-trace baseline. The next validation target is iterative degradation pressure.</p>
           </div>
           <a className="button primary" href={repoHref('docs/DEMO_WALKTHROUGH.md')}>Open demo walkthrough <ArrowRight size={16} /></a>
+        </section>
+
+        {/* Artifact Workbench section */}
+        <section className="section-shell" id="workbench" aria-labelledby="workbench-title">
+          <div className="section-heading compact">
+            <div className="eyebrow"><ScanSearch size={16} /> Artifact Workbench</div>
+            <h2 id="workbench-title">Artifact Workbench</h2>
+            <p>Inspect compact replay artifacts without storing giant raw prompts.</p>
+          </div>
+          <ArtifactWorkbench />
         </section>
       </main>
     </>
