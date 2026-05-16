@@ -54,7 +54,7 @@ function SummaryRow({ label, value }: { label: string; value: React.ReactNode })
  *   right:     artifact summary fields
  */
 export function ArtifactWorkbench() {
-  const [selectedId, setSelectedId] = useState<string>(sampleArtifacts[0].artifactId);
+  const [selectedId, setSelectedId] = useState<string>(sampleArtifacts[0]?.artifactId ?? '');
 
   const selected = sampleArtifacts.find((a) => a.artifactId === selectedId) ?? sampleArtifacts[0];
 
