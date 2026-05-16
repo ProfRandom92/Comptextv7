@@ -155,13 +155,13 @@ def test_compression_mapping(tmp_path):
         const { mapCompressionSignalsToStepIds } = require('./core/foundation/index');
         const events = [
           { executionId: 'exec-1', stepId: 'step-1', timestamp: '2026-01-01T00:00:01Z', eventType: 'context.selected', status: 'succeeded' },
-          { executionId: 'exec-1', stepId: 'step-2', timestamp: '2026-01-01T00:00:02Z', eventType: 'tool.called', status: 'succeeded' },
+          { executionId: 'exec-1', stepId: 'step-2', timestamp: '2026-01-01T00:00:02Z', eventType: 'tool.called', status: 'succeeded' }, // In gap
           { executionId: 'exec-1', stepId: 'step-3', timestamp: '2026-01-01T00:00:03Z', eventType: 'tool.called', status: 'succeeded' },
           { executionId: 'exec-1', stepId: 'step-4', timestamp: '2026-01-01T00:00:04Z', eventType: 'execution.failed', status: 'failed' },
         ];
         const signals = [
           { windowId: 'sig-1', timestamp: '2026-01-01T00:00:01Z', window: { input: {} } },
-          { windowId: 'sig-2', timestamp: '2026-01-01T00:00:03Z', window: { input: {} } }
+          { windowId: 'sig-2', timestamp: '2026-01-01T00:00:03Z', window: { input: { metadata: { startTimestamp: '2026-01-01T00:00:03Z' } } } }
         ];
         const mapping = mapCompressionSignalsToStepIds(signals, events);
         console.log(JSON.stringify(mapping));
@@ -171,6 +171,27 @@ def test_compression_mapping(tmp_path):
     assert result[0]['windowId'] == 'sig-1'
     assert result[0]['associatedStepIds'] == ['step-1']
     assert result[1]['windowId'] == 'sig-2'
-    assert result[1]['associatedStepIds'] == ['step-2', 'step-3']
-    assert result[1]['unmappedStepIds'] == ['step-4']
+    assert result[1]['associatedStepIds'] == ['step-3']
+    # step-2 is in the gap, step-4 is a trailing failure
+    assert result[1]['unmappedStepIds'] == ['step-2', 'step-4']
     assert result[1]['unmappedReason'] == '[UNMAPPED_EXECUTION_HALT]'
+
+def test_compression_mapping_no_signals(tmp_path):
+    result = run_foundation_script(
+        tmp_path,
+        textwrap.dedent("""
+        const { mapCompressionSignalsToStepIds } = require('./core/foundation/index');
+        const events = [
+          { executionId: 'exec-1', stepId: 'step-1', timestamp: '2026-01-01T00:00:01Z', eventType: 'context.selected', status: 'succeeded' },
+          { executionId: 'exec-1', stepId: 'step-2', timestamp: '2026-01-01T00:00:02Z', eventType: 'execution.failed', status: 'failed' },
+        ];
+        const signals = [];
+        const mapping = mapCompressionSignalsToStepIds(signals, events);
+        console.log(JSON.stringify(mapping));
+        """)
+    )
+    assert len(result) == 1
+    assert result[0]['windowId'] == 'synthetic-unmapped-window'
+    assert result[0]['associatedStepIds'] == []
+    assert result[0]['unmappedStepIds'] == ['step-1', 'step-2']
+    assert result[0]['unmappedReason'] == '[UNMAPPED_EXECUTION_HALT]'

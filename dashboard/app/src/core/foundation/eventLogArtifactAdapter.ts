@@ -143,13 +143,12 @@ export function mapCompressionSignalsToStepIds(
   const sortedSignals = [...signals].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 
   const mappedSignals: MappedCompressionSignal[] = [];
-  let lastEventIdx = 0;
+  let eventIdx = 0;
 
   for (const signal of sortedSignals) {
     let windowStart = '';
     let windowEnd = signal.timestamp;
 
-    // Use metadata start/end if available.
     if (signal.window.input.metadata?.startTimestamp && typeof signal.window.input.metadata.startTimestamp === 'string') {
       windowStart = signal.window.input.metadata.startTimestamp;
     }
@@ -166,27 +165,25 @@ export function mapCompressionSignalsToStepIds(
         }
       }
     } else {
-      let currentIdx = lastEventIdx;
       if (windowStart) {
-        currentIdx = 0;
-        while (currentIdx < sortedEvents.length) {
-          const ev = sortedEvents[currentIdx];
-          if (ev.timestamp >= windowStart && ev.timestamp <= windowEnd) {
-             stepIds.add(ev.stepId);
-             lastEventIdx = Math.max(lastEventIdx, currentIdx + 1);
+        // Find events in explicit start/end window
+        let i = 0;
+        while (i < sortedEvents.length && sortedEvents[i].timestamp <= windowEnd) {
+          if (sortedEvents[i].timestamp >= windowStart) {
+            stepIds.add(sortedEvents[i].stepId);
           }
-          currentIdx++;
+          i++;
         }
       } else {
-        while (currentIdx < sortedEvents.length) {
-          const ev = sortedEvents[currentIdx];
+        // Find events up to windowEnd from last eventIdx
+        while (eventIdx < sortedEvents.length) {
+          const ev = sortedEvents[eventIdx];
           if (ev.timestamp <= windowEnd) {
             stepIds.add(ev.stepId);
-            lastEventIdx = currentIdx + 1;
+            eventIdx++;
           } else {
             break;
           }
-          currentIdx++;
         }
       }
     }
@@ -197,12 +194,7 @@ export function mapCompressionSignalsToStepIds(
     });
   }
 
-  const unmappedStepIds = new Set<string>();
-  for (let i = lastEventIdx; i < sortedEvents.length; i++) {
-    unmappedStepIds.add(sortedEvents[i].stepId);
-  }
-
-  // Also include failed steps in unmapped if they aren't explicitly associated anywhere
+  // Find all globally mapped stepIds
   const allMappedSteps = new Set<string>();
   for (const ms of mappedSignals) {
     for (const sid of ms.associatedStepIds) {
@@ -210,22 +202,26 @@ export function mapCompressionSignalsToStepIds(
     }
   }
 
+  // Collect any unmapped events (orphaned or failed or gap events)
+  const unmappedStepIds = new Set<string>();
   for (const ev of sortedEvents) {
-    if ((ev.eventType === 'execution.failed' || ev.status === 'failed') && !allMappedSteps.has(ev.stepId)) {
+    if (!allMappedSteps.has(ev.stepId)) {
       unmappedStepIds.add(ev.stepId);
     }
   }
 
   if (unmappedStepIds.size > 0) {
-    // Add them to the last signal if there is one, or just attach somewhere?
-    // "Trailing events into unmappedStepIds... Use compact unmappedReason: [UNMAPPED_EXECUTION_HALT]"
     if (mappedSignals.length > 0) {
       mappedSignals[mappedSignals.length - 1].unmappedStepIds = Array.from(unmappedStepIds).sort();
       mappedSignals[mappedSignals.length - 1].unmappedReason = '[UNMAPPED_EXECUTION_HALT]';
     } else {
-      // If there are no signals, where to put it? Create a dummy mapping or just return it?
-      // Since mapping returns an array of mapped signals, we'll just append a dummy one or if no signals exist, handle it.
-      // Instructions say "triggered windows should have associatedStepIds unless explicitly unmapped."
+      // If there are no compression signals, create a synthetic mapped signal for the unmapped steps
+      mappedSignals.push({
+        windowId: 'synthetic-unmapped-window',
+        associatedStepIds: [],
+        unmappedStepIds: Array.from(unmappedStepIds).sort(),
+        unmappedReason: '[UNMAPPED_EXECUTION_HALT]'
+      });
     }
   }
 

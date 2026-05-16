@@ -67,23 +67,17 @@ export function validateReferenceUri(uri: string): ReferenceIndexValidationResul
 
 export function buildReferenceIndex(entries: ReferenceIndexEntry[]): ReferenceIndex {
   const deduped = new Map<string, ReferenceIndexEntry>();
+  const seenIds = new Set<string>();
+  const seenUris = new Set<string>();
+  const seenHashes = new Set<string>();
 
   for (const entry of entries) {
-    const key = `${entry.id}|${entry.uri}|${entry.hash}`;
-    if (!deduped.has(key)) {
-      // Deduplicate loosely by id, uri, or hash?
-      // "Deduplicate entries by id, uri, and hash."
-      // Typically means if any of these match an existing, keep the first. Let's do that.
-      let exists = false;
-      for (const existing of deduped.values()) {
-        if (existing.id === entry.id || existing.uri === entry.uri || existing.hash === entry.hash) {
-          exists = true;
-          break;
-        }
-      }
-      if (!exists) {
-        deduped.set(key, entry);
-      }
+    if (!seenIds.has(entry.id) && !seenUris.has(entry.uri) && !seenHashes.has(entry.hash)) {
+      seenIds.add(entry.id);
+      seenUris.add(entry.uri);
+      seenHashes.add(entry.hash);
+      const key = `${entry.id}|${entry.uri}|${entry.hash}`;
+      deduped.set(key, entry);
     }
   }
 
