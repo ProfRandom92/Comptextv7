@@ -308,21 +308,28 @@ export function validateReplayArtifact(artifact: ReplayArtifact): ReplayArtifact
 
 
 
-  function containsUnsafeHydration(obj: any): boolean {
+
+  function containsUnsafeHydration(obj: any, path: string = ''): boolean {
     if (obj === null || typeof obj !== 'object') return false;
     if (Array.isArray(obj)) {
-      return obj.some(containsUnsafeHydration);
+      return obj.some((item, idx) => containsUnsafeHydration(item, path + '[' + idx + ']'));
     }
     for (const [key, value] of Object.entries(obj)) {
-      if (key === 'rawFileContents' || key === 'fileData' || key === 'content' || key === 'body') {
-        // Broadly we assume if these keys exist at all, we flag it.
-        // It's possible to refine if they must be strings, but the requirement is "reject raw hydration fields such as ... if they appear in unsafe artifact locations".
+      const currentPath = path ? path + '.' + key : key;
+      if (key === 'rawFileContents' || key === 'fileData') {
         return true;
       }
-      if (containsUnsafeHydration(value)) return true;
+      if (key === 'content' || key === 'body') {
+        // Only reject these specific keys if they are deeply nested inside known payload containers or metadata
+        if (currentPath.includes('metadata') || currentPath.includes('compactPayload') || currentPath.includes('replaySnapshots') || currentPath.includes('compressionSignalMappings')) {
+            return true;
+        }
+      }
+      if (containsUnsafeHydration(value, currentPath)) return true;
     }
     return false;
   }
+
 
   if (containsUnsafeHydration(artifact)) {
       errors.push('Artifact contains raw file hydration fields');

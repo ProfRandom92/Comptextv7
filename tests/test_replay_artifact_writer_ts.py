@@ -57,7 +57,9 @@ def test_replay_artifact_writer_deterministic(tmp_path):
             } = require('./core/foundation');
             const { coreFoundationSample } = require('./core/foundation/sampleData');
 
+            const { event } = require('./core/foundation/sampleData');
             const events = [
+              event,
               {
                 executionId: 'exec-1',
                 stepId: 'step-1',
@@ -263,21 +265,11 @@ def test_replay_artifact_writer_unmapped_cases(tmp_path):
             } = require('./core/foundation');
             const { coreFoundationSample } = require('./core/foundation/sampleData');
 
+            const { event } = require('./core/foundation/sampleData');
             const events = [
-              {
-                executionId: 'exec-1',
-                stepId: 'step-1',
-                agentId: 'agent-1',
-                timestamp: '2026-05-15T00:00:01.000Z',
-                eventType: 'context.selected',
-                inputRefIds: [],
-                outputRefIds: [],
-                tokenIn: 10,
-                tokenOut: 0,
-                latencyMs: 1,
-                status: 'succeeded',
-                compactPayload: { a: 1 }
-              }
+              { ...event, executionId: 'exec-1', stepId: 'step-1' },
+              { ...event, executionId: 'exec-1', stepId: 'step-2', eventType: 'tool.called' },
+              { ...event, executionId: 'exec-1', stepId: 'step-3', eventType: 'execution.failed', status: 'failed' }
             ];
 
             // No signal case
@@ -335,21 +327,11 @@ def test_replay_artifact_writer_unknown_step_ids(tmp_path):
             } = require('./core/foundation');
             const { coreFoundationSample } = require('./core/foundation/sampleData');
 
+            const { event } = require('./core/foundation/sampleData');
             const events = [
-              {
-                executionId: 'exec-1',
-                stepId: 'step-1',
-                agentId: 'agent-1',
-                timestamp: '2026-05-15T00:00:01.000Z',
-                eventType: 'context.selected',
-                inputRefIds: [],
-                outputRefIds: [],
-                tokenIn: 10,
-                tokenOut: 0,
-                latencyMs: 1,
-                status: 'succeeded',
-                compactPayload: { a: 1 }
-              }
+              { ...event, executionId: 'exec-1', stepId: 'step-1' },
+              { ...event, executionId: 'exec-1', stepId: 'step-2', eventType: 'tool.called' },
+              { ...event, executionId: 'exec-1', stepId: 'step-3', eventType: 'execution.failed', status: 'failed' }
             ];
 
             const artifactNoSignal = createReplayArtifact({
@@ -381,6 +363,42 @@ def test_replay_artifact_writer_unknown_step_ids(tmp_path):
             const valUnmapped = validateReplayArtifact(badUnmapped);
             assert.equal(valUnmapped.valid, false);
             assert.ok(valUnmapped.errors.some(e => e.includes('unmapped stepId refers to unknown stepId: unknown-step')));
+
+            console.log("SUCCESS");
+            """
+        )
+    )
+    assert result == "SUCCESS"
+
+
+def test_replay_artifact_writer_raw_hydration(tmp_path):
+    result = run_foundation_script(
+        tmp_path,
+        textwrap.dedent(
+            """
+            const assert = require('node:assert/strict');
+            const { validateReplayArtifact } = require('./core/foundation');
+            const { coreFoundationSample } = require('./core/foundation/sampleData');
+
+            // 1. Safe 'content' key in top level summary is fine
+            const safeArtifact = JSON.parse(JSON.stringify(coreFoundationSample.sampleReplayArtifact));
+            safeArtifact.referenceIndex.entries[0].summary = "This is some content";
+            const valSafe = validateReplayArtifact(safeArtifact);
+            assert.ok(!valSafe.errors.some(e => e.includes('raw file hydration')));
+
+            // 2. Unsafe 'content' key in metadata fails
+            const badMetadata = JSON.parse(JSON.stringify(coreFoundationSample.sampleReplayArtifact));
+            badMetadata.referenceIndex.entries[0] = { ...badMetadata.referenceIndex.entries[0], metadata: { content: "evil" } };
+            const valBadMeta = validateReplayArtifact(badMetadata);
+            assert.ok(valBadMeta.errors.some(e => e.includes('raw file hydration')));
+            assert.ok(valBadMeta.errors.some(e => e.includes('raw file hydration')));
+
+            // 3. Unsafe 'fileData' key anywhere fails
+            const badGlobal = JSON.parse(JSON.stringify(coreFoundationSample.sampleReplayArtifact));
+            badGlobal.referenceIndex.entries[0].summary = { fileData: "evil" };
+            const valBadGlobal = validateReplayArtifact(badGlobal);
+            assert.ok(valBadGlobal.errors.some(e => e.includes('raw file hydration')));
+            assert.ok(valBadGlobal.errors.some(e => e.includes('raw file hydration')));
 
             console.log("SUCCESS");
             """

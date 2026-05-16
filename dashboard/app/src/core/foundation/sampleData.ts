@@ -36,8 +36,8 @@ const referenceIndexEntries: ReferenceIndexEntry[] = [
 const referenceIndex = buildReferenceIndex(referenceIndexEntries);
 
 const manifest = new ContextManifestBuilder(new TokenBudgetManager(64)).build('exec-sample', [reference], '2026-05-15T00:00:01.000Z');
-const eventStore = new InMemoryExecutionEventStore();
-const event = appendExecutionEvent(eventStore, {
+export const eventStore = new InMemoryExecutionEventStore();
+export const event = appendExecutionEvent(eventStore, {
   executionId: 'exec-sample',
   stepId: 'step-1',
   agentId: 'agent-core',
@@ -54,7 +54,7 @@ const event = appendExecutionEvent(eventStore, {
 
 const eventFingerprintSample = eventFingerprint(event, { normalizationVersion: 1 });
 
-const compressionSignalWindows: CompressionSignalInput[] = [
+export const compressionSignalWindows: CompressionSignalInput[] = [
   {
     executionId: 'exec-sample',
     windowId: 'signal-stable-known-family',
@@ -112,7 +112,7 @@ const compressionSignalWindows: CompressionSignalInput[] = [
   },
 ];
 
-const compressionSignalResults = new CompressionSignalEngine().evaluateSignalSequence(compressionSignalWindows);
+export const compressionSignalResults = new CompressionSignalEngine().evaluateSignalSequence(compressionSignalWindows);
 
 const compressionMappingSample = mapCompressionSignalsToStepIds(compressionSignalResults, [event]);
 
