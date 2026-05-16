@@ -158,7 +158,7 @@ Detail fidelity still degrades: hidden truth survival is `0.570173`, and evaluat
 - **no external APIs**;
 - **artifact-backed JSON + CI checks**;
 - **deterministic hashing foundation** ([`docs/deterministic_hashing.md`](docs/deterministic_hashing.md));
-- audit-friendly and CI reproducible.
+- **audit-friendly and CI reproducible**.
 
 ### Foundational Components
 
