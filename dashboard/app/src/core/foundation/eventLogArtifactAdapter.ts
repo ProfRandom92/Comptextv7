@@ -166,13 +166,17 @@ export function mapCompressionSignalsToStepIds(
       }
     } else {
       if (windowStart) {
-        // Find events in explicit start/end window
-        let i = 0;
-        while (i < sortedEvents.length && sortedEvents[i].timestamp <= windowEnd) {
-          if (sortedEvents[i].timestamp >= windowStart) {
-            stepIds.add(sortedEvents[i].stepId);
+        // Find events in explicit start/end window. We scan from the beginning or from a known point, but for correctness and simplicity of an explicit window, a full scan is safest.
+        // However, a simple binary search or deterministic range scan is requested.
+        // Since sortedEvents is sorted by timestamp, we can just scan through it entirely.
+        // We'll just do a single pass to be O(N) over all events if possible, but an explicit window can be anywhere.
+        // For simplicity and correctness:
+        for (let i = 0; i < sortedEvents.length; i++) {
+          const ev = sortedEvents[i];
+          if (ev.timestamp > windowEnd) break;
+          if (ev.timestamp >= windowStart) {
+            stepIds.add(ev.stepId);
           }
-          i++;
         }
       } else {
         // Find events up to windowEnd from last eventIdx

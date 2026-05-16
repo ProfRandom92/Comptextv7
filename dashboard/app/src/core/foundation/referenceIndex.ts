@@ -66,22 +66,21 @@ export function validateReferenceUri(uri: string): ReferenceIndexValidationResul
 }
 
 export function buildReferenceIndex(entries: ReferenceIndexEntry[]): ReferenceIndex {
-  const deduped = new Map<string, ReferenceIndexEntry>();
   const seenIds = new Set<string>();
   const seenUris = new Set<string>();
   const seenHashes = new Set<string>();
+  const deduped: ReferenceIndexEntry[] = [];
 
   for (const entry of entries) {
     if (!seenIds.has(entry.id) && !seenUris.has(entry.uri) && !seenHashes.has(entry.hash)) {
       seenIds.add(entry.id);
       seenUris.add(entry.uri);
       seenHashes.add(entry.hash);
-      const key = `${entry.id}|${entry.uri}|${entry.hash}`;
-      deduped.set(key, entry);
+      deduped.push(entry);
     }
   }
 
-  const sortedEntries = Array.from(deduped.values()).sort((a, b) => {
+  const sortedEntries = deduped.sort((a, b) => {
     // Sort deterministically
     if (a.createdAt !== b.createdAt) return a.createdAt.localeCompare(b.createdAt);
     if (a.id !== b.id) return a.id.localeCompare(b.id);
