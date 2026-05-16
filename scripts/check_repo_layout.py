@@ -15,6 +15,7 @@ REQUIRED_FILES = (
     REPO_ROOT / "showcase" / "app" / "package.json",
     REPO_ROOT / "artifacts" / "paper_replay_results.json",
     REPO_ROOT / "artifacts" / "agent_trace_replay_results.json",
+    REPO_ROOT / "artifacts" / "replay" / "exec-sample.replay.json",
 )
 
 
