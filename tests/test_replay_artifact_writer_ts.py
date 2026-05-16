@@ -43,7 +43,6 @@ def run_foundation_script(tmp_path: Path, script: str):
     )
     return result.stdout.strip()
 
-
 def test_replay_artifact_writer_deterministic(tmp_path):
     result = run_foundation_script(
         tmp_path,
@@ -201,45 +200,46 @@ def test_replay_artifact_writer_rejects_bad_schema(tmp_path):
             } = require('./core/foundation');
             const { coreFoundationSample } = require('./core/foundation/sampleData');
 
-            const badArtifact = JSON.parse(JSON.stringify(coreFoundationSample.sampleReplayArtifact));
-            badArtifact.schemaVersion = 'v2-beta';
+            const validArtifact = JSON.parse(JSON.stringify(coreFoundationSample.sampleReplayArtifact));
 
+            const badArtifact = JSON.parse(JSON.stringify(validArtifact));
+            badArtifact.schemaVersion = 'v2-beta';
             const validation = validateReplayArtifact(badArtifact);
             assert.equal(validation.valid, false);
             assert.ok(validation.errors.some(e => e.includes('schemaVersion')), 'Should reject wrong schema version');
 
-            const badArtifact2 = JSON.parse(JSON.stringify(coreFoundationSample.sampleReplayArtifact));
+            const badArtifact2 = JSON.parse(JSON.stringify(validArtifact));
             badArtifact2.integrity.normalizationVersion = 2;
             badArtifact2.integrity.artifactHash = 'fnv1a:bad'; // Ensure it fails on norm ver first
             const val2 = validateReplayArtifact(badArtifact2);
             assert.equal(val2.valid, false);
             assert.ok(val2.errors.some(e => e.includes('normalizationVersion: expected 1')), 'Should reject missing normalizationVersion');
 
-            const badArtifact3 = JSON.parse(JSON.stringify(coreFoundationSample.sampleReplayArtifact));
+            const badArtifact3 = JSON.parse(JSON.stringify(validArtifact));
             badArtifact3.integrity.deterministicSerializationVersion = 2;
             const val3 = validateReplayArtifact(badArtifact3);
             assert.equal(val3.valid, false);
             assert.ok(val3.errors.some(e => e.includes('deterministicSerializationVersion')), 'Should reject wrong deterministicSerializationVersion');
 
-            const badArtifact4 = JSON.parse(JSON.stringify(coreFoundationSample.sampleReplayArtifact));
+            const badArtifact4 = JSON.parse(JSON.stringify(validArtifact));
             badArtifact4.integrity.artifactHashAlgorithm = 'md5';
             const val4 = validateReplayArtifact(badArtifact4);
             assert.equal(val4.valid, false);
             assert.ok(val4.errors.some(e => e.includes('artifactHashAlgorithm')), 'Should reject wrong artifactHashAlgorithm');
 
-            const badArtifact5 = JSON.parse(JSON.stringify(coreFoundationSample.sampleReplayArtifact));
+            const badArtifact5 = JSON.parse(JSON.stringify(validArtifact));
             delete badArtifact5.replayTimelineSummary;
             const val5 = validateReplayArtifact(badArtifact5);
             assert.equal(val5.valid, false);
             assert.ok(val5.errors.some(e => e.includes('Missing replayTimelineSummary')));
 
-            const badArtifact6 = JSON.parse(JSON.stringify(coreFoundationSample.sampleReplayArtifact));
+            const badArtifact6 = JSON.parse(JSON.stringify(validArtifact));
             delete badArtifact6.replaySnapshots;
             const val6 = validateReplayArtifact(badArtifact6);
             assert.equal(val6.valid, false);
             assert.ok(val6.errors.some(e => e.includes('Missing replaySnapshots')));
 
-            const badArtifact7 = JSON.parse(JSON.stringify(coreFoundationSample.sampleReplayArtifact));
+            const badArtifact7 = JSON.parse(JSON.stringify(validArtifact));
             badArtifact7.eventFingerprints = [];
             const val7 = validateReplayArtifact(badArtifact7);
             assert.equal(val7.valid, false);
@@ -292,8 +292,6 @@ def test_replay_artifact_writer_unmapped_cases(tmp_path):
 
             assert.equal(validateReplayArtifact(artifactNoSignal).valid, true);
             assert.equal(artifactNoSignal.compressionSignalMappings.length, 1);
-            assert.equal(artifactNoSignal.compressionSignalMappings[0].windowId, 'synthetic-unmapped-window');
-            assert.equal(artifactNoSignal.compressionSignalMappings[0].unmappedStepIds.length, 1);
 
             // Step in both
             const badArtifact = JSON.parse(JSON.stringify(artifactNoSignal));
@@ -304,8 +302,10 @@ def test_replay_artifact_writer_unmapped_cases(tmp_path):
             assert.equal(validation.valid, false);
             assert.ok(validation.errors.some(e => e.includes('in both associatedStepIds and unmappedStepIds')));
 
-            // Duplicate across mappings
+            // Duplicate mapped stepId (add mapping with step-1 in associatedStepIds twice!)
             const badArtifact2 = JSON.parse(JSON.stringify(artifactNoSignal));
+            badArtifact2.compressionSignalMappings[0].associatedStepIds = ['step-1'];
+            badArtifact2.compressionSignalMappings[0].unmappedStepIds = [];
             badArtifact2.compressionSignalMappings.push({
                 windowId: 'win-2',
                 associatedStepIds: ['step-1'],

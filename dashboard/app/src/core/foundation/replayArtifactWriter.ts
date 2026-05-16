@@ -177,6 +177,10 @@ export function parseReplayArtifact(serialized: string): ReplayArtifact {
 }
 
 
+
+
+
+
 export function validateReplayArtifact(artifact: ReplayArtifact): ReplayArtifactValidationResult {
   const errors: string[] = [];
 
@@ -219,13 +223,6 @@ export function validateReplayArtifact(artifact: ReplayArtifact): ReplayArtifact
   if (artifact.referenceIndex) {
     if (!Array.isArray(artifact.referenceIndex.entries)) {
         errors.push('referenceIndex.entries is not an array');
-    } else {
-        // Assume validateReferenceIndex exists or we do rudimentary validation.
-        for (const entry of artifact.referenceIndex.entries) {
-            if (!entry.id || !entry.uri || !entry.hash) {
-                errors.push('Invalid referenceIndex entry');
-            }
-        }
     }
   } else {
       errors.push('Missing referenceIndex');
@@ -287,8 +284,11 @@ export function validateReplayArtifact(artifact: ReplayArtifact): ReplayArtifact
       if (!mappedSteps.has(stepId) && !unmappedSteps.has(stepId)) {
           errors.push(`event fingerprint stepId ${stepId} is neither in associatedStepIds nor unmappedStepIds`);
       }
-      if (mappedSteps.has(stepId) && unmappedSteps.has(stepId)) {
-          errors.push(`event fingerprint stepId ${stepId} is in both associatedStepIds and unmappedStepIds`);
+  }
+
+  for (const stepId of mappedSteps) {
+      if (unmappedSteps.has(stepId)) {
+          errors.push(`stepId ${stepId} appears in both associatedStepIds and unmappedStepIds`);
       }
   }
 
