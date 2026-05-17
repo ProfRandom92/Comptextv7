@@ -83,16 +83,15 @@ def measure_fixture(engine, text, name, fixture_type, iterations):
     tokens_in = count_tokens(text, "cl100k_base").count
 
     # Warmup
-    engine.compress(text)
+    last_result = engine.compress(text)
 
     latencies_ns = []
-    last_result = None
     for _ in range(iterations):
         start = time.perf_counter_ns()
         last_result = engine.compress(text)
         latencies_ns.append(time.perf_counter_ns() - start)
 
-    avg_latency_ms = (sum(latencies_ns) / len(latencies_ns)) / 1_000_000
+    avg_latency_ms = (sum(latencies_ns) / len(latencies_ns)) / 1_000_000 if latencies_ns else 0.0
 
     tokens_compact = count_tokens(last_result.text, "cl100k_base").count
 
