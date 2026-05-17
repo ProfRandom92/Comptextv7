@@ -1,6 +1,6 @@
 /**
  * Deterministic static sample replay artifacts for the Artifact Workbench.
- * No Date.now, no Math.random. All values are hardcoded.
+ * No runtime time generation or runtime randomness. All values are hardcoded.
  * Shaped like ReplayArtifact v1-alpha.1.
  */
 
