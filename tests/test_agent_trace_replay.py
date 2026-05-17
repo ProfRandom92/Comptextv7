@@ -29,6 +29,7 @@ PUBLIC_ROW_FIELDS = {
     "replay_token_count",
     "tool_sequence_survival_rate",
     "trace",
+    "evidence_survival_rate",
 }
 AGGREGATE_FIELDS = {
     "avg_blocker_survival_rate",
@@ -38,6 +39,7 @@ AGGREGATE_FIELDS = {
     "avg_operational_drift_rate",
     "avg_replay_consistency",
     "avg_tool_sequence_survival_rate",
+    "avg_evidence_survival_rate",
     "trace_count",
 }
 RATE_FIELDS = (
@@ -47,6 +49,7 @@ RATE_FIELDS = (
     "operational_drift_rate",
     "replay_consistency",
     "tool_sequence_survival_rate",
+    "evidence_survival_rate",
 )
 AGGREGATE_RATE_FIELDS = (
     "avg_blocker_survival_rate",
@@ -55,6 +58,7 @@ AGGREGATE_RATE_FIELDS = (
     "avg_operational_drift_rate",
     "avg_replay_consistency",
     "avg_tool_sequence_survival_rate",
+    "avg_evidence_survival_rate",
 )
 
 
@@ -115,6 +119,7 @@ def test_agent_trace_replay_aggregate_matches_recomputed_values() -> None:
         "avg_operational_drift_rate": "operational_drift_rate",
         "avg_replay_consistency": "replay_consistency",
         "avg_tool_sequence_survival_rate": "tool_sequence_survival_rate",
+        "avg_evidence_survival_rate": "evidence_survival_rate",
     }
     for aggregate_field, trace_field in field_pairs.items():
         recomputed = normalize_float(sum(float(row[trace_field]) for row in traces) / len(traces))
@@ -150,8 +155,8 @@ def test_no_empty_operational_fields_and_replay_matches_compact_state() -> None:
         replayed_fields = run.replayed_state["operational_fields"]
         assert isinstance(original_fields, dict)
         assert isinstance(replayed_fields, dict)
-        assert set(original_fields) == set(OPERATIONAL_FIELDS)
-        assert set(replayed_fields) == set(OPERATIONAL_FIELDS)
+        assert set(original_fields) == set(OPERATIONAL_FIELDS) | {"evidence"}
+        assert set(replayed_fields) == set(OPERATIONAL_FIELDS) | {"evidence"}
         for field in OPERATIONAL_FIELDS:
             value = original_fields[field]
             assert value

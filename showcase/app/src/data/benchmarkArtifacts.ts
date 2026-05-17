@@ -31,8 +31,9 @@ export const benchmarkArtifacts: BenchmarkArtifact[] = [
     note: 'Dense technical paper fixtures preserve entities, limitations, metrics, and section structure with measurable replay loss.',
     metrics: [
       { label: 'Paper count', value: '3', detail: 'dense technical papers' },
-      { label: 'Avg compression ratio', value: '1.347063', detail: 'original ÷ compact tokens' },
-      { label: 'Replay consistency', value: '0.791667', detail: 'deterministic validator' }
+      { label: 'Avg compression ratio', value: '1.263194', detail: 'original ÷ compact tokens' },
+      { label: 'Replay consistency', value: '0.541667', detail: 'deterministic validator' },
+      { label: 'Evidence survival', value: '1.000000', detail: 'critical signal retention' }
     ]
   },
   {
@@ -46,7 +47,8 @@ export const benchmarkArtifacts: BenchmarkArtifact[] = [
       { label: 'Trace count', value: '3', detail: 'multi-step workflows' },
       { label: 'Avg compression ratio', value: '1.773954', detail: 'original ÷ compact tokens' },
       { label: 'Replay consistency', value: '1.000000', detail: 'deterministic validator' },
-      { label: 'Operational drift', value: '0.000000', detail: 'required field loss' }
+      { label: 'Operational drift', value: '0.000000', detail: 'required field loss' },
+      { label: 'Evidence survival', value: '1.000000', detail: 'critical signal retention' }
     ]
   }
 ];

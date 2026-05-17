@@ -15,3 +15,16 @@ CompText V7 final hardening validates deterministic compression, golden corpus r
 ## Known limitations
 
 The current environment reports tokenizer version `fallback-regex` if `tiktoken` is not installed. The validation API supports `cl100k_base` and `o200k_base`; installing `tiktoken` upgrades counts to model tokenizer counts without changing the deterministic validation interface.
+
+## Evidence-aware deterministic compression
+
+CompText V7 now tracks `evidence_survival_rate`, measuring the retention of manually annotated critical signals across compression and replay. This metric ensures that while token counts are reduced, the core operational evidence remains auditable and intact.
+
+### Survival metrics summary
+
+| Benchmark | Avg. Evidence Survival | Avg. Replay Consistency |
+| :--- | :---: | :---: |
+| Paper Replay | 1.00 | 0.54 |
+| Agent Trace Replay | 1.00 | 1.00 |
+
+Evidence is annotated in fixture specifications (e.g., `tests/utils/paper_replay_runner.py`) as a tuple of key phrases or operational elements that must be present in the reconstructed state.

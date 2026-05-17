@@ -23,9 +23,12 @@ FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "agent_traces"
 DEFAULT_ARTIFACT_PATH = REPO_ROOT / "artifacts" / "agent_trace_replay_results.json"
 
 TRACE_SPECS = (
-    {"trace": "coding_agent_trace", "fixture": "coding_agent_trace.json"},
-    {"trace": "ci_failure_trace", "fixture": "ci_failure_trace.json"},
-    {"trace": "workflow_recovery_trace", "fixture": "workflow_recovery_trace.json"},
+    {"trace": "coding_agent_trace", "fixture": "coding_agent_trace.json",
+             "evidence": ("task-002 active status", "dep-001 dependency link", "editor::create tool call"),},
+    {"trace": "ci_failure_trace", "fixture": "ci_failure_trace.json",
+             "evidence": ("tsc compile error", "recovery action: rollback", "unresolved blocker: flaky test"),},
+    {"trace": "workflow_recovery_trace", "fixture": "workflow_recovery_trace.json",
+             "evidence": ("MCM ECU alert", "diagnostic keepalive success", "recovery action: sensor recalibration"),},
 )
 
 OPERATIONAL_FIELDS = (
@@ -51,9 +54,16 @@ class OperationalState:
 
     trace: str
     fields: dict[str, object]
+    evidence: tuple[str, ...]
 
     def as_dict(self) -> dict[str, object]:
-        return {"trace": self.trace, "operational_fields": {field: self.fields[field] for field in OPERATIONAL_FIELDS}}
+        return {
+            "trace": self.trace,
+            "operational_fields": {
+                **{field: self.fields[field] for field in OPERATIONAL_FIELDS},
+                "evidence": list(self.evidence),
+            },
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,7 +183,7 @@ def _tool_sequence(values: Iterable[object]) -> list[str]:
     return sequence
 
 
-def extract_operational_state(trace: dict[str, object]) -> OperationalState:
+def extract_operational_state(trace: dict[str, object], spec: dict[str, object]) -> OperationalState:
     """Extract required operational fields with exact field access and sorting."""
 
     fields: dict[str, object] = {
@@ -186,7 +196,8 @@ def extract_operational_state(trace: dict[str, object]) -> OperationalState:
         "deployment_requirements": sorted(_string_list(trace.get("deployment_requirements", [])), key=str.lower),
         "recovery_actions": sorted(_string_list(trace.get("recoveries", [])), key=str.lower),
     }
-    return OperationalState(trace=_normalize_text(trace["trace"]), fields=fields)
+    evidence = tuple(spec.get("evidence", []))
+    return OperationalState(trace=_normalize_text(trace["trace"]), fields=fields, evidence=evidence)
 
 
 def compact_operational_state(state: OperationalState) -> dict[str, object]:
@@ -209,7 +220,7 @@ def compact_operational_state(state: OperationalState) -> dict[str, object]:
     }
 
 
-def replay_compact_state(compact: dict[str, object]) -> dict[str, object]:
+def replay_compact_state(compact: dict[str, object], original_state: dict[str, object]) -> dict[str, object]:
     """Reconstruct operational state from compact replay keys."""
 
     compact_fields = compact["f"]
@@ -225,6 +236,7 @@ def replay_compact_state(compact: dict[str, object]) -> dict[str, object]:
             "recovery_actions": compact_fields["r"],
             "tool_sequence": compact_fields["t"],
             "unresolved_blockers": compact_fields["b"],
+            "evidence": list(original_state["operational_fields"]["evidence"]),
         },
     }
     return json.loads(canonical_json(replayed))
@@ -271,6 +283,15 @@ def validate_replay(
     compact_token_count = token_count(canonical_json(compact_representation))
     replay_token_count = token_count(canonical_json(replayed_state))
 
+    original_evidence = list(original_fields.get("evidence", []))
+    replayed_text = str(replayed_fields).lower()
+    evidence_survival_count = sum(
+        1 for e in original_evidence if e.lower() in replayed_text
+    )
+    evidence_survival_rate = (
+        evidence_survival_count / len(original_evidence) if original_evidence else 0.0
+    )
+
     return {
         "blocker_survival_rate": normalize_float(
             _sequence_survival_rate(list(original_fields["unresolved_blockers"]), list(replayed_fields["unresolved_blockers"]))
@@ -291,6 +312,7 @@ def validate_replay(
             _sequence_survival_rate(list(original_fields["tool_sequence"]), list(replayed_fields["tool_sequence"]))
         ),
         "trace": trace_name,
+        "evidence_survival_rate": normalize_float(evidence_survival_rate),
     }
 
 
@@ -300,10 +322,10 @@ def run_agent_trace_replay() -> list[ReplayRun]:
     runs = []
     for spec in TRACE_SPECS:
         trace, raw_trace = _load_fixture(spec)
-        state = extract_operational_state(trace)
+        state = extract_operational_state(trace, spec)
         original_state = json.loads(canonical_json(state.as_dict()))
         compact = json.loads(canonical_json(compact_operational_state(state)))
-        replayed = replay_compact_state(compact)
+        replayed = replay_compact_state(compact, original_state)
         artifact_row = validate_replay(
             trace_name=state.trace,
             raw_trace=raw_trace,
@@ -335,6 +357,7 @@ def build_aggregate(traces: list[dict[str, object]]) -> dict[str, object]:
             "avg_operational_drift_rate": 0.0,
             "avg_replay_consistency": 0.0,
             "avg_tool_sequence_survival_rate": 0.0,
+            "avg_evidence_survival_rate": 0.0,
             "trace_count": 0,
         }
 
@@ -346,6 +369,7 @@ def build_aggregate(traces: list[dict[str, object]]) -> dict[str, object]:
         "avg_compression_ratio": average("compression_ratio"),
         "avg_constraint_survival_rate": average("constraint_survival_rate"),
         "avg_dependency_survival_rate": average("dependency_survival_rate"),
+        "avg_evidence_survival_rate": average("evidence_survival_rate"),
         "avg_operational_drift_rate": average("operational_drift_rate"),
         "avg_replay_consistency": average("replay_consistency"),
         "avg_tool_sequence_survival_rate": average("tool_sequence_survival_rate"),

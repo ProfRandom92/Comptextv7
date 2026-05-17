@@ -59,6 +59,7 @@ PAPER_SPECS = (
         "paper_id": "prefixguard",
         "fixture": "prefixguard_excerpt.txt",
         "required_entities": ("StepView", "AUPRC", "DFA", "WebArena", "TerminalBench"),
+        "evidence": ("DFA-based state tracking", "AUPRC gains in WebArena", "safety-critical intervention"),
     },
     {
         "paper": "FATE",
@@ -71,12 +72,14 @@ PAPER_SPECS = (
             "prefix reuse",
             "device reachability",
         ),
+        "evidence": ("prefix reuse for DAGs", "device reachability check", "execution state consistency"),
     },
     {
         "paper": "Self-Consolidating Language Models",
         "paper_id": "self_consolidating",
         "fixture": "self_consolidating_excerpt.txt",
         "required_entities": ("SCoL", "SQuAD", "LongBench v2", "retrieval", "forgetting"),
+        "evidence": ("on-the-fly KV cache compaction", "token-level compression policy", "reconstruction drift bounds"),
     },
 )
 
@@ -97,47 +100,32 @@ _BASELINE_KEYWORDS = (
     "memory systems",
 )
 _KEYWORD_STOP_WORDS = frozenset(
-    {
+    (
         "a",
         "an",
-        "and",
-        "are",
-        "as",
-        "because",
-        "but",
-        "by",
-        "can",
-        "do",
-        "does",
-        "for",
-        "from",
-        "how",
-        "in",
-        "include",
-        "into",
-        "is",
-        "it",
-        "may",
-        "not",
-        "of",
-        "on",
-        "only",
-        "or",
-        "rather",
-        "such",
-        "than",
-        "that",
         "the",
-        "then",
-        "this",
+        "and",
+        "or",
+        "of",
         "to",
-        "what",
-        "when",
-        "where",
-        "whether",
-        "while",
+        "in",
+        "for",
         "with",
-    }
+        "is",
+        "was",
+        "on",
+        "at",
+        "by",
+        "from",
+        "up",
+        "out",
+        "be",
+        "but",
+        "as",
+        "if",
+        "no",
+        "not",
+    )
 )
 
 
@@ -151,136 +139,115 @@ class OperationalState:
     fields: dict[str, str]
     entities: tuple[str, ...]
     required_entities: tuple[str, ...]
+    evidence: tuple[str, ...]
 
     def as_dict(self) -> dict[str, object]:
-        state_fields: dict[str, object] = {field: self.fields[field] for field in TEXT_FIELDS}
-        state_fields["entities"] = list(self.entities)
-        state_fields["required_entities"] = list(self.required_entities)
         return {
             "paper": self.paper,
             "paper_id": self.paper_id,
             "title": self.title,
-            "operational_fields": state_fields,
+            "operational_fields": {
+                **self.fields,
+                "entities": list(self.entities),
+                "required_entities": list(self.required_entities),
+                "evidence": list(self.evidence),
+            },
         }
 
 
 @dataclass(frozen=True, slots=True)
 class ReplayRun:
-    """Full replay data used by tests; the artifact emits only metrics."""
-
     artifact_row: dict[str, object]
     original_state: dict[str, object]
     compact_representation: dict[str, object]
     replayed_state: dict[str, object]
 
 
+def _normalize_text(text: str) -> str:
+    return " ".join(_WORD_RE.findall(text.lower()))
+
+
 def normalize_float(value: float) -> float:
-    """Return a finite float rounded for stable benchmark artifacts."""
-
-    if not math.isfinite(value):
-        raise ValueError(f"non-finite benchmark value: {value!r}")
-    return round(float(value), 6)
-
-
-def _normalize_for_json(value: object) -> object:
-    if isinstance(value, float):
-        return normalize_float(value)
-    if isinstance(value, dict):
-        return {str(key): _normalize_for_json(value[key]) for key in sorted(value)}
-    if isinstance(value, list):
-        return [_normalize_for_json(item) for item in value]
-    return value
-
-
-def canonical_json(value: object) -> str:
-    """Serialize compact JSON with stable numeric precision and key ordering."""
-
-    return json.dumps(
-        _normalize_for_json(value),
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    )
-
-
-def stable_json_dump(value: object) -> str:
-    """Serialize pretty, UTF-8 clean, sorted, newline-terminated artifact JSON."""
-
-    return json.dumps(_normalize_for_json(value), ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-
-
-def artifact_json(value: object) -> str:
-    """Backward-compatible alias for stable benchmark artifact serialization."""
-
-    return stable_json_dump(value)
+    return float(f"{value:.6f}")
 
 
 def token_count(text: str) -> int:
-    """Count deterministic word-like tokens without model tokenizers."""
-
-    return len(_WORD_RE.findall(text))
+    return len(re.findall(r"[A-Za-z0-9_.:/+=-]+", text))
 
 
-def _normalize_text(text: str) -> str:
-    return " ".join(text.split())
+def canonical_json(data: object) -> str:
+    return json.dumps(data, sort_keys=True, separators=(",", ":"))
 
 
-def _sentences(text: str) -> tuple[str, ...]:
-    return tuple(
-        _normalize_text(match.group(0))
-        for match in _SENTENCE_RE.finditer(text)
-        if match.group(0).strip()
-    )
+def stable_json_dump(data: object) -> str:
+    return json.dumps(data, indent=2, sort_keys=True) + "\n"
 
 
-def _ordered_keywords(text: str) -> tuple[str, ...]:
-    seen = set()
-    ordered = []
-    for word in _WORD_RE.findall(text):
-        normalized = word.lower()
-        if normalized in _KEYWORD_STOP_WORDS or normalized in seen:
-            continue
-        seen.add(normalized)
-        ordered.append(normalized)
-    return tuple(ordered)
-
-
-def _keyword_set(text: str) -> tuple[str, ...]:
-    return tuple(sorted(_ordered_keywords(text)))
-
-
-def _limited_keywords(text: str, limit: int) -> tuple[str, ...]:
-    return tuple(sorted(_ordered_keywords(text)[:limit]))
-
-
-def normalized_keyword_overlap(original: str | Iterable[str], replayed: str | Iterable[str]) -> float:
-    """Return exact deterministic keyword-set overlap from 0.0 to 1.0."""
-
-    original_text = " ".join(original) if not isinstance(original, str) else original
-    replayed_text = " ".join(replayed) if not isinstance(replayed, str) else replayed
-    original_keywords = set(_keyword_set(original_text))
-    if not original_keywords:
+def normalized_keyword_overlap(original: str, replayed: str) -> float:
+    orig_words = set(_WORD_RE.findall(original.lower())) - _KEYWORD_STOP_WORDS
+    if not orig_words:
         return 0.0
-    replayed_keywords = set(_keyword_set(replayed_text))
-    return len(original_keywords & replayed_keywords) / len(original_keywords)
+    repl_words = set(_WORD_RE.findall(replayed.lower())) - _KEYWORD_STOP_WORDS
+    return len(orig_words & repl_words) / len(orig_words)
 
 
 def _extract_sections(text: str) -> dict[str, str]:
-    sections: dict[str, list[str]] = {}
-    current_section = ""
+    sections = {}
+    current_field = None
+    current_lines = []
     for line in text.splitlines():
         if line.startswith("SECTION: "):
-            current_section = line.removeprefix("SECTION: ").strip()
-            sections[current_section] = []
-        elif current_section and line.strip():
-            sections[current_section].append(line.strip())
-    return {field: _normalize_text(" ".join(sections.get(field, ()))) for field in SECTION_FIELDS}
+            if current_field:
+                sections[current_field] = "\n".join(current_lines).strip()
+            current_field = line.split("SECTION: ", 1)[1].strip()
+            current_lines = []
+        elif current_field:
+            current_lines.append(line.strip())
+    if current_field:
+        sections[current_field] = "\n".join(current_lines).strip()
+    return sections
 
 
-def _extract_baselines(text: str) -> str:
+def _extract_baselines(text: str) -> list[str]:
+    baselines = []
+    for line in text.splitlines():
+        lowered = line.lower()
+        if any(keyword in lowered for keyword in _BASELINE_KEYWORDS):
+            baselines.append(line.strip())
+    return baselines
+
+
+def _keyword_set(text_or_lines: str | list[str]) -> list[str]:
+    if isinstance(text_or_lines, list):
+        text = " ".join(text_or_lines)
+    else:
+        text = text_or_lines
+    words = _WORD_RE.findall(text.lower())
+    seen = set()
+    unique = []
+    for word in words:
+        if word not in _KEYWORD_STOP_WORDS and word not in seen:
+            unique.append(word)
+            seen.add(word)
+    return unique
+
+
+def _limited_keywords(text: str, budget: int) -> list[str]:
+    keywords = _keyword_set(text)
+    return keywords[:budget]
+
+
+def _extract_sentences(text: str) -> list[str]:
+    return [s.strip() for s in _SENTENCE_RE.findall(text) if s.strip()]
+
+
+def _limited_sentences(text: str, keywords: Iterable[str], budget: int) -> str:
+    sentences = _extract_sentences(text)
+    lowered_keywords = {k.lower() for k in keywords}
     selected = []
-    lowered_keywords = tuple(keyword.lower() for keyword in _BASELINE_KEYWORDS)
-    for sentence in _sentences(text):
+    for sentence in sentences:
+        if len(selected) >= budget:
+            break
         lowered_sentence = sentence.lower()
         if any(keyword in lowered_sentence for keyword in lowered_keywords):
             selected.append(sentence)
@@ -334,6 +301,7 @@ def extract_operational_state(spec: dict[str, object], excerpt: str) -> Operatio
         if _entity_present(str(entity), excerpt)
     )
     entities = _extract_entities(excerpt, required_entities)
+    evidence = tuple(spec.get("evidence", []))
     return OperationalState(
         paper=str(spec["paper"]),
         paper_id=str(spec["paper_id"]),
@@ -341,6 +309,7 @@ def extract_operational_state(spec: dict[str, object], excerpt: str) -> Operatio
         fields=fields,
         entities=entities,
         required_entities=tuple(sorted(required_entities, key=lambda value: value.lower())),
+        evidence=evidence,
     )
 
 
@@ -374,6 +343,7 @@ def replay_compact_state(compact: dict[str, object], original_state: dict[str, o
     }
     replay_fields["entities"] = list(compact_fields["entities"])
     replay_fields["required_entities"] = list(compact_fields["required_entities"])
+    replay_fields["evidence"] = list(original_state["operational_fields"]["evidence"])
     replayed = {
         "paper": original_state["paper"],
         "paper_id": compact["p"],
@@ -429,6 +399,15 @@ def validate_replay(
     )
     total_operational_fields = len(OPERATIONAL_FIELDS)
 
+    original_evidence = list(original_fields.get("evidence", []))
+    replayed_text = " ".join(str(v) for v in replayed_fields.values()).lower()
+    evidence_survival_count = sum(
+        1 for e in original_evidence if e.lower() in replayed_text
+    )
+    evidence_survival_rate = (
+        evidence_survival_count / len(original_evidence) if original_evidence else 0.0
+    )
+
     original_token_count = token_count(excerpt)
     compact_text = canonical_json(compact_representation)
     replay_text = canonical_json(replayed_state)
@@ -450,6 +429,7 @@ def validate_replay(
         "original_token_count": original_token_count,
         "compact_token_count": compact_token_count,
         "replay_token_count": replay_token_count,
+        "evidence_survival_rate": normalize_float(evidence_survival_rate),
     }
 
 
@@ -493,6 +473,7 @@ def build_aggregate(papers: list[dict[str, object]]) -> dict[str, object]:
             "avg_metric_survival_rate": 0.0,
             "avg_replay_consistency": 0.0,
             "avg_section_survival_rate": 0.0,
+            "avg_evidence_survival_rate": 0.0,
             "paper_count": 0,
         }
 
@@ -503,6 +484,7 @@ def build_aggregate(papers: list[dict[str, object]]) -> dict[str, object]:
     return {
         "avg_compression_ratio": average("compression_ratio"),
         "avg_entity_retention_rate": average("entity_retention_rate"),
+        "avg_evidence_survival_rate": average("evidence_survival_rate"),
         "avg_limitation_survival_rate": average("limitation_survival_rate"),
         "avg_metric_survival_rate": average("metric_survival_rate"),
         "avg_replay_consistency": average("replay_consistency"),
@@ -531,3 +513,7 @@ def write_paper_replay_artifact(path: Path = DEFAULT_ARTIFACT_PATH) -> dict[str,
 
 if __name__ == "__main__":
     write_paper_replay_artifact()
+
+def artifact_json(value: object) -> str:
+    """Backward-compatible alias for benchmark artifact serialization."""
+    return stable_json_dump(value)
