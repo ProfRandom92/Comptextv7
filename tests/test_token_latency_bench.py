@@ -2,13 +2,14 @@
 
 import json
 from pathlib import Path
-from benchmarks.token_latency_bench import run_benchmark, ARTIFACT_PATH
+from benchmarks.token_latency_bench import run_benchmark
 
-def test_benchmark_execution_and_schema():
+def test_benchmark_execution_and_schema(tmp_path):
     """Smoke test for benchmark execution and JSON schema validation."""
 
+    artifact_path = tmp_path / "test_results.json"
     # Run with minimal iterations for speed in CI
-    output = run_benchmark(iterations=2)
+    output = run_benchmark(iterations=2, output_path=artifact_path)
 
     assert output["benchmark"] == "token_latency_bench"
     assert "timestamp" in output
@@ -16,7 +17,7 @@ def test_benchmark_execution_and_schema():
     assert len(output["results"]) > 0
 
     # Verify artifact file exists
-    assert ARTIFACT_PATH.exists()
+    assert artifact_path.exists()
 
     # Validate schema of the first result
     res = output["results"][0]
@@ -37,11 +38,12 @@ def test_benchmark_execution_and_schema():
     assert isinstance(res["latency_ms_per_kb"], float)
     assert isinstance(res["latency_ms_per_1k_tokens"], float)
 
-def test_artifact_persistence():
+def test_artifact_persistence(tmp_path):
     """Ensure the JSON artifact is correctly written to disk and is readable."""
-    run_benchmark(iterations=1)
+    artifact_path = tmp_path / "test_results.json"
+    run_benchmark(iterations=1, output_path=artifact_path)
 
-    with open(ARTIFACT_PATH, "r", encoding="utf-8") as f:
+    with open(artifact_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     assert data["benchmark"] == "token_latency_bench"

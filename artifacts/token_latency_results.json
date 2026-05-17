@@ -1,13 +1,13 @@
 {
   "benchmark": "token_latency_bench",
-  "iterations": 1,
+  "iterations": 20,
   "results": [
     {
       "compression_ratio": 1.0631,
       "fixture": "prefixguard_excerpt.txt",
-      "latency_ms_per_1k_tokens": 9.1995,
-      "latency_ms_per_kb": 1.2918,
-      "latency_ms_per_run": 2.1711,
+      "latency_ms_per_1k_tokens": 11.145,
+      "latency_ms_per_kb": 1.565,
+      "latency_ms_per_run": 2.6302,
       "reduction_percent": 5.93,
       "tokens_compact": 222,
       "tokens_in": 236,
@@ -16,9 +16,9 @@
     {
       "compression_ratio": 1.0413,
       "fixture": "fate_excerpt.txt",
-      "latency_ms_per_1k_tokens": 8.5593,
-      "latency_ms_per_kb": 1.2259,
-      "latency_ms_per_run": 1.943,
+      "latency_ms_per_1k_tokens": 11.2386,
+      "latency_ms_per_kb": 1.6096,
+      "latency_ms_per_run": 2.5512,
       "reduction_percent": 3.96,
       "tokens_compact": 218,
       "tokens_in": 227,
@@ -27,9 +27,9 @@
     {
       "compression_ratio": 1.0273,
       "fixture": "self_consolidating_excerpt.txt",
-      "latency_ms_per_1k_tokens": 9.9937,
-      "latency_ms_per_kb": 1.3701,
-      "latency_ms_per_run": 2.2586,
+      "latency_ms_per_1k_tokens": 11.6845,
+      "latency_ms_per_kb": 1.6019,
+      "latency_ms_per_run": 2.6407,
       "reduction_percent": 2.65,
       "tokens_compact": 220,
       "tokens_in": 226,
@@ -38,9 +38,9 @@
     {
       "compression_ratio": 3.536,
       "fixture": "coding_agent_trace.json",
-      "latency_ms_per_1k_tokens": 5.5578,
-      "latency_ms_per_kb": 1.2321,
-      "latency_ms_per_run": 4.3629,
+      "latency_ms_per_1k_tokens": 7.01,
+      "latency_ms_per_kb": 1.554,
+      "latency_ms_per_run": 5.5029,
       "reduction_percent": 71.72,
       "tokens_compact": 222,
       "tokens_in": 785,
@@ -49,9 +49,9 @@
     {
       "compression_ratio": 3.6696,
       "fixture": "ci_failure_trace.json",
-      "latency_ms_per_1k_tokens": 4.8628,
-      "latency_ms_per_kb": 1.1386,
-      "latency_ms_per_run": 3.9972,
+      "latency_ms_per_1k_tokens": 6.6708,
+      "latency_ms_per_kb": 1.5619,
+      "latency_ms_per_run": 5.4834,
       "reduction_percent": 72.75,
       "tokens_compact": 224,
       "tokens_in": 822,
@@ -60,14 +60,14 @@
     {
       "compression_ratio": 3.7658,
       "fixture": "workflow_recovery_trace.json",
-      "latency_ms_per_1k_tokens": 5.075,
-      "latency_ms_per_kb": 1.1732,
-      "latency_ms_per_run": 4.2427,
+      "latency_ms_per_1k_tokens": 6.365,
+      "latency_ms_per_kb": 1.4715,
+      "latency_ms_per_run": 5.3212,
       "reduction_percent": 73.44,
       "tokens_compact": 222,
       "tokens_in": 836,
       "type": "agent_trace"
     }
   ],
-  "timestamp": "2026-05-17T19:16:36.069593+00:00"
+  "timestamp": "2026-05-17T19:22:37.691607+00:00"
 }

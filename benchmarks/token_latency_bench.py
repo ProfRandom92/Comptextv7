@@ -39,9 +39,14 @@ from tests.utils.paper_replay_runner import PAPER_SPECS, FIXTURE_ROOT as PAPER_F
 from tests.utils.agent_trace_replay_runner import TRACE_SPECS, FIXTURE_ROOT as TRACE_FIXTURE_ROOT
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-ARTIFACT_PATH = REPO_ROOT / "artifacts" / "token_latency_results.json"
+DEFAULT_ARTIFACT_PATH = REPO_ROOT / "artifacts" / "token_latency_results.json"
 
-def run_benchmark(iterations=20):
+def run_benchmark(iterations=20, output_path=None):
+    if output_path is None:
+        output_path = DEFAULT_ARTIFACT_PATH
+    else:
+        output_path = Path(output_path)
+
     engine = KVTCV7Engine()
     results = []
 
@@ -67,8 +72,8 @@ def run_benchmark(iterations=20):
         "results": results
     }
 
-    ARTIFACT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(ARTIFACT_PATH, "w", encoding="utf-8") as f:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2, sort_keys=True)
 
     return output
