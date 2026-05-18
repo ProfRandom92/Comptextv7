@@ -24,9 +24,9 @@
 </p>
 
 <p align="center">
-  <a href="https://comptextv7.vercel.app"><strong>Live showcase</strong></a>
-  · <a href="docs/DEMO_WALKTHROUGH.md">Demo walkthrough</a>
+  <a href="https://github.com/ProfRandom92/comptext-v7-monaco-showcase"><strong>External Monaco showcase repo</strong></a>
   · <a href="docs/BENCHMARK_EXPLANATION.md">Benchmark explanation</a>
+  · <a href="docs/iterative_replay_degradation.md">Iterative replay degradation</a>
   · <a href="reports/replay_continuity/validation_report.md">Replay report</a>
 </p>
 
@@ -202,17 +202,27 @@ Use this short flow when reviewing replay-system changes:
 
 ## Review surfaces
 
+The main Comptextv7 repository is the source of truth for deterministic replay-validation evidence: artifacts, benchmarks, failure labels, degradation summaries, and conservative research positioning. The visual Monaco walkthrough now lives separately in the external showcase repository.
+
+### Main repo technical evidence
+
 | Surface | Link |
 | --- | --- |
-| Live showcase | [`comptextv7.vercel.app`](https://comptextv7.vercel.app) |
 | CI Artifact Narrative | [`docs/ci_artifact_narrative.md`](docs/ci_artifact_narrative.md) |
-| Demo walkthrough | [`docs/DEMO_WALKTHROUGH.md`](docs/DEMO_WALKTHROUGH.md) |
-| Showcase readiness | [`docs/SHOWCASE_READINESS.md`](docs/SHOWCASE_READINESS.md) |
 | Benchmark explanation | [`docs/BENCHMARK_EXPLANATION.md`](docs/BENCHMARK_EXPLANATION.md) |
 | Replay failure taxonomy | [`docs/operational_replay_failure_taxonomy.md`](docs/operational_replay_failure_taxonomy.md) |
 | Iterative replay degradation artifact and CI summary | [`docs/iterative_replay_degradation.md`](docs/iterative_replay_degradation.md) |
+| Comparative replay degradation artifact and CI summary | [`docs/iterative_replay_degradation.md#comparative-replay-degradation-results`](docs/iterative_replay_degradation.md#comparative-replay-degradation-results) |
 | Replay report | [`reports/replay_continuity/validation_report.md`](reports/replay_continuity/validation_report.md) |
 | API surface | [`docs/API_SURFACE.md`](docs/API_SURFACE.md) |
+
+### External Monaco showcase UI
+
+| Surface | Link |
+| --- | --- |
+| Monaco showcase repository | [`ProfRandom92/comptext-v7-monaco-showcase`](https://github.com/ProfRandom92/comptext-v7-monaco-showcase) |
+| Legacy demo walkthrough note | [`docs/DEMO_WALKTHROUGH.md`](docs/DEMO_WALKTHROUGH.md) |
+| Legacy showcase readiness note | [`docs/SHOWCASE_READINESS.md`](docs/SHOWCASE_READINESS.md) |
 
 ## Repository map
 
@@ -222,10 +232,10 @@ Comptextv7/
 ├── benchmarks/                 # deterministic compression, replay, and audit runners
 ├── contracts/                  # machine-readable validation and handoff contracts
 ├── dashboard/                  # backend plus React operations console
-├── docs/                       # benchmark, showcase, and reviewer documentation
+├── docs/                       # benchmark, artifact, research, and legacy showcase notes
 ├── reports/replay_continuity/  # adversarial continuity metrics and SVG charts
 ├── scripts/                    # validation, reporting, and artifact tooling
-├── showcase/app/               # Vite + TypeScript showcase application
+├── showcase/app/               # legacy in-repo Vite app; Monaco UI lives in external repo
 ├── src/                        # KVTC engine, audit, and semantic validation modules
 ├── tests/                      # Python regression and replay validation tests
 └── README.md
@@ -266,7 +276,7 @@ python benchmarks/run_replay_continuity.py --iterations 250 --output-dir reports
 python scripts/generate_iterative_replay_degradation_artifacts.py
 ```
 
-Use the validation commands in [`docs/validation.md`](docs/validation.md). The root `package.json` is a wrapper for reviewer convenience. App dependencies remain in `dashboard/app` and `showcase/app`.
+Use the validation commands in [`docs/validation.md`](docs/validation.md). The root `package.json` is a wrapper for reviewer convenience. App dependencies remain in `dashboard/app` and the legacy in-repo `showcase/app`; the current Monaco showcase UI is maintained in [`ProfRandom92/comptext-v7-monaco-showcase`](https://github.com/ProfRandom92/comptext-v7-monaco-showcase).
 
 Root wrapper checks:
 

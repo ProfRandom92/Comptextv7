@@ -1,5 +1,7 @@
 # Demo Walkthrough
 
+> **Legacy showcase note:** This walkthrough is retained for historical context only. The current visual Monaco showcase UI and reviewer-facing presentation walkthrough are maintained in [`ProfRandom92/comptext-v7-monaco-showcase`](https://github.com/ProfRandom92/comptext-v7-monaco-showcase). This main repository remains the source of truth for deterministic replay-validation artifacts, benchmarks, failure labels, degradation evidence, and research positioning.
+
 ## Purpose
 
 This walkthrough gives reviewers a no-local-execution path for inspecting the CompText V7 evidence chain. It focuses on the CI artifact narrative, explaining how CompText V7 evidence is produced, validated, and interpreted.
