@@ -124,6 +124,7 @@ Comptextv7 turns noisy context into compact operational state, then validates wh
 - **Validates:** how checked-in paper and agent-trace fixtures degrade across bounded repeated compact/replay cycles.
 - **Method:** [`docs/iterative_replay_degradation.md`](docs/iterative_replay_degradation.md).
 - **Profile comparison:** additive prototype mode compares `CONSERVATIVE`, `BALANCED`, and `AGGRESSIVE` compression profiles using fixture-bound aggregates only: collapse rate, replay consistency, operational drift, evidence survival, and deterministic failure labels.
+- **Current internal baseline:** see the fixture-bound [comparative replay degradation results](docs/iterative_replay_degradation.md#comparative-replay-degradation-results).
 - **Interpretation:** profile comparison rows are deterministic replay-validation observations for the current fixtures, not general memory, production, or clinical-grade claims.
 
 ## Complementary adversarial replay stress suite
