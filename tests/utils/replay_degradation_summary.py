@@ -32,6 +32,19 @@ SEVERITY_GUIDANCE = {
 }
 
 
+def _rate_value(value: object) -> float | None:
+    """Return a finite numeric rate or None for missing/non-applicable values."""
+
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int | float):
+        numeric = float(value)
+        if not math.isfinite(numeric):
+            raise ValueError(f"non-finite summary rate: {value!r}")
+        return normalize_float(numeric)
+    return None
+
+
 def _format_rate(value: float | None) -> str:
     if value is None:
         return "N/A"
@@ -90,8 +103,16 @@ def summarize_replay_degradation_artifact(artifact: Mapping[str, object]) -> dic
     collapse_rate = normalize_float(collapsed_fixtures / total_fixtures) if total_fixtures else 0.0
 
     final_cycles = [_final_cycle(run) for run in runs]
-    consistency_values = [float(cycle["replay_consistency"]) for cycle in final_cycles if cycle]
-    drift_values = [float(cycle["operational_drift_rate"]) for cycle in final_cycles if cycle]
+    consistency_values = [
+        value
+        for value in (_rate_value(cycle.get("replay_consistency")) for cycle in final_cycles if cycle)
+        if value is not None
+    ]
+    drift_values = [
+        value
+        for value in (_rate_value(cycle.get("operational_drift_rate")) for cycle in final_cycles if cycle)
+        if value is not None
+    ]
     average_replay_consistency = (
         normalize_float(sum(consistency_values) / len(consistency_values)) if consistency_values else None
     )
@@ -185,6 +206,8 @@ def render_replay_degradation_summary(artifact: Mapping[str, object]) -> str:
             cycle_number = cycle.get("cycle") if cycle else None
             failure_labels = cycle.get("failure_labels", []) if cycle else []
             failure_text = ",".join(str(label) for label in failure_labels) if failure_labels else "none"
+            replay_consistency = _rate_value(cycle.get("replay_consistency")) if cycle else None
+            operational_drift_rate = _rate_value(cycle.get("operational_drift_rate")) if cycle else None
             lines.append(
                 "| "
                 + " | ".join(
@@ -195,8 +218,8 @@ def render_replay_degradation_summary(artifact: Mapping[str, object]) -> str:
                         str(bool(run.get("collapsed", False))).lower(),
                         _format_int(run.get("collapse_cycle") if isinstance(run.get("collapse_cycle"), int) else None),
                         _format_int(cycle_number if isinstance(cycle_number, int) else None),
-                        _format_rate(float(cycle["replay_consistency"]) if cycle else None),
-                        _format_rate(float(cycle["operational_drift_rate"]) if cycle else None),
+                        _format_rate(replay_consistency),
+                        _format_rate(operational_drift_rate),
                         run.get("stop_reason", "N/A"),
                         failure_text,
                     )
