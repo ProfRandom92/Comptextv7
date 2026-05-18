@@ -261,6 +261,10 @@ def test_replay_degradation_comparison_markdown_is_stable_and_ordered() -> None:
     assert rendered.index("| CONSERVATIVE |") < rendered.index("| BALANCED |") < rendered.index("| AGGRESSIVE |")
     assert "| CONSERVATIVE | 0.000000 | 0.895833 | 0.104167 | 0.916667 | EVIDENCE_LOSS |" in rendered
     assert (
+        "| BALANCED | 0.000000 | 0.458333 | 0.541667 | 0.416667 | "
+        "EVIDENCE_LOSS,CONSTRAINT_DRIFT,BLOCKER_DETACHMENT |"
+    ) in rendered
+    assert (
         "| AGGRESSIVE | 0.000000 | 0.125000 | 0.875000 | 0.083333 | "
         "EVIDENCE_LOSS,CONSTRAINT_DRIFT,BLOCKER_DETACHMENT |"
     ) in rendered
