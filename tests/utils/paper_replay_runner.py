@@ -24,6 +24,7 @@ else:
 ensure_repo_root_on_path()
 
 from src.validation.evidence import EvidenceItem, compute_evidence_survival
+from src.validation.replay_failure_classifier import classify_replay_failures, merge_failure_labels
 
 BENCHMARK_NAME = "paper_replay_bench"
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -567,7 +568,7 @@ def validate_replay(
         evidence_criticalities={item.id: item.criticality for item in evidence},
     )
 
-    return {
+    metrics = {
         "paper": paper,
         "evidence_survival_rate": evidence_result.evidence_survival_rate,
         "high_critical_evidence_survival_rate": evidence_result.high_critical_evidence_survival_rate,
@@ -588,6 +589,9 @@ def validate_replay(
         "compact_token_count": compact_token_count,
         "replay_token_count": replay_token_count,
     }
+    classifier_metrics = {**metrics, "has_high_critical_evidence": evidence_result.has_high_critical_evidence}
+    metrics["failure_labels"] = classify_replay_failures(classifier_metrics)
+    return metrics
 
 
 def run_paper_replay() -> list[ReplayRun]:
@@ -629,6 +633,7 @@ def build_aggregate(papers: list[dict[str, object]]) -> dict[str, object]:
             "avg_entity_retention_rate": 0.0,
             "avg_evidence_survival_rate": 0.0,
             "avg_high_critical_evidence_survival_rate": 0.0,
+            "failure_labels": [],
             "avg_limitation_survival_rate": 0.0,
             "avg_metric_survival_rate": 0.0,
             "avg_replay_consistency": 0.0,
@@ -645,6 +650,7 @@ def build_aggregate(papers: list[dict[str, object]]) -> dict[str, object]:
         "avg_entity_retention_rate": average("entity_retention_rate"),
         "avg_evidence_survival_rate": average("evidence_survival_rate"),
         "avg_high_critical_evidence_survival_rate": average("high_critical_evidence_survival_rate"),
+        "failure_labels": merge_failure_labels(papers),
         "avg_limitation_survival_rate": average("limitation_survival_rate"),
         "avg_metric_survival_rate": average("metric_survival_rate"),
         "avg_replay_consistency": average("replay_consistency"),

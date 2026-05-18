@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from src.core.adaptive_policy import CompressionParams, ReplayMetrics, get_params, select_profile
 from src.validation.evidence import EvidenceItem, compute_evidence_survival, exact_normalized_match
+from src.validation.replay_failure_classifier import (
+    BLOCKER_DETACHMENT,
+    CONSTRAINT_DRIFT,
+    EVIDENCE_LOSS,
+    HIGH_CRITICAL_EVIDENCE_LOSS,
+    classify_replay_failures,
+)
 from tests.utils.agent_trace_replay_runner import _resolve_agent_evidence
 from tests.utils.paper_replay_runner import _paper_evidence_match, _resolve_paper_evidence
 
@@ -260,3 +267,68 @@ def test_get_params_returns_stable_profile_parameters() -> None:
         max_bursts=10,
         use_sparse_micro_frames=True,
     )
+
+
+def test_replay_failure_classifier_returns_no_labels_for_clean_metrics() -> None:
+    assert classify_replay_failures(
+        {
+            "has_evidence": True,
+            "evidence_survived": 2,
+            "evidence_total": 2,
+            "evidence_survival_rate": 1.0,
+            "has_high_critical_evidence": True,
+            "high_critical_evidence_survival_rate": 1.0,
+            "constraint_survival_rate": 1.0,
+            "blocker_survival_rate": 1.0,
+        }
+    ) == []
+
+
+def test_replay_failure_classifier_labels_evidence_loss() -> None:
+    assert classify_replay_failures(
+        {
+            "has_evidence": True,
+            "evidence_survived": 1,
+            "evidence_total": 2,
+            "evidence_survival_rate": 0.5,
+            "constraint_survival_rate": 1.0,
+            "blocker_survival_rate": 1.0,
+        }
+    ) == [EVIDENCE_LOSS]
+
+
+def test_replay_failure_classifier_labels_high_critical_evidence_loss() -> None:
+    assert classify_replay_failures(
+        {
+            "has_evidence": True,
+            "evidence_survived": 1,
+            "evidence_total": 2,
+            "evidence_survival_rate": 0.5,
+            "has_high_critical_evidence": True,
+            "high_critical_evidence_survival_rate": 0.0,
+            "constraint_survival_rate": 1.0,
+            "blocker_survival_rate": 1.0,
+        }
+    ) == [EVIDENCE_LOSS, HIGH_CRITICAL_EVIDENCE_LOSS]
+
+
+def test_replay_failure_classifier_labels_constraint_drift() -> None:
+    assert classify_replay_failures(
+        {
+            "has_evidence": False,
+            "evidence_survival_rate": 0.0,
+            "constraint_survival_rate": 0.75,
+            "blocker_survival_rate": 1.0,
+        }
+    ) == [CONSTRAINT_DRIFT]
+
+
+def test_replay_failure_classifier_labels_blocker_detachment() -> None:
+    assert classify_replay_failures(
+        {
+            "has_evidence": False,
+            "evidence_survival_rate": 0.0,
+            "constraint_survival_rate": 1.0,
+            "blocker_survival_rate": 0.5,
+        }
+    ) == [BLOCKER_DETACHMENT]

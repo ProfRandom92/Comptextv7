@@ -26,6 +26,7 @@ PUBLIC_ROW_FIELDS = {
     "evidence_survival_rate",
     "evidence_survived",
     "evidence_total",
+    "failure_labels",
     "has_evidence",
     "high_critical_evidence_survival_rate",
     "operational_drift_rate",
@@ -42,6 +43,7 @@ AGGREGATE_FIELDS = {
     "avg_dependency_survival_rate",
     "avg_evidence_survival_rate",
     "avg_high_critical_evidence_survival_rate",
+    "failure_labels",
     "avg_operational_drift_rate",
     "avg_replay_consistency",
     "avg_tool_sequence_survival_rate",
@@ -103,6 +105,8 @@ def test_agent_trace_replay_artifact_schema_is_valid() -> None:
             assert row[field] > 0
         assert isinstance(row["evidence_total"], int)
         assert isinstance(row["evidence_survived"], int)
+        assert isinstance(row["failure_labels"], list)
+        assert all(isinstance(label, str) for label in row["failure_labels"])
         assert isinstance(row["has_evidence"], bool)
         assert row["has_evidence"] == (row["evidence_total"] > 0)
         assert 0 <= row["evidence_survived"] <= row["evidence_total"]
@@ -111,6 +115,8 @@ def test_agent_trace_replay_artifact_schema_is_valid() -> None:
         assert isinstance(aggregate[field], float)
         assert math.isfinite(aggregate[field])
         assert _decimal_places(aggregate[field]) <= 6
+    assert isinstance(aggregate["failure_labels"], list)
+    assert all(isinstance(label, str) for label in aggregate["failure_labels"])
     for field in AGGREGATE_RATE_FIELDS:
         assert 0.0 <= aggregate[field] <= 1.0
     assert aggregate["avg_compression_ratio"] > 1.0
