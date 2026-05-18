@@ -30,13 +30,14 @@ Schema:
 import json
 import time
 import statistics
-import sys
 from pathlib import Path
 from datetime import datetime, timezone
+from runpy import run_path
 
-_REPO_ROOT_FOR_IMPORTS = Path(__file__).resolve().parents[1]
-if str(_REPO_ROOT_FOR_IMPORTS) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT_FOR_IMPORTS))
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_IMPORT_HELPER = _REPO_ROOT / "tests" / "utils" / "_import_root.py"
+ensure_repo_root_on_path = run_path(str(_IMPORT_HELPER))["ensure_repo_root_on_path"]
+ensure_repo_root_on_path(_REPO_ROOT)
 
 from src.core.adaptive_policy import CompressionProfile, ReplayMetrics, get_params, reduction_percent_from_ratio, select_profile
 from src.core.kvtc_v7 import KVTCV7Engine

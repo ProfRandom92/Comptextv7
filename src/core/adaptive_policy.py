@@ -34,6 +34,17 @@ class ReplayMetrics:
     evidence_survival_rate: float
 
 
+EVIDENCE_LOSS_THRESHOLD = 0.95
+REPLAY_CONSISTENCY_LOSS_THRESHOLD = 0.95
+CONSTRAINT_SURVIVAL_LOSS_THRESHOLD = 0.90
+BLOCKER_SURVIVAL_LOSS_THRESHOLD = 0.90
+AGGRESSIVE_MIN_EVIDENCE = 0.99
+AGGRESSIVE_MIN_REPLAY_CONSISTENCY = 0.99
+AGGRESSIVE_MIN_CONSTRAINT_SURVIVAL = 0.98
+AGGRESSIVE_MIN_BLOCKER_SURVIVAL = 0.98
+AGGRESSIVE_MAX_REDUCTION = 45.0
+
+
 _PROFILE_PARAMS: dict[CompressionProfile, CompressionParams] = {
     "CONSERVATIVE": CompressionParams(
         window_seconds=900,
@@ -60,19 +71,19 @@ def select_profile(metrics: ReplayMetrics) -> CompressionProfile:
     """Select a compression profile from replay metrics using fixed thresholds."""
 
     if (
-        metrics.evidence_survival_rate < 0.95
-        or metrics.replay_consistency < 0.95
-        or metrics.constraint_survival < 0.90
-        or metrics.blocker_survival < 0.90
+        metrics.evidence_survival_rate < EVIDENCE_LOSS_THRESHOLD
+        or metrics.replay_consistency < REPLAY_CONSISTENCY_LOSS_THRESHOLD
+        or metrics.constraint_survival < CONSTRAINT_SURVIVAL_LOSS_THRESHOLD
+        or metrics.blocker_survival < BLOCKER_SURVIVAL_LOSS_THRESHOLD
     ):
         return "CONSERVATIVE"
 
     if (
-        metrics.evidence_survival_rate >= 0.99
-        and metrics.replay_consistency >= 0.99
-        and metrics.constraint_survival >= 0.98
-        and metrics.blocker_survival >= 0.98
-        and metrics.reduction_percent < 45.0
+        metrics.evidence_survival_rate >= AGGRESSIVE_MIN_EVIDENCE
+        and metrics.replay_consistency >= AGGRESSIVE_MIN_REPLAY_CONSISTENCY
+        and metrics.constraint_survival >= AGGRESSIVE_MIN_CONSTRAINT_SURVIVAL
+        and metrics.blocker_survival >= AGGRESSIVE_MIN_BLOCKER_SURVIVAL
+        and metrics.reduction_percent < AGGRESSIVE_MAX_REDUCTION
     ):
         return "AGGRESSIVE"
 

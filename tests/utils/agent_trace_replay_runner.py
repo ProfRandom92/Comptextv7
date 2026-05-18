@@ -14,13 +14,15 @@ from dataclasses import dataclass
 import json
 import math
 import re
-import sys
 from pathlib import Path
 from typing import Iterable
 
-_REPO_ROOT_FOR_IMPORTS = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT_FOR_IMPORTS) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT_FOR_IMPORTS))
+if __package__:
+    from tests.utils._import_root import ensure_repo_root_on_path
+else:
+    from _import_root import ensure_repo_root_on_path
+
+ensure_repo_root_on_path(Path(__file__).resolve().parents[2])
 
 from src.validation.evidence import EvidenceItem, compute_evidence_survival, exact_normalized_match
 
