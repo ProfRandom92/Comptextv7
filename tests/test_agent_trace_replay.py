@@ -23,6 +23,9 @@ PUBLIC_ROW_FIELDS = {
     "compression_ratio",
     "constraint_survival_rate",
     "dependency_survival_rate",
+    "evidence_survival_rate",
+    "evidence_survived",
+    "evidence_total",
     "operational_drift_rate",
     "original_token_count",
     "replay_consistency",
@@ -35,6 +38,7 @@ AGGREGATE_FIELDS = {
     "avg_compression_ratio",
     "avg_constraint_survival_rate",
     "avg_dependency_survival_rate",
+    "avg_evidence_survival_rate",
     "avg_operational_drift_rate",
     "avg_replay_consistency",
     "avg_tool_sequence_survival_rate",
@@ -44,6 +48,7 @@ RATE_FIELDS = (
     "blocker_survival_rate",
     "constraint_survival_rate",
     "dependency_survival_rate",
+    "evidence_survival_rate",
     "operational_drift_rate",
     "replay_consistency",
     "tool_sequence_survival_rate",
@@ -52,6 +57,7 @@ AGGREGATE_RATE_FIELDS = (
     "avg_blocker_survival_rate",
     "avg_constraint_survival_rate",
     "avg_dependency_survival_rate",
+    "avg_evidence_survival_rate",
     "avg_operational_drift_rate",
     "avg_replay_consistency",
     "avg_tool_sequence_survival_rate",
@@ -90,6 +96,9 @@ def test_agent_trace_replay_artifact_schema_is_valid() -> None:
         for field in ("original_token_count", "compact_token_count", "replay_token_count"):
             assert isinstance(row[field], int)
             assert row[field] > 0
+        assert isinstance(row["evidence_total"], int)
+        assert isinstance(row["evidence_survived"], int)
+        assert 0 <= row["evidence_survived"] <= row["evidence_total"]
 
     for field in AGGREGATE_RATE_FIELDS + ("avg_compression_ratio",):
         assert isinstance(aggregate[field], float)
@@ -112,6 +121,7 @@ def test_agent_trace_replay_aggregate_matches_recomputed_values() -> None:
         "avg_compression_ratio": "compression_ratio",
         "avg_constraint_survival_rate": "constraint_survival_rate",
         "avg_dependency_survival_rate": "dependency_survival_rate",
+        "avg_evidence_survival_rate": "evidence_survival_rate",
         "avg_operational_drift_rate": "operational_drift_rate",
         "avg_replay_consistency": "replay_consistency",
         "avg_tool_sequence_survival_rate": "tool_sequence_survival_rate",

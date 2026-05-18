@@ -30,13 +30,19 @@ Schema:
 import json
 import time
 import statistics
+import sys
 from pathlib import Path
 from datetime import datetime, timezone
 
+_REPO_ROOT_FOR_IMPORTS = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT_FOR_IMPORTS) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT_FOR_IMPORTS))
+
+from src.core.adaptive_policy import CompressionProfile, ReplayMetrics, get_params, reduction_percent_from_ratio, select_profile
 from src.core.kvtc_v7 import KVTCV7Engine
 from src.validation.token_telemetry import count_tokens
-from tests.utils.paper_replay_runner import PAPER_SPECS, FIXTURE_ROOT as PAPER_FIXTURE_ROOT
-from tests.utils.agent_trace_replay_runner import TRACE_SPECS, FIXTURE_ROOT as TRACE_FIXTURE_ROOT
+from tests.utils.paper_replay_runner import PAPER_SPECS, FIXTURE_ROOT as PAPER_FIXTURE_ROOT, build_paper_replay_artifact
+from tests.utils.agent_trace_replay_runner import TRACE_SPECS, FIXTURE_ROOT as TRACE_FIXTURE_ROOT, build_agent_trace_replay_artifact
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_ARTIFACT_PATH = REPO_ROOT / "artifacts" / "token_latency_results.json"
@@ -105,6 +111,90 @@ def measure_fixture(engine, text, name, fixture_type, iterations):
         "latency_ms_per_run": round(avg_latency_ms, 4),
         "latency_ms_per_kb": round(avg_latency_ms / input_kb, 4) if input_kb > 0 else 0,
         "latency_ms_per_1k_tokens": round(avg_latency_ms / (tokens_in / 1000), 4) if tokens_in > 0 else 0
+    }
+
+
+def build_adaptive_policy_demo(iterations=5):
+    """Return optional profile comparisons without changing default benchmarks.
+
+    The demo evaluates each fixture with all deterministic policy profiles and
+    carries replay evidence metrics from the replay artifacts beside measured
+    token/latency values. It is intentionally opt-in and does not mutate the
+    default KVTC-V7 engine configuration used by ``run_benchmark``.
+    """
+
+    paper_rows = {row["paper"]: row for row in build_paper_replay_artifact()["papers"]}
+    trace_rows = {row["trace"]: row for row in build_agent_trace_replay_artifact()["traces"]}
+    comparisons = []
+
+    for spec in PAPER_SPECS:
+        fixture_name = str(spec["fixture"])
+        row = paper_rows[str(spec["paper"])]
+        text = (PAPER_FIXTURE_ROOT / fixture_name).read_text(encoding="utf-8")
+        metrics = ReplayMetrics(
+            compression_ratio=float(row["compression_ratio"]),
+            reduction_percent=reduction_percent_from_ratio(float(row["compression_ratio"])),
+            replay_consistency=float(row["replay_consistency"]),
+            constraint_survival=1.0,
+            blocker_survival=1.0,
+            evidence_survival_rate=float(row["evidence_survival_rate"]),
+        )
+        comparisons.append(_measure_profiles_for_demo(fixture_name, "paper", text, metrics, iterations))
+
+    for spec in TRACE_SPECS:
+        fixture_name = str(spec["fixture"])
+        row = trace_rows[str(spec["trace"])]
+        text = (TRACE_FIXTURE_ROOT / fixture_name).read_text(encoding="utf-8")
+        metrics = ReplayMetrics(
+            compression_ratio=float(row["compression_ratio"]),
+            reduction_percent=reduction_percent_from_ratio(float(row["compression_ratio"])),
+            replay_consistency=float(row["replay_consistency"]),
+            constraint_survival=float(row["constraint_survival_rate"]),
+            blocker_survival=float(row["blocker_survival_rate"]),
+            evidence_survival_rate=float(row["evidence_survival_rate"]),
+        )
+        comparisons.append(_measure_profiles_for_demo(fixture_name, "agent_trace", text, metrics, iterations))
+
+    return {
+        "benchmark": "adaptive_policy_demo",
+        "iterations": iterations,
+        "results": comparisons,
+    }
+
+
+def _measure_profiles_for_demo(name, fixture_type, text, metrics, iterations):
+    selected_profile = select_profile(metrics)
+    profiles = []
+    for profile in ("CONSERVATIVE", "BALANCED", "AGGRESSIVE"):
+        typed_profile: CompressionProfile = profile
+        params = get_params(typed_profile)
+        engine = KVTCV7Engine(
+            window_seconds=params.window_seconds,
+            max_families=params.max_families,
+            max_bursts=params.max_bursts,
+        )
+        measured = measure_fixture(engine, text, name, fixture_type, iterations)
+        profiles.append(
+            {
+                "profile": profile,
+                "selected": profile == selected_profile,
+                "window_seconds": params.window_seconds,
+                "max_families": params.max_families,
+                "max_bursts": params.max_bursts,
+                "use_sparse_micro_frames": params.use_sparse_micro_frames,
+                "compression_ratio": measured["compression_ratio"],
+                "reduction_percent": measured["reduction_percent"],
+                "latency_ms_per_run": measured["latency_ms_per_run"],
+            }
+        )
+
+    return {
+        "fixture": name,
+        "type": fixture_type,
+        "selected_profile": selected_profile,
+        "evidence_survival_rate": metrics.evidence_survival_rate,
+        "replay_consistency": metrics.replay_consistency,
+        "profiles": profiles,
     }
 
 if __name__ == "__main__":

@@ -14,8 +14,15 @@ from dataclasses import dataclass
 import json
 import math
 import re
+import sys
 from pathlib import Path
 from typing import Iterable
+
+_REPO_ROOT_FOR_IMPORTS = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT_FOR_IMPORTS) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT_FOR_IMPORTS))
+
+from src.validation.evidence import EvidenceItem, compute_evidence_survival, exact_normalized_match
 
 BENCHMARK_NAME = "agent_trace_replay_bench"
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -23,9 +30,60 @@ FIXTURE_ROOT = REPO_ROOT / "tests" / "fixtures" / "agent_traces"
 DEFAULT_ARTIFACT_PATH = REPO_ROOT / "artifacts" / "agent_trace_replay_results.json"
 
 TRACE_SPECS = (
-    {"trace": "coding_agent_trace", "fixture": "coding_agent_trace.json"},
-    {"trace": "ci_failure_trace", "fixture": "ci_failure_trace.json"},
-    {"trace": "workflow_recovery_trace", "fixture": "workflow_recovery_trace.json"},
+    {
+        "trace": "coding_agent_trace",
+        "fixture": "coding_agent_trace.json",
+        "evidence": (
+            {
+                "id": "coding_active_task",
+                "kind": "agent_event",
+                "locator": "event:active_task",
+                "description": "The active coding task must survive replay.",
+            },
+            {
+                "id": "coding_unresolved_blockers",
+                "kind": "agent_event",
+                "locator": "event:unresolved_blockers",
+                "description": "Unresolved blockers must remain visible after replay.",
+            },
+        ),
+    },
+    {
+        "trace": "ci_failure_trace",
+        "fixture": "ci_failure_trace.json",
+        "evidence": (
+            {
+                "id": "ci_constraints",
+                "kind": "agent_event",
+                "locator": "event:constraints",
+                "description": "CI recovery constraints must survive replay.",
+            },
+            {
+                "id": "ci_recovery_actions",
+                "kind": "agent_event",
+                "locator": "event:recovery_actions",
+                "description": "Recovery actions must remain reconstructable.",
+            },
+        ),
+    },
+    {
+        "trace": "workflow_recovery_trace",
+        "fixture": "workflow_recovery_trace.json",
+        "evidence": (
+            {
+                "id": "workflow_tool_sequence",
+                "kind": "agent_event",
+                "locator": "event:tool_sequence",
+                "description": "Tool ordering is evidence for workflow continuity.",
+            },
+            {
+                "id": "workflow_dependencies",
+                "kind": "agent_event",
+                "locator": "event:dependencies",
+                "description": "Dependency records must survive replay.",
+            },
+        ),
+    },
 )
 
 OPERATIONAL_FIELDS = (
@@ -112,7 +170,49 @@ def _normalize_text(text: object) -> str:
     return _SPACE_RE.sub(" ", str(text)).strip()
 
 
-def _load_fixture(spec: dict[str, str]) -> tuple[dict[str, object], str]:
+def _evidence_items(spec: dict[str, object]) -> tuple[EvidenceItem, ...]:
+    evidence = spec.get("evidence", ())
+    assert isinstance(evidence, tuple)
+    return tuple(
+        EvidenceItem(
+            id=str(item["id"]),
+            kind=str(item["kind"]),
+            locator=str(item["locator"]),
+            description=str(item.get("description", "")),
+        )
+        for item in evidence
+        if isinstance(item, dict)
+    )
+
+
+def _resolve_agent_evidence(
+    *,
+    original_state: dict[str, object],
+    replayed_state: dict[str, object],
+    evidence: tuple[EvidenceItem, ...],
+) -> tuple[dict[str, object], dict[str, object], tuple[str, ...]]:
+    original_fields = original_state["operational_fields"]
+    replayed_fields = replayed_state["operational_fields"]
+    assert isinstance(original_fields, dict)
+    assert isinstance(replayed_fields, dict)
+
+    original_by_id: dict[str, object] = {}
+    replayed_by_id: dict[str, object] = {}
+    evidence_ids: list[str] = []
+    for item in evidence:
+        evidence_ids.append(item.id)
+        if item.kind != "agent_event" or not item.locator.startswith("event:"):
+            continue
+        event_name = item.locator.removeprefix("event:")
+        if event_name in original_fields:
+            original_by_id[item.id] = original_fields[event_name]
+        if event_name in replayed_fields:
+            replayed_by_id[item.id] = replayed_fields[event_name]
+
+    return original_by_id, replayed_by_id, tuple(evidence_ids)
+
+
+def _load_fixture(spec: dict[str, object]) -> tuple[dict[str, object], str]:
     path = FIXTURE_ROOT / spec["fixture"]
     raw = path.read_text(encoding="utf-8")
     return json.loads(raw), raw
@@ -253,6 +353,7 @@ def validate_replay(
     original_state: dict[str, object],
     compact_representation: dict[str, object],
     replayed_state: dict[str, object],
+    evidence: tuple[EvidenceItem, ...] = (),
 ) -> dict[str, object]:
     """Derive deterministic replay metrics from original-vs-replayed state."""
 
@@ -271,6 +372,18 @@ def validate_replay(
     compact_token_count = token_count(canonical_json(compact_representation))
     replay_token_count = token_count(canonical_json(replayed_state))
 
+    original_evidence, replayed_evidence, evidence_ids = _resolve_agent_evidence(
+        original_state=original_state,
+        replayed_state=replayed_state,
+        evidence=evidence,
+    )
+    evidence_result = compute_evidence_survival(
+        original_events=original_evidence,
+        reconstructed_events=replayed_evidence,
+        evidence_ids=evidence_ids,
+        matches=exact_normalized_match,
+    )
+
     return {
         "blocker_survival_rate": normalize_float(
             _sequence_survival_rate(list(original_fields["unresolved_blockers"]), list(replayed_fields["unresolved_blockers"]))
@@ -283,6 +396,9 @@ def validate_replay(
         "dependency_survival_rate": normalize_float(
             _sequence_survival_rate(list(original_fields["dependencies"]), list(replayed_fields["dependencies"]))
         ),
+        "evidence_survival_rate": evidence_result.evidence_survival_rate,
+        "evidence_survived": evidence_result.evidence_survived,
+        "evidence_total": evidence_result.evidence_total,
         "operational_drift_rate": normalize_float(lost_operational_fields / total_operational_fields),
         "original_token_count": original_token_count,
         "replay_consistency": normalize_float(surviving_operational_fields / total_operational_fields),
@@ -310,6 +426,7 @@ def run_agent_trace_replay() -> list[ReplayRun]:
             original_state=original_state,
             compact_representation=compact,
             replayed_state=replayed,
+            evidence=_evidence_items(spec),
         )
         runs.append(
             ReplayRun(
@@ -332,6 +449,7 @@ def build_aggregate(traces: list[dict[str, object]]) -> dict[str, object]:
             "avg_compression_ratio": 0.0,
             "avg_constraint_survival_rate": 0.0,
             "avg_dependency_survival_rate": 0.0,
+            "avg_evidence_survival_rate": 0.0,
             "avg_operational_drift_rate": 0.0,
             "avg_replay_consistency": 0.0,
             "avg_tool_sequence_survival_rate": 0.0,
@@ -346,6 +464,7 @@ def build_aggregate(traces: list[dict[str, object]]) -> dict[str, object]:
         "avg_compression_ratio": average("compression_ratio"),
         "avg_constraint_survival_rate": average("constraint_survival_rate"),
         "avg_dependency_survival_rate": average("dependency_survival_rate"),
+        "avg_evidence_survival_rate": average("evidence_survival_rate"),
         "avg_operational_drift_rate": average("operational_drift_rate"),
         "avg_replay_consistency": average("replay_consistency"),
         "avg_tool_sequence_survival_rate": average("tool_sequence_survival_rate"),

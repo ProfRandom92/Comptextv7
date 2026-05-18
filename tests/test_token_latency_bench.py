@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from benchmarks.token_latency_bench import run_benchmark
+from benchmarks.token_latency_bench import build_adaptive_policy_demo, run_benchmark
 
 def test_benchmark_execution_and_schema(tmp_path):
     """Smoke test for benchmark execution and JSON schema validation."""
@@ -48,3 +48,19 @@ def test_artifact_persistence(tmp_path):
 
     assert data["benchmark"] == "token_latency_bench"
     assert data["iterations"] == 1
+
+
+def test_adaptive_policy_demo_reports_profiles_without_writing_artifact():
+    """Smoke test the optional adaptive profile comparison path."""
+
+    output = build_adaptive_policy_demo(iterations=1)
+
+    assert output["benchmark"] == "adaptive_policy_demo"
+    assert output["iterations"] == 1
+    assert len(output["results"]) > 0
+    first = output["results"][0]
+    assert {"fixture", "type", "selected_profile", "evidence_survival_rate", "replay_consistency", "profiles"} == set(first)
+    assert first["selected_profile"] in {"CONSERVATIVE", "BALANCED", "AGGRESSIVE"}
+    assert 0.0 <= first["evidence_survival_rate"] <= 1.0
+    assert [profile["profile"] for profile in first["profiles"]] == ["CONSERVATIVE", "BALANCED", "AGGRESSIVE"]
+    assert any(profile["selected"] for profile in first["profiles"])

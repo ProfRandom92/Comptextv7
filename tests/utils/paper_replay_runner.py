@@ -13,8 +13,15 @@ from dataclasses import dataclass
 import json
 import math
 import re
+import sys
 from pathlib import Path
 from typing import Iterable
+
+_REPO_ROOT_FOR_IMPORTS = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT_FOR_IMPORTS) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT_FOR_IMPORTS))
+
+from src.validation.evidence import EvidenceItem, compute_evidence_survival
 
 BENCHMARK_NAME = "paper_replay_bench"
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -59,6 +66,20 @@ PAPER_SPECS = (
         "paper_id": "prefixguard",
         "fixture": "prefixguard_excerpt.txt",
         "required_entities": ("StepView", "AUPRC", "DFA", "WebArena", "TerminalBench"),
+        "evidence": (
+            {
+                "id": "prefixguard_stepview_method",
+                "kind": "paper_sentence",
+                "locator": "method:0",
+                "description": "StepView canonicalization is central to the method.",
+            },
+            {
+                "id": "prefixguard_auprc_metrics",
+                "kind": "paper_sentence",
+                "locator": "metrics:0",
+                "description": "AUPRC and benchmark coverage define the reported evaluation signal.",
+            },
+        ),
     },
     {
         "paper": "FATE",
@@ -71,12 +92,40 @@ PAPER_SPECS = (
             "prefix reuse",
             "device reachability",
         ),
+        "evidence": (
+            {
+                "id": "fate_state_aware_method",
+                "kind": "paper_sentence",
+                "locator": "method:0",
+                "description": "The scheduler uses future-state-aware workflow metadata.",
+            },
+            {
+                "id": "fate_residency_metrics",
+                "kind": "paper_sentence",
+                "locator": "metrics:0",
+                "description": "Model residency and reachability are key metrics.",
+            },
+        ),
     },
     {
         "paper": "Self-Consolidating Language Models",
         "paper_id": "self_consolidating",
         "fixture": "self_consolidating_excerpt.txt",
         "required_entities": ("SCoL", "SQuAD", "LongBench v2", "retrieval", "forgetting"),
+        "evidence": (
+            {
+                "id": "scol_method_update",
+                "kind": "paper_sentence",
+                "locator": "method:0",
+                "description": "Self-consolidation update strategy is core method evidence.",
+            },
+            {
+                "id": "scol_forgetting_limitation",
+                "kind": "paper_sentence",
+                "locator": "limitations:0",
+                "description": "Forgetting risk is an important limitation.",
+            },
+        ),
     },
 )
 
@@ -313,6 +362,72 @@ def _compress_entities(entities: tuple[str, ...], required_entities: tuple[str, 
     return tuple(sorted(retained, key=lambda value: value.lower()))
 
 
+
+def _evidence_items(spec: dict[str, object]) -> tuple[EvidenceItem, ...]:
+    evidence = spec.get("evidence", ())
+    assert isinstance(evidence, tuple)
+    return tuple(
+        EvidenceItem(
+            id=str(item["id"]),
+            kind=str(item["kind"]),
+            locator=str(item["locator"]),
+            description=str(item.get("description", "")),
+        )
+        for item in evidence
+        if isinstance(item, dict)
+    )
+
+
+def _section_sentences(text: str) -> dict[str, tuple[str, ...]]:
+    sections: dict[str, list[str]] = {}
+    current_section = ""
+    for line in text.splitlines():
+        if line.startswith("SECTION: "):
+            current_section = line.removeprefix("SECTION: ").strip()
+            sections[current_section] = []
+        elif current_section and line.strip():
+            sections[current_section].append(line.strip())
+    return {field: tuple(_sentences(" ".join(sections.get(field, ())))) for field in SECTION_FIELDS}
+
+
+def _resolve_paper_evidence(
+    *,
+    excerpt: str,
+    replayed_state: dict[str, object],
+    evidence: tuple[EvidenceItem, ...],
+) -> tuple[dict[str, object], dict[str, object], tuple[str, ...]]:
+    original_by_id: dict[str, object] = {}
+    replayed_by_id: dict[str, object] = {}
+    evidence_ids: list[str] = []
+    section_sentences = _section_sentences(excerpt)
+    replayed_fields = replayed_state["operational_fields"]
+    assert isinstance(replayed_fields, dict)
+
+    for item in evidence:
+        evidence_ids.append(item.id)
+        if item.kind == "paper_line" and item.locator.startswith("line:"):
+            line_index = int(item.locator.removeprefix("line:"))
+            lines = [line.strip() for line in excerpt.splitlines() if line.strip()]
+            if 0 <= line_index < len(lines):
+                original_by_id[item.id] = lines[line_index]
+            continue
+
+        if item.kind != "paper_sentence" or ":" not in item.locator:
+            continue
+        section, sentence_index_text = item.locator.split(":", 1)
+        sentence_index = int(sentence_index_text)
+        sentences = section_sentences.get(section, ())
+        if 0 <= sentence_index < len(sentences):
+            original_by_id[item.id] = sentences[sentence_index]
+        if section in replayed_fields:
+            replayed_by_id[item.id] = replayed_fields[section]
+
+    return original_by_id, replayed_by_id, tuple(evidence_ids)
+
+
+def _paper_evidence_match(original: object, replayed: object) -> bool:
+    return normalized_keyword_overlap(str(original), str(replayed)) >= 0.60
+
 def _load_fixture(spec: dict[str, object]) -> str:
     return (FIXTURE_ROOT / str(spec["fixture"])).read_text(encoding="utf-8")
 
@@ -410,6 +525,7 @@ def validate_replay(
     original_state: dict[str, object],
     compact_representation: dict[str, object],
     replayed_state: dict[str, object],
+    evidence: tuple[EvidenceItem, ...] = (),
 ) -> dict[str, object]:
     """Derive replay metrics from original-vs-replayed operational state."""
 
@@ -435,8 +551,23 @@ def validate_replay(
     compact_token_count = token_count(compact_text)
     replay_token_count = token_count(replay_text)
 
+    original_evidence, replayed_evidence, evidence_ids = _resolve_paper_evidence(
+        excerpt=excerpt,
+        replayed_state=replayed_state,
+        evidence=evidence,
+    )
+    evidence_result = compute_evidence_survival(
+        original_events=original_evidence,
+        reconstructed_events=replayed_evidence,
+        evidence_ids=evidence_ids,
+        matches=_paper_evidence_match,
+    )
+
     return {
         "paper": paper,
+        "evidence_survival_rate": evidence_result.evidence_survival_rate,
+        "evidence_survived": evidence_result.evidence_survived,
+        "evidence_total": evidence_result.evidence_total,
         "entity_retention_rate": normalize_float(_retention_rate(original_entities, replayed_entities)),
         "section_survival_rate": normalize_float(sum(section_survivals) / len(section_survivals)),
         "limitation_survival_rate": normalize_float(
@@ -469,6 +600,7 @@ def run_paper_replay() -> list[ReplayRun]:
             original_state=original_state,
             compact_representation=compact,
             replayed_state=replayed,
+            evidence=_evidence_items(spec),
         )
         runs.append(
             ReplayRun(
@@ -489,6 +621,7 @@ def build_aggregate(papers: list[dict[str, object]]) -> dict[str, object]:
         return {
             "avg_compression_ratio": 0.0,
             "avg_entity_retention_rate": 0.0,
+            "avg_evidence_survival_rate": 0.0,
             "avg_limitation_survival_rate": 0.0,
             "avg_metric_survival_rate": 0.0,
             "avg_replay_consistency": 0.0,
@@ -503,6 +636,7 @@ def build_aggregate(papers: list[dict[str, object]]) -> dict[str, object]:
     return {
         "avg_compression_ratio": average("compression_ratio"),
         "avg_entity_retention_rate": average("entity_retention_rate"),
+        "avg_evidence_survival_rate": average("evidence_survival_rate"),
         "avg_limitation_survival_rate": average("limitation_survival_rate"),
         "avg_metric_survival_rate": average("metric_survival_rate"),
         "avg_replay_consistency": average("replay_consistency"),
