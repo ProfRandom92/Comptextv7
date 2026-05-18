@@ -191,6 +191,7 @@ The system relies on the following deterministic foundations:
 | Demo walkthrough | [`docs/DEMO_WALKTHROUGH.md`](docs/DEMO_WALKTHROUGH.md) |
 | Showcase readiness | [`docs/SHOWCASE_READINESS.md`](docs/SHOWCASE_READINESS.md) |
 | Benchmark explanation | [`docs/BENCHMARK_EXPLANATION.md`](docs/BENCHMARK_EXPLANATION.md) |
+| Replay failure taxonomy | [`docs/operational_replay_failure_taxonomy.md`](docs/operational_replay_failure_taxonomy.md) |
 | Replay report | [`reports/replay_continuity/validation_report.md`](reports/replay_continuity/validation_report.md) |
 | API surface | [`docs/API_SURFACE.md`](docs/API_SURFACE.md) |
 
