@@ -24,6 +24,7 @@ PUBLIC_ROW_FIELDS = {
     "evidence_survived",
     "evidence_total",
     "has_evidence",
+    "high_critical_evidence_survival_rate",
     "section_survival_rate",
     "limitation_survival_rate",
     "metric_survival_rate",
@@ -36,6 +37,7 @@ PUBLIC_ROW_FIELDS = {
 AGGREGATE_FIELDS = {
     "avg_entity_retention_rate",
     "avg_evidence_survival_rate",
+    "avg_high_critical_evidence_survival_rate",
     "avg_metric_survival_rate",
     "avg_limitation_survival_rate",
     "avg_section_survival_rate",
@@ -46,6 +48,7 @@ AGGREGATE_FIELDS = {
 NORMALIZED_RATE_FIELDS = (
     "entity_retention_rate",
     "evidence_survival_rate",
+    "high_critical_evidence_survival_rate",
     "section_survival_rate",
     "limitation_survival_rate",
     "metric_survival_rate",
@@ -54,6 +57,7 @@ NORMALIZED_RATE_FIELDS = (
 AGGREGATE_RATE_FIELDS = (
     "avg_entity_retention_rate",
     "avg_evidence_survival_rate",
+    "avg_high_critical_evidence_survival_rate",
     "avg_metric_survival_rate",
     "avg_limitation_survival_rate",
     "avg_section_survival_rate",
@@ -128,6 +132,7 @@ def test_paper_replay_aggregate_matches_recomputed_values() -> None:
         "avg_compression_ratio": "compression_ratio",
         "avg_entity_retention_rate": "entity_retention_rate",
         "avg_evidence_survival_rate": "evidence_survival_rate",
+        "avg_high_critical_evidence_survival_rate": "high_critical_evidence_survival_rate",
         "avg_limitation_survival_rate": "limitation_survival_rate",
         "avg_metric_survival_rate": "metric_survival_rate",
         "avg_replay_consistency": "replay_consistency",

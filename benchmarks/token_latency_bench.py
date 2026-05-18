@@ -140,6 +140,7 @@ def build_adaptive_policy_demo(iterations=5):
             blocker_survival=1.0,
             evidence_survival_rate=float(row["evidence_survival_rate"]),
             has_evidence=int(row["evidence_total"]) > 0,
+            high_critical_evidence_survival_rate=float(row["high_critical_evidence_survival_rate"]),
         )
         comparisons.append(_measure_profiles_for_demo(fixture_name, "paper", text, metrics, iterations))
 
@@ -155,6 +156,7 @@ def build_adaptive_policy_demo(iterations=5):
             blocker_survival=float(row["blocker_survival_rate"]),
             evidence_survival_rate=float(row["evidence_survival_rate"]),
             has_evidence=int(row["evidence_total"]) > 0,
+            high_critical_evidence_survival_rate=float(row["high_critical_evidence_survival_rate"]),
         )
         comparisons.append(_measure_profiles_for_demo(fixture_name, "agent_trace", text, metrics, iterations))
 

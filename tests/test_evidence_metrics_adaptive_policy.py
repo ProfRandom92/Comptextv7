@@ -103,6 +103,8 @@ def test_empty_evidence_set_is_marked_not_applicable() -> None:
     assert result.evidence_total == 0
     assert result.evidence_survived == 0
     assert result.evidence_survival_rate == 0.0
+    assert result.high_critical_evidence_survival_rate == 0.0
+    assert result.has_high_critical_evidence is False
     assert result.missing_evidence_ids == ()
 
 
@@ -146,6 +148,83 @@ def test_select_profile_falls_back_to_conservative_on_evidence_loss() -> None:
     )
 
     assert select_profile(metrics) == "CONSERVATIVE"
+
+
+def test_high_critical_evidence_survival_rate_tracks_high_loss() -> None:
+    result = compute_evidence_survival(
+        original_events={"critical": "preserve this", "medium": "can degrade"},
+        reconstructed_events={"critical": "lost", "medium": "can degrade"},
+        evidence_ids=("critical", "medium"),
+        evidence_criticalities={"critical": "HIGH", "medium": "MEDIUM"},
+    )
+
+    assert result.has_evidence is True
+    assert result.has_high_critical_evidence is True
+    assert result.evidence_total == 2
+    assert result.evidence_survived == 1
+    assert result.evidence_survival_rate == 0.5
+    assert result.high_critical_evidence_survival_rate == 0.0
+    assert result.missing_evidence_ids == ("critical",)
+
+
+def test_high_critical_evidence_survival_rate_is_zero_when_no_high_evidence() -> None:
+    result = compute_evidence_survival(
+        original_events={"low": "preserved", "medium": "preserved"},
+        reconstructed_events={"low": "preserved", "medium": "preserved"},
+        evidence_ids=("low", "medium"),
+        evidence_criticalities={"low": "LOW", "medium": "MEDIUM"},
+    )
+
+    assert result.has_evidence is True
+    assert result.has_high_critical_evidence is False
+    assert result.evidence_survival_rate == 1.0
+    assert result.high_critical_evidence_survival_rate == 0.0
+
+
+def test_evidence_item_defaults_to_medium_for_backward_compatible_fixtures() -> None:
+    item = EvidenceItem("legacy", "agent_event", "event:active_task")
+    result = compute_evidence_survival(
+        original_events={"legacy": "same"},
+        reconstructed_events={"legacy": "same"},
+        evidence_ids=(item.id,),
+        evidence_criticalities={item.id: item.criticality},
+    )
+
+    assert item.criticality == "MEDIUM"
+    assert result.has_high_critical_evidence is False
+    assert result.high_critical_evidence_survival_rate == 0.0
+
+
+def test_select_profile_falls_back_to_conservative_on_high_critical_evidence_loss() -> None:
+    metrics = ReplayMetrics(
+        compression_ratio=1.35,
+        reduction_percent=26.0,
+        replay_consistency=1.0,
+        constraint_survival=1.0,
+        blocker_survival=1.0,
+        evidence_survival_rate=0.99,
+        has_evidence=True,
+        high_critical_evidence_survival_rate=0.0,
+        has_high_critical_evidence=True,
+    )
+
+    assert select_profile(metrics) == "CONSERVATIVE"
+
+
+def test_select_profile_ignores_high_rate_when_no_high_evidence_is_annotated() -> None:
+    metrics = ReplayMetrics(
+        compression_ratio=1.35,
+        reduction_percent=26.0,
+        replay_consistency=1.0,
+        constraint_survival=1.0,
+        blocker_survival=1.0,
+        evidence_survival_rate=1.0,
+        has_evidence=True,
+        high_critical_evidence_survival_rate=0.0,
+        has_high_critical_evidence=False,
+    )
+
+    assert select_profile(metrics) == "AGGRESSIVE"
 
 
 def test_select_profile_uses_balanced_when_quality_is_good_but_already_compressed() -> None:
