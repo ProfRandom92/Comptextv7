@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document explains how reviewers should interpret CompText V7 benchmark and token-reduction evidence during the showcase. It is intentionally conservative: token reduction is a useful signal, but it is not proof of semantic correctness, enterprise readiness, or production value by itself.
+This document explains how reviewers should interpret CompText V7 benchmark, token-reduction, and deterministic replay-validation evidence. It is intentionally conservative: token reduction and replay metrics are useful fixture-bound signals, but they are not proof of semantic correctness, enterprise readiness, production value, or solved AI memory.
 
 ## What is being reduced
 
@@ -38,7 +38,7 @@ When a benchmark or report contains original-token and compressed-token values, 
 | Payload bytes | Shows transport-size change. | Does not prove LLM quality or business ROI. |
 | Runtime metrics | Helps reason about benchmark cost for tested cases. | Does not prove production latency at fleet scale. |
 | Distinct families / coverage | Shows whether repeated structures dominate. | Does not prove rare event preservation. |
-| Replay / forensic checks | Helps guard against dangerous drift or semantic loss in validated cases. | Does not certify safety-critical behavior. |
+| Replay / forensic checks | Shows whether fixture-defined operational fields, evidence references, and failure labels survived deterministic replay. | Does not certify safety-critical behavior or semantic completeness. |
 | CI status | Shows cloud workflows completed for a commit. | Does not replace domain validation on real governed data. |
 
 ## Conservative interpretation rules
@@ -57,7 +57,7 @@ Use these rules in reviewer conversations:
 | Category | Meaning in this showcase |
 | --- | --- |
 | Validated | Evidence exists in repository files, schemas, reports, or GitHub Actions artifacts for the reviewed commit. |
-| Planned | Reasonable follow-up work listed as next steps, not yet delivered by SHOWCASE-01. |
+| Planned | Reasonable follow-up work listed as next steps, not yet delivered in the referenced artifact or review scope. |
 | Illustrative | Demo language or example framing used to help reviewers understand the architecture, not a measured claim. |
 
 ## Relationship to CFI artifacts

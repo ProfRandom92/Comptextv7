@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  Comptextv7 tests whether compact, replay-safe operational state can preserve workflow continuity across compression, reconstruction, and CI-audited replay checks — without LLM judges, embeddings, vector databases, or external APIs.
+  Comptextv7 is a deterministic operational replay-validation and state-survivability prototype: it tests whether compact, replay-safe operational state preserves fixture-defined evidence, constraints, blockers, dependencies, recovery paths, and tool-order signals across compression, reconstruction, iterative replay degradation, and CI-audited summaries — without LLM judges, embeddings, vector databases, graph stores, or external APIs.
   <br/><br/>
   See <a href="docs/research_positioning.md">docs/research_positioning.md</a> for conservative project positioning and scope boundaries.
 </p>
@@ -35,7 +35,7 @@
 
 ## Safe Positioning
 
-Comptextv7 is a deterministic operational replay-validation prototype. It validates whether compact operational state survives compression and replay under controlled fixtures. It is complementary to learned context-compression research and durable workflow infrastructure, but it is not a workflow orchestrator, learned compressor, vector memory system, or universal AI-memory solution.
+Comptextv7 is a deterministic operational replay-validation and state-survivability prototype. It validates whether compact operational state preserves fixture-defined evidence, constraints, blockers, dependencies, recovery paths, and tool-order signals through compression, replay, and bounded iterative degradation. It is complementary to learned context-compression research, RAG evaluation, vector-memory systems, serving-layer cache optimization, and durable workflow infrastructure, but it is not a workflow orchestrator, learned compressor, vector memory system, RAG replacement, KV-cache compressor, or universal AI-memory solution.
 
 For detailed positioning, see [Research Positioning](docs/research_positioning.md) and [Research Positioning Sources](docs/research_positioning_sources.md).
 

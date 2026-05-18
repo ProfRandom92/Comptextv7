@@ -101,16 +101,14 @@ The taxonomy is intended to name field-level failure modes that can explain chan
 - `blocker_survival_rate`: Aggregate signal for `BLOCKER_DETACHMENT` when blocker identity or blocker-task links fail to survive.
 - `operational_drift_rate`: Broad field-loss signal that can increase when constraints, blockers, dependencies, task identity, tool order, state aliases, or recovery paths drift.
 
-These relationships are interpretive design guidance. A future implementation should keep the metric calculations deterministic and should avoid adding subjective scoring.
+These relationships are interpretive design guidance. Current and future metric calculations should remain deterministic and avoid subjective scoring.
 
-## Future implementation sketch
+## Classifier scope
 
-A later docs-or-code PR could add a deterministic classifier that reads existing replay fixtures and validation outputs, emits zero or more stable failure IDs per replay case, and summarizes counts in CI artifacts. A conservative implementation would:
+The current deterministic classifier covers the implemented subset listed in the purpose section and can summarize those labels in replay artifacts. The remaining taxonomy entries are conservative labels for fixture fields that may be added or expanded later. Any expansion should:
 
 1. keep all checks fixture-bound and schema-driven;
 2. compare only explicit IDs, counts, normalized fields, and declared attachment edges;
 3. emit stable failure IDs without natural-language judging;
-4. preserve existing metrics and add taxonomy labels as explanatory metadata;
-5. include regression tests for each failure mode using small checked-in fixtures.
-
-This sketch is not implemented in this document.
+4. preserve existing metrics and use taxonomy labels as explanatory metadata;
+5. include regression coverage for each newly implemented failure mode using small checked-in fixtures.
