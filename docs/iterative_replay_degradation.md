@@ -160,6 +160,18 @@ Each profile emits an additive aggregate block with stable keys:
 
 The comparison artifact keeps per-profile `runs` in the existing run shape and stores profile aggregates beside those runs, so existing single-run consumers can continue reading the original artifact shape while comparison-aware consumers can opt into the additive `profiles` list. Markdown rendering orders rows as `CONSERVATIVE`, `BALANCED`, then `AGGRESSIVE` and formats rates with fixed six-decimal precision.
 
+## Comparative replay degradation results
+
+The current deterministic internal baseline is fixture-bound. `CONSERVATIVE` is the internal reference baseline for these fixtures; `BALANCED` and `AGGRESSIVE` are controlled stress profiles that increase compression pressure within the prototype. These rows are not an external benchmark, not a production-readiness claim, and not a solved-memory claim.
+
+| Profile | `collapse_rate` | `average_replay_consistency` | `average_operational_drift_rate` | `average_evidence_survival_rate` | `aggregated_failure_labels` |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `CONSERVATIVE` | `0.000000` | `0.895833` | `0.104167` | `0.916667` | `EVIDENCE_LOSS` |
+| `BALANCED` | `0.000000` | `0.458333` | `0.541667` | `0.416667` | `EVIDENCE_LOSS`, `CONSTRAINT_DRIFT`, `BLOCKER_DETACHMENT` |
+| `AGGRESSIVE` | `0.000000` | `0.125000` | `0.875000` | `0.083333` | `EVIDENCE_LOSS`, `CONSTRAINT_DRIFT`, `BLOCKER_DETACHMENT` |
+
+The monotonic degradation is useful because it shows the fixture-bound prototype responds to increasing compression pressure: replay consistency and evidence survival decrease while operational drift increases across the controlled profiles.
+
 ## CI summary generator
 
 The lightweight CI review surface is implemented as a deterministic Markdown renderer in `tests/utils/replay_degradation_summary.py`. It consumes the existing iterative replay degradation JSON artifact shape while preserving additive schema compatibility and emits plain text/Markdown only.
