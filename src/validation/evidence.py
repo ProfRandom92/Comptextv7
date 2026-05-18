@@ -40,7 +40,7 @@ def normalize_float(value: float) -> float:
 
     if not math.isfinite(value):
         raise ValueError(f"non-finite evidence metric value: {value!r}")
-    return round(float(value), 6)
+    return round(value, 6)
 
 
 def normalize_text(value: object) -> str:
