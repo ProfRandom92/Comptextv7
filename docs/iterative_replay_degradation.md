@@ -161,6 +161,14 @@ A future implementation could emit one JSON artifact per benchmark run. The shap
 
 The lightweight CI review surface is implemented as a deterministic Markdown renderer in `tests/utils/replay_degradation_summary.py`. It consumes the existing iterative replay degradation JSON artifact shape without redesigning that artifact schema and emits plain text/Markdown only.
 
+Local CI-style artifact generation can be run with:
+
+```bash
+python scripts/generate_iterative_replay_degradation_artifacts.py
+```
+
+This writes `artifacts/iterative_replay_degradation_results.json`, writes `artifacts/iterative_replay_degradation_results.summary.md`, and prints both stable output paths.
+
 The summary includes:
 
 - total fixtures;
