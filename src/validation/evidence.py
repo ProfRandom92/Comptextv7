@@ -9,10 +9,27 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from enum import StrEnum
 import math
 import re
 
 _SPACE_RE = re.compile(r"\s+")
+
+
+class EvidenceCriticality(StrEnum):
+    """Deterministic criticality levels for evidence annotations."""
+
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+
+
+def normalize_evidence_criticality(value: EvidenceCriticality | str) -> EvidenceCriticality:
+    """Return a normalized evidence criticality value."""
+
+    if isinstance(value, EvidenceCriticality):
+        return value
+    return EvidenceCriticality(str(value).strip().upper())
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +40,10 @@ class EvidenceItem:
     kind: str
     locator: str
     description: str = ""
+    criticality: EvidenceCriticality = EvidenceCriticality.MEDIUM
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "criticality", normalize_evidence_criticality(self.criticality))
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +55,8 @@ class EvidenceCheckResult:
     evidence_total: int
     evidence_survived: int
     missing_evidence_ids: tuple[str, ...]
+    high_critical_evidence_survival_rate: float
+    has_high_critical_evidence: bool
 
 
 def normalize_float(value: float) -> float:
@@ -62,6 +85,7 @@ def compute_evidence_survival(
     reconstructed_events: Mapping[str, object],
     evidence_ids: Sequence[str],
     matches: Callable[[object, object], bool] = exact_normalized_match,
+    evidence_criticalities: Mapping[str, EvidenceCriticality | str] | None = None,
 ) -> EvidenceCheckResult:
     """Compute the share of annotated evidence IDs preserved after replay."""
 
@@ -73,18 +97,32 @@ def compute_evidence_survival(
             evidence_total=0,
             evidence_survived=0,
             missing_evidence_ids=(),
+            high_critical_evidence_survival_rate=0.0,
+            has_high_critical_evidence=False,
         )
 
+    criticalities = evidence_criticalities or {}
     survived = 0
+    high_total = 0
+    high_survived = 0
     missing: list[str] = []
     for evidence_id in evidence_ids:
+        criticality = normalize_evidence_criticality(criticalities.get(evidence_id, EvidenceCriticality.MEDIUM))
+        is_high = criticality == EvidenceCriticality.HIGH
+        if is_high:
+            high_total += 1
+
+        evidence_survived = False
         if evidence_id not in original_events or evidence_id not in reconstructed_events:
             missing.append(evidence_id)
-            continue
-        if matches(original_events[evidence_id], reconstructed_events[evidence_id]):
+        elif matches(original_events[evidence_id], reconstructed_events[evidence_id]):
+            evidence_survived = True
             survived += 1
         else:
             missing.append(evidence_id)
+
+        if is_high and evidence_survived:
+            high_survived += 1
 
     return EvidenceCheckResult(
         has_evidence=True,
@@ -92,4 +130,8 @@ def compute_evidence_survival(
         evidence_total=total,
         evidence_survived=survived,
         missing_evidence_ids=tuple(missing),
+        high_critical_evidence_survival_rate=(
+            normalize_float(high_survived / high_total) if high_total else 0.0
+        ),
+        has_high_critical_evidence=high_total > 0,
     )

@@ -181,6 +181,7 @@ def _evidence_items(spec: dict[str, object]) -> tuple[EvidenceItem, ...]:
             kind=str(item["kind"]),
             locator=str(item["locator"]),
             description=str(item.get("description", "")),
+            criticality=str(item.get("criticality", "MEDIUM")),
         )
         for item in evidence
         if isinstance(item, dict)
@@ -384,6 +385,7 @@ def validate_replay(
         reconstructed_events=replayed_evidence,
         evidence_ids=evidence_ids,
         matches=exact_normalized_match,
+        evidence_criticalities={item.id: item.criticality for item in evidence},
     )
 
     return {
@@ -399,6 +401,7 @@ def validate_replay(
             _sequence_survival_rate(list(original_fields["dependencies"]), list(replayed_fields["dependencies"]))
         ),
         "evidence_survival_rate": evidence_result.evidence_survival_rate,
+        "high_critical_evidence_survival_rate": evidence_result.high_critical_evidence_survival_rate,
         "evidence_survived": evidence_result.evidence_survived,
         "evidence_total": evidence_result.evidence_total,
         "has_evidence": evidence_result.has_evidence,
@@ -453,6 +456,7 @@ def build_aggregate(traces: list[dict[str, object]]) -> dict[str, object]:
             "avg_constraint_survival_rate": 0.0,
             "avg_dependency_survival_rate": 0.0,
             "avg_evidence_survival_rate": 0.0,
+            "avg_high_critical_evidence_survival_rate": 0.0,
             "avg_operational_drift_rate": 0.0,
             "avg_replay_consistency": 0.0,
             "avg_tool_sequence_survival_rate": 0.0,
@@ -468,6 +472,7 @@ def build_aggregate(traces: list[dict[str, object]]) -> dict[str, object]:
         "avg_constraint_survival_rate": average("constraint_survival_rate"),
         "avg_dependency_survival_rate": average("dependency_survival_rate"),
         "avg_evidence_survival_rate": average("evidence_survival_rate"),
+        "avg_high_critical_evidence_survival_rate": average("high_critical_evidence_survival_rate"),
         "avg_operational_drift_rate": average("operational_drift_rate"),
         "avg_replay_consistency": average("replay_consistency"),
         "avg_tool_sequence_survival_rate": average("tool_sequence_survival_rate"),

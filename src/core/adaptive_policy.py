@@ -33,6 +33,8 @@ class ReplayMetrics:
     blocker_survival: float
     evidence_survival_rate: float
     has_evidence: bool
+    high_critical_evidence_survival_rate: float = 0.0
+    has_high_critical_evidence: bool = False
 
 
 # Conservative if evidence/replay drops below FLOOR; aggressive only when all
@@ -75,6 +77,10 @@ def select_profile(metrics: ReplayMetrics) -> CompressionProfile:
 
     if (
         (metrics.has_evidence and metrics.evidence_survival_rate < EVIDENCE_QUALITY_FLOOR)
+        or (
+            metrics.has_high_critical_evidence
+            and metrics.high_critical_evidence_survival_rate < 1.0
+        )
         or metrics.replay_consistency < REPLAY_QUALITY_FLOOR
         or metrics.constraint_survival < CONSTRAINT_SURVIVAL_FLOOR
         or metrics.blocker_survival < BLOCKER_SURVIVAL_FLOOR

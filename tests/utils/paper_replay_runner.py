@@ -374,6 +374,7 @@ def _evidence_items(spec: dict[str, object]) -> tuple[EvidenceItem, ...]:
             kind=str(item["kind"]),
             locator=str(item["locator"]),
             description=str(item.get("description", "")),
+            criticality=str(item.get("criticality", "MEDIUM")),
         )
         for item in evidence
         if isinstance(item, dict)
@@ -563,11 +564,13 @@ def validate_replay(
         reconstructed_events=replayed_evidence,
         evidence_ids=evidence_ids,
         matches=_paper_evidence_match,
+        evidence_criticalities={item.id: item.criticality for item in evidence},
     )
 
     return {
         "paper": paper,
         "evidence_survival_rate": evidence_result.evidence_survival_rate,
+        "high_critical_evidence_survival_rate": evidence_result.high_critical_evidence_survival_rate,
         "evidence_survived": evidence_result.evidence_survived,
         "evidence_total": evidence_result.evidence_total,
         "has_evidence": evidence_result.has_evidence,
@@ -625,6 +628,7 @@ def build_aggregate(papers: list[dict[str, object]]) -> dict[str, object]:
             "avg_compression_ratio": 0.0,
             "avg_entity_retention_rate": 0.0,
             "avg_evidence_survival_rate": 0.0,
+            "avg_high_critical_evidence_survival_rate": 0.0,
             "avg_limitation_survival_rate": 0.0,
             "avg_metric_survival_rate": 0.0,
             "avg_replay_consistency": 0.0,
@@ -640,6 +644,7 @@ def build_aggregate(papers: list[dict[str, object]]) -> dict[str, object]:
         "avg_compression_ratio": average("compression_ratio"),
         "avg_entity_retention_rate": average("entity_retention_rate"),
         "avg_evidence_survival_rate": average("evidence_survival_rate"),
+        "avg_high_critical_evidence_survival_rate": average("high_critical_evidence_survival_rate"),
         "avg_limitation_survival_rate": average("limitation_survival_rate"),
         "avg_metric_survival_rate": average("metric_survival_rate"),
         "avg_replay_consistency": average("replay_consistency"),
