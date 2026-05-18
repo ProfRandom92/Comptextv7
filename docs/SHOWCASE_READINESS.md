@@ -1,5 +1,7 @@
 # Showcase Readiness Pack
 
+> **Legacy showcase note:** This document is retained for historical context only. The current visual Monaco showcase UI, presentation-layer narrative, charts, reviewer walkthrough, and static fixture-bound profile comparison display are maintained in [`ProfRandom92/comptext-v7-monaco-showcase`](https://github.com/ProfRandom92/comptext-v7-monaco-showcase). This main repository remains the source of truth for deterministic replay-validation artifacts, benchmarks, failure labels, degradation evidence, and research positioning.
+
 ## 1. Executive Summary
 
 CompText V7 is a deterministic, auditable prototype for reducing repetitive technical diagnostic logs into compact KVTC-V7 transport frames. It is designed for reviewer inspection before assistant, dashboard, audit, or CI handoff, especially where raw vehicle/workshop-style logs would be too verbose to send directly into an LLM context window.
