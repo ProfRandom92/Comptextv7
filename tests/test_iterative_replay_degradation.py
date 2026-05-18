@@ -144,3 +144,51 @@ def test_iterative_replay_rejects_unbounded_or_invalid_config() -> None:
         build_iterative_replay_degradation_artifact(
             config=IterativeReplayConfig(min_replay_consistency=1.1)
         )
+
+
+def test_comparative_replay_profiles_cover_expected_profiles() -> None:
+    from tests.utils.iterative_replay_degradation_runner import (
+        COMPARATIVE_PROFILES,
+        build_comparative_replay_degradation_artifact,
+    )
+
+    artifact = build_comparative_replay_degradation_artifact()
+    profiles = artifact["profiles"]
+
+    assert [profile["profile"] for profile in profiles] == list(COMPARATIVE_PROFILES)
+    assert [profile["profile"] for profile in profiles] == ["CONSERVATIVE", "BALANCED", "AGGRESSIVE"]
+    for profile in profiles:
+        aggregate = profile["aggregate"]
+        assert set(aggregate) == {
+            "aggregated_failure_labels",
+            "average_evidence_survival_rate",
+            "average_operational_drift_rate",
+            "average_replay_consistency",
+            "collapse_rate",
+        }
+        assert isinstance(profile["runs"], list)
+        assert profile["runs"]
+
+
+def test_comparative_replay_output_is_stable_and_ordered() -> None:
+    from tests.utils.iterative_replay_degradation_runner import (
+        build_comparative_replay_degradation_artifact,
+        stable_json_dump,
+    )
+
+    first = build_comparative_replay_degradation_artifact()
+    second = build_comparative_replay_degradation_artifact()
+
+    assert first == second
+    assert stable_json_dump(first) == stable_json_dump(second)
+    assert [profile["profile"] for profile in first["profiles"]] == [
+        "CONSERVATIVE",
+        "BALANCED",
+        "AGGRESSIVE",
+    ]
+    consistency = [profile["aggregate"]["average_replay_consistency"] for profile in first["profiles"]]
+    drift = [profile["aggregate"]["average_operational_drift_rate"] for profile in first["profiles"]]
+    evidence = [profile["aggregate"]["average_evidence_survival_rate"] for profile in first["profiles"]]
+    assert consistency == sorted(consistency, reverse=True)
+    assert drift == sorted(drift)
+    assert evidence == sorted(evidence, reverse=True)

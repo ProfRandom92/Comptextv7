@@ -142,6 +142,22 @@ The local artifact writer emits one JSON artifact per benchmark run. The committ
 ```
 
 
+## Comparative compression profile mode
+
+A small comparative mode evaluates the same checked-in fixtures under the three deterministic compression profiles defined by the adaptive policy: `CONSERVATIVE`, `BALANCED`, and `AGGRESSIVE`. The mode is prototype-scoped and fixture-bound; it applies progressively smaller deterministic profile budgets to the compact replay payloads and then reuses the existing replay validation metrics. It does not add external APIs, embeddings, vector databases, graph stores, dashboards, or subjective judging.
+
+Each profile emits an additive aggregate block with stable keys:
+
+| Aggregate field | Meaning |
+| --- | --- |
+| `collapse_rate` | Fraction of fixtures that met the configured deterministic collapse criteria for that profile. |
+| `average_replay_consistency` | Mean final-cycle replay consistency across fixtures for that profile. |
+| `average_operational_drift_rate` | Mean final-cycle operational drift rate across fixtures for that profile. |
+| `average_evidence_survival_rate` | Mean final-cycle evidence survival rate across fixtures for that profile. |
+| `aggregated_failure_labels` | Replay failure labels observed in final cycles, ordered by the classifier taxonomy. |
+
+The comparison artifact keeps per-profile `runs` in the existing run shape and stores profile aggregates beside those runs, so existing single-run consumers can continue reading the original artifact shape while comparison-aware consumers can opt into the additive `profiles` list. Markdown rendering orders rows as `CONSERVATIVE`, `BALANCED`, then `AGGRESSIVE` and formats rates with fixed six-decimal precision.
+
 ## CI summary generator
 
 The lightweight CI review surface is implemented as a deterministic Markdown renderer in `tests/utils/replay_degradation_summary.py`. It consumes the existing iterative replay degradation JSON artifact shape while preserving additive schema compatibility and emits plain text/Markdown only.
