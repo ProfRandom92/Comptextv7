@@ -405,11 +405,11 @@ def _resolve_paper_evidence(
     replayed_fields = replayed_state["operational_fields"]
     assert isinstance(replayed_fields, dict)
 
+    lines = [line.strip() for line in excerpt.splitlines() if line.strip()]
     for item in evidence:
         evidence_ids.append(item.id)
         if item.kind == "paper_line" and item.locator.startswith("line:"):
             line_index = int(item.locator.removeprefix("line:"))
-            lines = [line.strip() for line in excerpt.splitlines() if line.strip()]
             if 0 <= line_index < len(lines):
                 original_by_id[item.id] = lines[line_index]
             continue
