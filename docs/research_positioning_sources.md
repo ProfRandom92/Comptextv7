@@ -18,3 +18,13 @@
 | CI artifacts as evidence records | CI artifacts are evidence records | controlled fixtures | universal guarantees | Yes | Yes | Yes |
 | replay artifacts as deterministic snapshots | deterministic snapshots | ReplayArtifactWriter | live autonomous execution | Yes | Yes | Yes |
 | artifactHash as non-cryptographic deterministic integrity | deterministic integrity | static hashing | cryptographic security | Yes | Yes | Yes |
+| deterministic replay artifacts | deterministic replay artifacts for controlled fixtures | stable JSON + CI summaries | universal memory evidence | Yes | Yes | Yes |
+| evidence survival metrics | evidence survival under fixture-defined references and attachments | evidence survival metrics | evidence truth or quality | Yes | Yes | Yes |
+| HIGH/MEDIUM/LOW evidence criticality | fixture-authored evidence criticality labels | evidence criticality fields | real-world harm ranking | Yes | Yes | Yes |
+| HIGH-critical evidence fallback | conservative fallback signal when HIGH-critical evidence is lost | adaptive fallback policy surface | safety guarantee | Yes | Yes | Yes |
+| replay failure labels | deterministic failure labels for implemented fixture checks | replay failure classifier + taxonomy | subjective failure diagnosis | Yes | Yes | Yes |
+| iterative replay degradation prototype | bounded iterative replay degradation prototype | iterative replay degradation artifacts and summaries | universal memory limit | Yes | Yes | Yes |
+| CI-reviewable summaries | deterministic Markdown summaries for artifact review | local artifact generation + CI review flow | production certification | Yes | Yes | Yes |
+| not RAG replacement | not a RAG replacement | no retrieval or answer judging | better than RAG | Yes | Yes | Yes |
+| not KV-cache compression | not KV-cache compression | no serving-layer cache optimization | model-internal optimization | Yes | Yes | Yes |
+| not workflow orchestration | not workflow orchestration | no autonomous runtime execution | durable executor | Yes | Yes | Yes |
