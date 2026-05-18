@@ -25,6 +25,7 @@ else:
 ensure_repo_root_on_path()
 
 from src.validation.evidence import EvidenceItem, compute_evidence_survival, exact_normalized_match
+from src.validation.replay_failure_classifier import classify_replay_failures, merge_failure_labels
 
 BENCHMARK_NAME = "agent_trace_replay_bench"
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -388,7 +389,7 @@ def validate_replay(
         evidence_criticalities={item.id: item.criticality for item in evidence},
     )
 
-    return {
+    metrics = {
         "blocker_survival_rate": normalize_float(
             _sequence_survival_rate(list(original_fields["unresolved_blockers"]), list(replayed_fields["unresolved_blockers"]))
         ),
@@ -414,6 +415,9 @@ def validate_replay(
         ),
         "trace": trace_name,
     }
+    classifier_metrics = {**metrics, "has_high_critical_evidence": evidence_result.has_high_critical_evidence}
+    metrics["failure_labels"] = classify_replay_failures(classifier_metrics)
+    return metrics
 
 
 def run_agent_trace_replay() -> list[ReplayRun]:
@@ -457,6 +461,7 @@ def build_aggregate(traces: list[dict[str, object]]) -> dict[str, object]:
             "avg_dependency_survival_rate": 0.0,
             "avg_evidence_survival_rate": 0.0,
             "avg_high_critical_evidence_survival_rate": 0.0,
+            "failure_labels": [],
             "avg_operational_drift_rate": 0.0,
             "avg_replay_consistency": 0.0,
             "avg_tool_sequence_survival_rate": 0.0,
@@ -473,6 +478,7 @@ def build_aggregate(traces: list[dict[str, object]]) -> dict[str, object]:
         "avg_dependency_survival_rate": average("dependency_survival_rate"),
         "avg_evidence_survival_rate": average("evidence_survival_rate"),
         "avg_high_critical_evidence_survival_rate": average("high_critical_evidence_survival_rate"),
+        "failure_labels": merge_failure_labels(traces),
         "avg_operational_drift_rate": average("operational_drift_rate"),
         "avg_replay_consistency": average("replay_consistency"),
         "avg_tool_sequence_survival_rate": average("tool_sequence_survival_rate"),
