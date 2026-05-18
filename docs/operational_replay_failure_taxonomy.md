@@ -6,6 +6,8 @@ This document defines a small, deterministic taxonomy for describing how operati
 
 The failure modes are fixture-bound. A mode is detectable only when the source fixture and reconstructed replay artifact expose the relevant fields for deterministic comparison.
 
+The current deterministic replay failure classifier emits the implemented subset `EVIDENCE_LOSS`, `HIGH_CRITICAL_EVIDENCE_LOSS`, `CONSTRAINT_DRIFT`, and `BLOCKER_DETACHMENT`. The remaining labels stay documented as taxonomy guidance for future fixture fields; they are not inferred by the current classifier.
+
 ## Scope and constraints
 
 - Deterministic, fixture-bound replay validation only.

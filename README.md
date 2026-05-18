@@ -75,7 +75,7 @@ Sources: [`artifacts/paper_replay_results.json`](artifacts/paper_replay_results.
 - **Agent trace replay is currently near-lossless because traces are structured.** The checked-in traces expose explicit tasks, blockers, dependencies, tool order, and recovery actions.
 - **`1.000000` replay consistency does not mean solved memory.** It means exact preservation under the current structured trace fixtures and current deterministic validator.
 - **Operational drift is field loss, not subjective quality.** A non-zero drift rate would mean replay lost required operational fields.
-- **Next target is iterative replay degradation.** The next milestone is to repeatedly compact and replay state until drift curves and collapse points are visible.
+- **Iterative replay degradation is now a bounded prototype.** Repeated compact/replay cycles emit deterministic JSON and Markdown artifacts for reviewing drift curves, collapse points, and failure labels.
 
 ## What makes this different
 
@@ -175,12 +175,22 @@ The system relies on the following deterministic foundations:
 - This is not production telemetry.
 - This is not an autonomous agent framework.
 - Evaluator divergence remains material in the long-horizon stress suite.
-- A stronger iterative degradation benchmark is the next technical milestone.
+- Iterative degradation remains a bounded fixture prototype; its artifact and summary are review aids, not universal memory claims.
 
 ## Next technical milestone
 
-> Next: iterative replay degradation review surfaces.
-> Keep repeated compact/replay artifacts cheap, deterministic, and easy to inspect in CI and pull requests.
+> Next: continue tightening deterministic replay review surfaces.
+> Keep repeated compact/replay artifacts cheap, deterministic, additive-compatible, and easy to inspect in CI and pull requests.
+
+## Validated deterministic replay review flow
+
+Use this short flow when reviewing replay-system changes:
+
+1. Regenerate or inspect deterministic replay artifacts only from checked-in fixtures.
+2. Compare stable metric fields (`replay_consistency`, evidence survival rates, `operational_drift_rate`) and taxonomy fields (`failure_labels`, `failure_mode_counts`) rather than prose interpretations.
+3. For iterative degradation review, run `python scripts/generate_iterative_replay_degradation_artifacts.py` and inspect both the JSON artifact and Markdown summary.
+4. Treat additive artifact fields as forward-compatible when existing deterministic fields remain stable.
+5. Keep claims fixture-bound: no LLM judging, embeddings, external APIs, production-readiness claims, or solved-memory claims.
 
 ## Review surfaces
 
@@ -192,7 +202,7 @@ The system relies on the following deterministic foundations:
 | Showcase readiness | [`docs/SHOWCASE_READINESS.md`](docs/SHOWCASE_READINESS.md) |
 | Benchmark explanation | [`docs/BENCHMARK_EXPLANATION.md`](docs/BENCHMARK_EXPLANATION.md) |
 | Replay failure taxonomy | [`docs/operational_replay_failure_taxonomy.md`](docs/operational_replay_failure_taxonomy.md) |
-| Iterative replay degradation design and CI summary | [`docs/iterative_replay_degradation.md`](docs/iterative_replay_degradation.md) |
+| Iterative replay degradation artifact and CI summary | [`docs/iterative_replay_degradation.md`](docs/iterative_replay_degradation.md) |
 | Replay report | [`reports/replay_continuity/validation_report.md`](reports/replay_continuity/validation_report.md) |
 | API surface | [`docs/API_SURFACE.md`](docs/API_SURFACE.md) |
 
@@ -245,6 +255,7 @@ Regenerate deterministic replay artifacts:
 python tests/utils/paper_replay_runner.py
 python tests/utils/agent_trace_replay_runner.py
 python benchmarks/run_replay_continuity.py --iterations 250 --output-dir reports/replay_continuity
+python scripts/generate_iterative_replay_degradation_artifacts.py
 ```
 
 Use the validation commands in [`docs/validation.md`](docs/validation.md). The root `package.json` is a wrapper for reviewer convenience. App dependencies remain in `dashboard/app` and `showcase/app`.
