@@ -179,8 +179,8 @@ The system relies on the following deterministic foundations:
 
 ## Next technical milestone
 
-> Next: iterative replay degradation.
-> Repeatedly compact and replay operational state to expose drift curves, collapse points, and field-level failure modes under pressure.
+> Next: iterative replay degradation review surfaces.
+> Keep repeated compact/replay artifacts cheap, deterministic, and easy to inspect in CI and pull requests.
 
 ## Review surfaces
 
@@ -192,7 +192,7 @@ The system relies on the following deterministic foundations:
 | Showcase readiness | [`docs/SHOWCASE_READINESS.md`](docs/SHOWCASE_READINESS.md) |
 | Benchmark explanation | [`docs/BENCHMARK_EXPLANATION.md`](docs/BENCHMARK_EXPLANATION.md) |
 | Replay failure taxonomy | [`docs/operational_replay_failure_taxonomy.md`](docs/operational_replay_failure_taxonomy.md) |
-| Iterative replay degradation design | [`docs/iterative_replay_degradation.md`](docs/iterative_replay_degradation.md) |
+| Iterative replay degradation design and CI summary | [`docs/iterative_replay_degradation.md`](docs/iterative_replay_degradation.md) |
 | Replay report | [`reports/replay_continuity/validation_report.md`](reports/replay_continuity/validation_report.md) |
 | API surface | [`docs/API_SURFACE.md`](docs/API_SURFACE.md) |
 
