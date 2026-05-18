@@ -2,6 +2,13 @@ from __future__ import annotations
 
 from src.core.adaptive_policy import CompressionParams, ReplayMetrics, get_params, select_profile
 from src.validation.evidence import EvidenceItem, compute_evidence_survival, exact_normalized_match
+from src.validation.replay_failure_classifier import (
+    BLOCKER_DETACHMENT,
+    CONSTRAINT_DRIFT,
+    EVIDENCE_LOSS,
+    HIGH_CRITICAL_EVIDENCE_LOSS,
+    classify_replay_failures,
+)
 from tests.utils.agent_trace_replay_runner import _resolve_agent_evidence
 from tests.utils.paper_replay_runner import _paper_evidence_match, _resolve_paper_evidence
 
@@ -263,8 +270,6 @@ def test_get_params_returns_stable_profile_parameters() -> None:
 
 
 def test_replay_failure_classifier_returns_no_labels_for_clean_metrics() -> None:
-    from src.validation.replay_failure_classifier import classify_replay_failures
-
     assert classify_replay_failures(
         {
             "has_evidence": True,
@@ -280,8 +285,6 @@ def test_replay_failure_classifier_returns_no_labels_for_clean_metrics() -> None
 
 
 def test_replay_failure_classifier_labels_evidence_loss() -> None:
-    from src.validation.replay_failure_classifier import EVIDENCE_LOSS, classify_replay_failures
-
     assert classify_replay_failures(
         {
             "has_evidence": True,
@@ -295,12 +298,6 @@ def test_replay_failure_classifier_labels_evidence_loss() -> None:
 
 
 def test_replay_failure_classifier_labels_high_critical_evidence_loss() -> None:
-    from src.validation.replay_failure_classifier import (
-        EVIDENCE_LOSS,
-        HIGH_CRITICAL_EVIDENCE_LOSS,
-        classify_replay_failures,
-    )
-
     assert classify_replay_failures(
         {
             "has_evidence": True,
@@ -316,8 +313,6 @@ def test_replay_failure_classifier_labels_high_critical_evidence_loss() -> None:
 
 
 def test_replay_failure_classifier_labels_constraint_drift() -> None:
-    from src.validation.replay_failure_classifier import CONSTRAINT_DRIFT, classify_replay_failures
-
     assert classify_replay_failures(
         {
             "has_evidence": False,
@@ -329,8 +324,6 @@ def test_replay_failure_classifier_labels_constraint_drift() -> None:
 
 
 def test_replay_failure_classifier_labels_blocker_detachment() -> None:
-    from src.validation.replay_failure_classifier import BLOCKER_DETACHMENT, classify_replay_failures
-
     assert classify_replay_failures(
         {
             "has_evidence": False,
