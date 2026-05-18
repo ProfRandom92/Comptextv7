@@ -48,7 +48,12 @@ class EvidenceItem:
 
 @dataclass(frozen=True, slots=True)
 class EvidenceCheckResult:
-    """Deterministic survival result for an evidence annotation set."""
+    """Deterministic survival result for an evidence annotation set.
+
+    high_critical_evidence_survival_rate is meaningful only when
+    has_high_critical_evidence is true. It remains 0.0 for non-applicable cases
+    so committed JSON artifacts keep a stable numeric schema.
+    """
 
     has_evidence: bool
     evidence_survival_rate: float
