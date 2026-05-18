@@ -194,7 +194,7 @@ def render_replay_degradation_summary(artifact: Mapping[str, object]) -> str:
         "",
         "## Per-fixture summary",
         "",
-        "| fixture_id | fixture_kind | collapsed | collapse_cycle | final_cycle | final_replay_consistency | final_operational_drift_rate | stop_reason | failure_modes |",
+        "| fixture_id | fixture_kind | collapsed | collapse_cycle | final_cycle | final_replay_consistency | final_operational_drift_rate | stop_reason | failure_labels |",
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
 
@@ -205,7 +205,7 @@ def render_replay_degradation_summary(artifact: Mapping[str, object]) -> str:
             cycle = _final_cycle(run)
             cycle_number = cycle.get("cycle") if cycle else None
             failure_labels = cycle.get("failure_labels", []) if cycle else []
-            failure_text = ",".join(str(label) for label in failure_labels) if failure_labels else "none"
+            failure_labels_text = ",".join(str(label) for label in failure_labels) if failure_labels else "none"
             replay_consistency = _rate_value(cycle.get("replay_consistency")) if cycle else None
             operational_drift_rate = _rate_value(cycle.get("operational_drift_rate")) if cycle else None
             lines.append(
@@ -221,7 +221,7 @@ def render_replay_degradation_summary(artifact: Mapping[str, object]) -> str:
                         _format_rate(replay_consistency),
                         _format_rate(operational_drift_rate),
                         run.get("stop_reason", "N/A"),
-                        failure_text,
+                        failure_labels_text,
                     )
                 )
                 + " |"

@@ -1,14 +1,14 @@
-# Iterative Replay Degradation Benchmark Design
+# Iterative Replay Degradation Benchmark and CI Summary
 
 ## Purpose
 
-This document defines a proposed benchmark design for measuring how compact operational state degrades across repeated compression and replay cycles. It is a design note only; it does not add benchmark code, fixtures, artifacts, or new claims.
+This document describes the deterministic iterative replay degradation prototype for measuring how compact operational state degrades across repeated compression and replay cycles. It covers the implemented artifact and CI-summary review surface without adding claims beyond fixture-bound replay validation.
 
-The benchmark should remain deterministic, fixture-bound, and CI-auditable. It should use explicit fixture fields and replay artifacts rather than LLM judges, embeddings, vector databases, external APIs, or subjective quality scoring.
+The benchmark remains deterministic, fixture-bound, and CI-auditable. It uses explicit fixture fields and replay artifacts rather than LLM judges, embeddings, vector databases, external APIs, or subjective quality scoring.
 
 ## Scope
 
-The proposed benchmark evaluates whether operational fields survive repeated replay pressure. It is intended to extend the current single-pass replay checks by making per-cycle drift visible before any benchmark implementation is added.
+The prototype evaluates whether operational fields survive repeated replay pressure. It extends the single-pass replay checks by making per-cycle drift visible in a deterministic local artifact and Markdown summary.
 
 Out of scope:
 
@@ -17,11 +17,11 @@ Out of scope:
 - production readiness claims;
 - universal memory or solved-memory claims;
 - superiority claims against other systems;
-- changes to current benchmark logic, source code, tests, showcase code, or artifacts.
+- showcase, dashboard, GitHub Actions, external-service, or unrelated benchmark-family changes.
 
 ## Cycle model
 
-Each fixture should run through a deterministic cycle sequence:
+Each fixture runs through a deterministic cycle sequence:
 
 ```text
 source fixture
@@ -43,7 +43,7 @@ For cycle `0`, the source fixture is the baseline operational state. For cycle `
 
 ## Per-cycle metrics
 
-Each cycle should emit the same metric keys so downstream reports can plot drift curves and identify collapse points.
+Each cycle emits the same metric keys so downstream reports can plot drift curves and identify collapse points.
 
 | Metric | Meaning |
 | --- | --- |
@@ -55,13 +55,13 @@ Each cycle should emit the same metric keys so downstream reports can plot drift
 | `operational_drift_rate` | Fraction of required operational fields that are missing, mutated, detached, or otherwise not replay-consistent. |
 | `failure_mode_counts` | Counts of operational replay failure taxonomy labels observed in the cycle. |
 
-Metric calculations should use stable IDs, normalized fields, declared attachments, and fixture-defined expectations only. If a fixture does not expose a field required for a metric, the benchmark should mark that metric as not applicable for that fixture rather than infer it.
+Metric calculations should use stable IDs, normalized fields, declared attachments, and fixture-defined expectations only. If a fixture does not expose a field required for a metric, the benchmark marks that metric as not applicable for that fixture rather than infer it.
 
 ## Collapse and stop criteria
 
-The benchmark should stop a fixture run when either a configured cycle limit is reached or deterministic collapse criteria are met.
+The benchmark stops a fixture run when either a configured cycle limit is reached or deterministic collapse criteria are met.
 
-Recommended stop inputs:
+Implemented stop inputs:
 
 - `max_cycles`: hard upper bound for bounded CI runtime;
 - `min_replay_consistency`: lower bound for acceptable replay consistency;
@@ -69,19 +69,18 @@ Recommended stop inputs:
 - `max_operational_drift_rate`: upper bound for accumulated operational drift;
 - `fatal_failure_modes`: taxonomy labels that immediately stop a run when present.
 
-A fixture should be marked collapsed when any required continuation condition fails. Conservative initial collapse criteria could include:
+A fixture is marked collapsed when any required continuation condition fails. Current collapse criteria include:
 
 - `high_critical_evidence_survival_rate` falls below the configured threshold;
 - `replay_consistency` falls below the configured threshold;
 - `operational_drift_rate` rises above the configured threshold;
-- a required blocker, constraint, dependency, or recovery path becomes unrecoverably detached;
-- a fatal taxonomy label appears, if configured for the fixture.
+- a fatal taxonomy label appears, if configured for the run.
 
 Collapse is a benchmark state for a controlled fixture. It should not be described as general task failure, production failure, or a universal memory limit.
 
 ## Use of the operational replay failure taxonomy
 
-The operational replay failure taxonomy should label why per-cycle metrics degraded. Each cycle can emit zero or more taxonomy labels from deterministic comparisons, then aggregate those labels in `failure_mode_counts`.
+The operational replay failure taxonomy labels why per-cycle metrics degraded. Each cycle can emit zero or more taxonomy labels in `failure_labels`, then aggregate those labels in `failure_mode_counts`.
 
 Suggested label relationships:
 
@@ -97,69 +96,55 @@ Suggested label relationships:
 
 The taxonomy explains degradation; it should not replace numeric metrics. Labeling should remain schema-driven and deterministic, with no natural-language judging.
 
-## Proposed JSON artifact shape
+## JSON artifact shape
 
-A future implementation could emit one JSON artifact per benchmark run. The shape below is illustrative and should be treated as a design sketch, not a committed schema.
+The local artifact writer emits one JSON artifact per benchmark run. The committed schema remains intentionally small and additive-compatible: consumers should read known fields and ignore unknown future fields.
 
 ```json
 {
-  "artifact_version": "iterative-replay-degradation.v0",
-  "generated_at": "2026-05-18T00:00:00Z",
-  "deterministic": true,
-  "benchmark": {
-    "name": "iterative_replay_degradation",
-    "cycle_model": "compress -> replay -> recompress -> replay",
-    "max_cycles": 25,
-    "stop_criteria": {
-      "min_replay_consistency": 0.8,
-      "min_high_critical_evidence_survival_rate": 1.0,
-      "max_operational_drift_rate": 0.2,
-      "fatal_failure_modes": ["HIGH_CRITICAL_EVIDENCE_LOSS"]
-    }
+  "benchmark": "iterative_replay_degradation_bench",
+  "config": {
+    "fatal_failure_modes": [],
+    "max_cycles": 3,
+    "max_operational_drift_rate": 1.0,
+    "min_high_critical_evidence_survival_rate": 0.0,
+    "min_replay_consistency": 0.0
   },
-  "fixtures": [
+  "runs": [
     {
-      "fixture_id": "agent_trace_fixture_001",
-      "fixture_kind": "agent_trace",
-      "collapsed": false,
       "collapse_cycle": null,
+      "collapsed": false,
       "cycles": [
         {
+          "blocker_survival_rate": 1.0,
+          "constraint_survival_rate": 1.0,
           "cycle": 1,
-          "input_state_ref": "cycle_0_source",
-          "compressed_state_ref": "cycle_1_compressed",
-          "replay_state_ref": "cycle_1_replay",
-          "metrics": {
-            "evidence_survival_rate": 1.0,
-            "high_critical_evidence_survival_rate": 1.0,
-            "replay_consistency": 1.0,
-            "constraint_survival_rate": 1.0,
-            "blocker_survival_rate": 1.0,
-            "operational_drift_rate": 0.0,
-            "failure_mode_counts": {}
+          "evidence_survival_rate": 1.0,
+          "failure_labels": [],
+          "failure_mode_counts": {
+            "EVIDENCE_LOSS": 0,
+            "HIGH_CRITICAL_EVIDENCE_LOSS": 0,
+            "CONSTRAINT_DRIFT": 0,
+            "BLOCKER_DETACHMENT": 0
           },
-          "failure_modes": [],
-          "stop_triggered": false,
-          "stop_reason": null
+          "has_high_critical_evidence": true,
+          "high_critical_evidence_survival_rate": 1.0,
+          "operational_drift_rate": 0.0,
+          "replay_consistency": 1.0
         }
-      ]
+      ],
+      "fixture_id": "agent_trace_fixture_001",
+      "fixture_kind": "agent_trace",
+      "stop_reason": "max_cycles"
     }
-  ],
-  "summary": {
-    "fixture_count": 1,
-    "collapsed_fixture_count": 0,
-    "first_collapse_cycle": null,
-    "mean_final_replay_consistency": 1.0,
-    "mean_final_operational_drift_rate": 0.0,
-    "failure_mode_counts": {}
-  }
+  ]
 }
 ```
 
 
 ## CI summary generator
 
-The lightweight CI review surface is implemented as a deterministic Markdown renderer in `tests/utils/replay_degradation_summary.py`. It consumes the existing iterative replay degradation JSON artifact shape without redesigning that artifact schema and emits plain text/Markdown only.
+The lightweight CI review surface is implemented as a deterministic Markdown renderer in `tests/utils/replay_degradation_summary.py`. It consumes the existing iterative replay degradation JSON artifact shape while preserving additive schema compatibility and emits plain text/Markdown only.
 
 Local CI-style artifact generation can be run with:
 
@@ -178,7 +163,7 @@ The summary includes:
 - average final operational drift rate;
 - aggregated `failure_mode_counts`;
 - highest collapse cycle observed;
-- compact per-fixture final-cycle rows;
+- compact per-fixture final-cycle rows with `failure_labels`;
 - deterministic severity guidance: `INFO`, `WARNING`, or `CRITICAL`.
 
 Severity is intentionally conservative and schema-driven:
@@ -191,7 +176,7 @@ The renderer does not call external APIs, use LLM judges, embeddings, vector dat
 
 ## CI integration sketch
 
-A conservative CI integration should keep runtime bounded and artifacts reviewable:
+Any future CI integration should keep runtime bounded and artifacts reviewable:
 
 1. run the iterative benchmark against a small checked-in fixture set;
 2. write a deterministic JSON artifact with stable key ordering;
@@ -200,7 +185,7 @@ A conservative CI integration should keep runtime bounded and artifacts reviewab
 5. fail CI only on deterministic contract violations or configured collapse thresholds;
 6. keep larger exploratory runs outside required checks until their runtime and interpretation are stable.
 
-The initial CI gate should prefer a small fixture count and low `max_cycles` so the benchmark remains cheap enough for routine pull requests.
+If wired into required CI later, the gate should prefer a small fixture count and low `max_cycles` so the benchmark remains cheap enough for routine pull requests.
 
 ## Non-claims and limitations
 

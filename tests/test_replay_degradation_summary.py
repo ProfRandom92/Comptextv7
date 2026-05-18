@@ -86,7 +86,7 @@ def test_replay_degradation_summary_formatting_is_stable() -> None:
     assert "| highest collapse cycle observed | 3 |" in rendered
     assert (
         "| fixture_id | fixture_kind | collapsed | collapse_cycle | final_cycle | final_replay_consistency | "
-        "final_operational_drift_rate | stop_reason | failure_modes |"
+        "final_operational_drift_rate | stop_reason | failure_labels |"
     ) in rendered
     assert rendered.index("| zeta_trace | agent_trace |") < rendered.index("| alpha_paper | paper |")
 
@@ -104,6 +104,21 @@ def test_replay_degradation_summary_handles_empty_artifact() -> None:
     assert "| average replay consistency | N/A |" in rendered
     assert "| average operational drift rate | N/A |" in rendered
     assert "| N/A | N/A | false | N/A | N/A | N/A | N/A | N/A | none |" in rendered
+
+
+def test_replay_degradation_summary_tolerates_additive_fields() -> None:
+    artifact = _artifact()
+    artifact["artifact_version"] = "future-compatible"
+    artifact["runs"][0]["review_note"] = "ignored additive run metadata"
+    artifact["runs"][0]["cycles"][-1]["extra_metric"] = 0.123456
+
+    summary = summarize_replay_degradation_artifact(artifact)
+    rendered = render_replay_degradation_summary(artifact)
+
+    assert summary["total_fixtures"] == 2
+    assert summary["failure_mode_counts"][CONSTRAINT_DRIFT] == 1
+    assert "extra_metric" not in rendered
+    assert "| zeta_trace | agent_trace |" in rendered
 
 
 def test_replay_degradation_summary_severity_classification() -> None:
