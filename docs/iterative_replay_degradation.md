@@ -146,6 +146,8 @@ The local artifact writer emits one JSON artifact per benchmark run. The committ
 
 A small comparative mode evaluates the same checked-in fixtures under the three deterministic compression profiles defined by the adaptive policy: `CONSERVATIVE`, `BALANCED`, and `AGGRESSIVE`. The mode is prototype-scoped and fixture-bound; it applies progressively smaller deterministic profile budgets to the compact replay payloads and then reuses the existing replay validation metrics. It does not add external APIs, embeddings, vector databases, graph stores, dashboards, or subjective judging.
 
+`CONSERVATIVE` is the internal reference baseline for the current fixture set. `BALANCED` and `AGGRESSIVE` are controlled stress profiles that apply progressively smaller deterministic budgets so reviewers can observe monotonic replay degradation. The comparison is an internal baseline, not an external benchmark against other systems and not evidence of production performance.
+
 Each profile emits an additive aggregate block with stable keys:
 
 | Aggregate field | Meaning |
