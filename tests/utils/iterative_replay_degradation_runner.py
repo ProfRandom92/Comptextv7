@@ -285,7 +285,7 @@ def build_iterative_replay_degradation_artifact(
     config: IterativeReplayConfig | None = None,
     fixture_kinds: tuple[FixtureKind, ...] = ("agent_trace", "paper"),
 ) -> dict[str, object]:
-    """Build the public iterative replay degradation artifact."""
+    """Build the public iterative replay degradation artifact in memory."""
 
     resolved_config = config or IterativeReplayConfig()
     _validate_config(resolved_config)
@@ -302,6 +302,8 @@ def build_iterative_replay_degradation_artifact(
 
 
 def write_iterative_replay_degradation_artifact(path: Path = DEFAULT_ARTIFACT_PATH) -> dict[str, object]:
+    """Opt-in writer for local/CI runs; tests do not call this by default."""
+
     artifact = build_iterative_replay_degradation_artifact()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(stable_json_dump(artifact), encoding="utf-8")
