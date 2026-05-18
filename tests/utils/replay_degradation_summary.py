@@ -16,6 +16,7 @@ ensure_repo_root_on_path()
 
 from src.validation.replay_failure_classifier import REPLAY_FAILURE_LABELS
 from tests.utils.iterative_replay_degradation_runner import (
+    COMPARATIVE_PROFILES,
     DEFAULT_ARTIFACT_PATH,
     normalize_float,
 )
@@ -60,6 +61,33 @@ def _format_int(value: int | None) -> str:
 def _markdown_cell(value: object) -> str:
     text = str(value)
     return text.replace("|", "\\|").replace("\n", " ")
+
+
+def _profiles(artifact: Mapping[str, object]) -> list[Mapping[str, object]]:
+    profiles = artifact.get("profiles", [])
+    if not isinstance(profiles, Sequence) or isinstance(profiles, str):
+        raise ValueError("comparative replay degradation artifact 'profiles' must be a list")
+    return [profile for profile in profiles if isinstance(profile, Mapping)]
+
+
+def _aggregate(profile: Mapping[str, object]) -> Mapping[str, object]:
+    aggregate = profile.get("aggregate", {})
+    return aggregate if isinstance(aggregate, Mapping) else {}
+
+
+def _labels_text(labels: object) -> str:
+    if not isinstance(labels, Sequence) or isinstance(labels, str):
+        return "none"
+    ordered = [label for label in REPLAY_FAILURE_LABELS if label in labels]
+    return ",".join(ordered) if ordered else "none"
+
+
+def _format_profile_order(profile: Mapping[str, object]) -> tuple[int, str]:
+    name = str(profile.get("profile", ""))
+    try:
+        return (COMPARATIVE_PROFILES.index(name), name)
+    except ValueError:
+        return (len(COMPARATIVE_PROFILES), name)
 
 
 def _runs(artifact: Mapping[str, object]) -> list[Mapping[str, object]]:
@@ -169,11 +197,51 @@ def _failure_counts_text(counts: Mapping[str, int]) -> str:
     return ", ".join(f"{label}={int(counts.get(label, 0))}" for label in REPLAY_FAILURE_LABELS)
 
 
+def render_replay_degradation_profile_comparison(artifact: Mapping[str, object]) -> list[str]:
+    """Render deterministic profile comparison rows when present."""
+
+    profiles = _profiles(artifact)
+    if not profiles:
+        return []
+
+    lines = [
+        "",
+        "## Compression profile comparison",
+        "",
+        "Fixture-bound prototype comparison across deterministic compression profiles.",
+        "",
+        "| profile | collapse_rate | average_replay_consistency | average_operational_drift_rate | average_evidence_survival_rate | aggregated_failure_labels |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for profile in sorted(profiles, key=_format_profile_order):
+        aggregate = _aggregate(profile)
+        lines.append(
+            "| "
+            + " | ".join(
+                _markdown_cell(value)
+                for value in (
+                    profile.get("profile", "N/A"),
+                    _format_rate(_rate_value(aggregate.get("collapse_rate"))),
+                    _format_rate(_rate_value(aggregate.get("average_replay_consistency"))),
+                    _format_rate(_rate_value(aggregate.get("average_operational_drift_rate"))),
+                    _format_rate(_rate_value(aggregate.get("average_evidence_survival_rate"))),
+                    _labels_text(aggregate.get("aggregated_failure_labels")),
+                )
+            )
+            + " |"
+        )
+    return lines
+
+
 def render_replay_degradation_summary(artifact: Mapping[str, object]) -> str:
     """Render a stable plain Markdown CI summary from an artifact."""
 
-    summary = summarize_replay_degradation_artifact(artifact)
     runs = _runs(artifact)
+    if not runs and _profiles(artifact):
+        lines = [f"# {SUMMARY_TITLE}", *render_replay_degradation_profile_comparison(artifact)]
+        return "\n".join(lines) + "\n"
+
+    summary = summarize_replay_degradation_artifact(artifact)
     lines = [
         f"# {SUMMARY_TITLE}",
         "",
@@ -191,6 +259,8 @@ def render_replay_degradation_summary(artifact: Mapping[str, object]) -> str:
         f"| average operational drift rate | {_format_rate(summary['average_operational_drift_rate'])} |",
         f"| aggregated failure_mode_counts | {_failure_counts_text(summary['failure_mode_counts'])} |",
         f"| highest collapse cycle observed | {_format_int(summary['highest_collapse_cycle_observed'])} |",
+        "",
+        *render_replay_degradation_profile_comparison(artifact),
         "",
         "## Per-fixture summary",
         "",

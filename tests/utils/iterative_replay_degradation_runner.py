@@ -7,7 +7,7 @@ the original fixture state, and emits stable per-cycle degradation metrics.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import json
 import math
 from pathlib import Path
@@ -20,6 +20,7 @@ else:
 
 ensure_repo_root_on_path()
 
+from src.core.adaptive_policy import CompressionProfile, get_params
 from src.validation.replay_failure_classifier import REPLAY_FAILURE_LABELS, classify_replay_failures
 from tests.utils import agent_trace_replay_runner as agent_runner
 from tests.utils import paper_replay_runner as paper_runner
@@ -27,6 +28,7 @@ from tests.utils import paper_replay_runner as paper_runner
 BENCHMARK_NAME = "iterative_replay_degradation_bench"
 DEFAULT_MAX_CYCLES = 3
 DEFAULT_ARTIFACT_PATH = Path(__file__).resolve().parents[2] / "artifacts" / "iterative_replay_degradation_results.json"
+COMPARATIVE_PROFILES: tuple[CompressionProfile, ...] = ("CONSERVATIVE", "BALANCED", "AGGRESSIVE")
 
 FixtureKind = Literal["agent_trace", "paper"]
 
@@ -133,6 +135,56 @@ def _cycle_metrics(row: dict[str, object], cycle: int) -> dict[str, object]:
     }
 
 
+def _profile_limit(length: int, profile: CompressionProfile, budget_name: Literal["max_families", "max_bursts"]) -> int:
+    """Return a deterministic retained-item count for a compression profile."""
+
+    if length <= 0:
+        return 0
+    profile_budget = getattr(get_params(profile), budget_name)
+    baseline_budget = getattr(get_params("CONSERVATIVE"), budget_name)
+    return min(length, max(1, math.ceil(length * profile_budget / baseline_budget)))
+
+
+def _profiled_list(values: object, profile: CompressionProfile, budget_name: Literal["max_families", "max_bursts"]) -> object:
+    if not isinstance(values, list):
+        return values
+    return values[: _profile_limit(len(values), profile, budget_name)]
+
+
+def apply_compression_profile_to_compact(
+    compact: dict[str, object],
+    *,
+    fixture_kind: FixtureKind,
+    profile: CompressionProfile,
+) -> dict[str, object]:
+    """Apply deterministic profile budgets to an existing compact replay payload.
+
+    The default iterative runner remains unchanged; comparative mode uses this
+    fixture-bound pruning layer to evaluate how the checked-in replay fixtures
+    degrade under progressively smaller profile budgets.
+    """
+
+    if profile == "CONSERVATIVE":
+        return json.loads(canonical_json(compact))
+
+    profiled = json.loads(canonical_json(compact))
+    fields = profiled.get("f")
+    assert isinstance(fields, dict)
+
+    if fixture_kind == "agent_trace":
+        for key, value in list(fields.items()):
+            if key == "t":
+                fields[key] = _profiled_list(value, profile, "max_bursts")
+            elif key != "a":
+                fields[key] = _profiled_list(value, profile, "max_families")
+    else:
+        for key, value in list(fields.items()):
+            if key != "required_entities":
+                fields[key] = _profiled_list(value, profile, "max_families")
+
+    return json.loads(canonical_json(profiled))
+
+
 def _collapse_reason(cycle: dict[str, object], config: IterativeReplayConfig) -> str | None:
     labels = cycle["failure_labels"]
     assert isinstance(labels, list)
@@ -171,7 +223,7 @@ def _paper_state_from_replayed(replayed_state: dict[str, object]) -> paper_runne
     )
 
 
-def _run_agent_case(spec: dict[str, object], config: IterativeReplayConfig) -> dict[str, object]:
+def _run_agent_case(spec: dict[str, object], config: IterativeReplayConfig, profile: CompressionProfile | None = None) -> dict[str, object]:
     trace, raw_trace = agent_runner._load_fixture(spec)
     original = agent_runner.extract_operational_state(trace)
     original_state = json.loads(agent_runner.canonical_json(original.as_dict()))
@@ -184,6 +236,8 @@ def _run_agent_case(spec: dict[str, object], config: IterativeReplayConfig) -> d
 
     for cycle_index in range(1, config.max_cycles + 1):
         compact = json.loads(agent_runner.canonical_json(agent_runner.compact_operational_state(current_state)))
+        if profile is not None:
+            compact = apply_compression_profile_to_compact(compact, fixture_kind="agent_trace", profile=profile)
         replayed = agent_runner.replay_compact_state(compact)
         row = agent_runner.validate_replay(
             trace_name=original.trace,
@@ -217,7 +271,7 @@ def _run_agent_case(spec: dict[str, object], config: IterativeReplayConfig) -> d
     )
 
 
-def _run_paper_case(spec: dict[str, object], config: IterativeReplayConfig) -> dict[str, object]:
+def _run_paper_case(spec: dict[str, object], config: IterativeReplayConfig, profile: CompressionProfile | None = None) -> dict[str, object]:
     excerpt = paper_runner._load_fixture(spec)
     original = paper_runner.extract_operational_state(spec, excerpt)
     original_state = json.loads(paper_runner.canonical_json(original.as_dict()))
@@ -230,6 +284,8 @@ def _run_paper_case(spec: dict[str, object], config: IterativeReplayConfig) -> d
 
     for cycle_index in range(1, config.max_cycles + 1):
         compact = json.loads(paper_runner.canonical_json(paper_runner.compact_operational_state(current_state)))
+        if profile is not None:
+            compact = apply_compression_profile_to_compact(compact, fixture_kind="paper", profile=profile)
         replayed = paper_runner.replay_compact_state(compact, original_state)
         row = paper_runner.validate_replay(
             paper=original.paper,
@@ -267,6 +323,7 @@ def run_iterative_replay_degradation(
     *,
     config: IterativeReplayConfig | None = None,
     fixture_kinds: tuple[FixtureKind, ...] = ("agent_trace", "paper"),
+    profile: CompressionProfile | None = None,
 ) -> list[dict[str, object]]:
     """Run bounded iterative replay cycles over existing checked-in fixtures."""
 
@@ -274,9 +331,9 @@ def run_iterative_replay_degradation(
     _validate_config(resolved_config)
     runs: list[dict[str, object]] = []
     if "agent_trace" in fixture_kinds:
-        runs.extend(_run_agent_case(spec, resolved_config) for spec in agent_runner.TRACE_SPECS)
+        runs.extend(_run_agent_case(spec, resolved_config, profile) for spec in agent_runner.TRACE_SPECS)
     if "paper" in fixture_kinds:
-        runs.extend(_run_paper_case(spec, resolved_config) for spec in paper_runner.PAPER_SPECS)
+        runs.extend(_run_paper_case(spec, resolved_config, profile) for spec in paper_runner.PAPER_SPECS)
     return runs
 
 
@@ -296,6 +353,71 @@ def build_iterative_replay_degradation_artifact(
                 "benchmark": BENCHMARK_NAME,
                 "config": resolved_config.as_dict(),
                 "runs": runs,
+            }
+        )
+    )
+
+
+def aggregate_replay_degradation_runs(runs: list[dict[str, object]]) -> dict[str, object]:
+    """Compute deterministic comparative aggregate fields for a set of runs."""
+
+    total_fixtures = len(runs)
+    collapsed_fixtures = sum(1 for run in runs if bool(run.get("collapsed", False)))
+    collapse_rate = normalize_float(collapsed_fixtures / total_fixtures) if total_fixtures else 0.0
+    final_cycles = [run["cycles"][-1] for run in runs if isinstance(run.get("cycles"), list) and run["cycles"]]
+
+    def average(field: str) -> float | None:
+        values = [float(cycle[field]) for cycle in final_cycles if isinstance(cycle.get(field), int | float)]
+        return normalize_float(sum(values) / len(values)) if values else None
+
+    failure_counts = {label: 0 for label in REPLAY_FAILURE_LABELS}
+    for cycle in final_cycles:
+        counts = cycle.get("failure_mode_counts", {})
+        if not isinstance(counts, dict):
+            continue
+        for label in REPLAY_FAILURE_LABELS:
+            count = counts.get(label, 0)
+            failure_counts[label] += count if isinstance(count, int) and not isinstance(count, bool) else 0
+
+    return {
+        "aggregated_failure_labels": [label for label in REPLAY_FAILURE_LABELS if failure_counts[label] > 0],
+        "average_evidence_survival_rate": average("evidence_survival_rate"),
+        "average_operational_drift_rate": average("operational_drift_rate"),
+        "average_replay_consistency": average("replay_consistency"),
+        "collapse_rate": collapse_rate,
+    }
+
+
+def build_comparative_replay_degradation_artifact(
+    *,
+    config: IterativeReplayConfig | None = None,
+    fixture_kinds: tuple[FixtureKind, ...] = ("agent_trace", "paper"),
+) -> dict[str, object]:
+    """Build a deterministic fixture-bound profile comparison artifact."""
+
+    resolved_config = config or IterativeReplayConfig()
+    _validate_config(resolved_config)
+    profiles = []
+    for profile in COMPARATIVE_PROFILES:
+        runs = run_iterative_replay_degradation(
+            config=resolved_config,
+            fixture_kinds=fixture_kinds,
+            profile=profile,
+        )
+        profiles.append(
+            {
+                "aggregate": aggregate_replay_degradation_runs(runs),
+                "compression_params": asdict(get_params(profile)),
+                "profile": profile,
+                "runs": runs,
+            }
+        )
+    return json.loads(
+        canonical_json(
+            {
+                "benchmark": f"{BENCHMARK_NAME}_profile_comparison",
+                "config": resolved_config.as_dict(),
+                "profiles": profiles,
             }
         )
     )

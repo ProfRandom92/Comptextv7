@@ -243,3 +243,43 @@ def test_local_ci_entrypoint_exit_behavior_is_stable(tmp_path, capsys) -> None:
     assert captured.err == ""
     assert artifact_path.is_file()
     assert summary_path.is_file()
+
+
+def test_replay_degradation_comparison_markdown_is_stable_and_ordered() -> None:
+    from tests.utils.iterative_replay_degradation_runner import build_comparative_replay_degradation_artifact
+
+    artifact = build_comparative_replay_degradation_artifact()
+    rendered = render_replay_degradation_summary(artifact)
+
+    assert rendered == render_replay_degradation_summary(artifact)
+    assert rendered.startswith("# Iterative Replay Degradation CI Summary\n")
+    assert "## Compression profile comparison" in rendered
+    assert (
+        "| profile | collapse_rate | average_replay_consistency | average_operational_drift_rate | "
+        "average_evidence_survival_rate | aggregated_failure_labels |"
+    ) in rendered
+    assert rendered.index("| CONSERVATIVE |") < rendered.index("| BALANCED |") < rendered.index("| AGGRESSIVE |")
+    assert "| CONSERVATIVE | 0.000000 | 0.895833 | 0.104167 | 0.916667 | EVIDENCE_LOSS |" in rendered
+    assert (
+        "| BALANCED | 0.000000 | 0.458333 | 0.541667 | 0.416667 | "
+        "EVIDENCE_LOSS,CONSTRAINT_DRIFT,BLOCKER_DETACHMENT |"
+    ) in rendered
+    assert (
+        "| AGGRESSIVE | 0.000000 | 0.125000 | 0.875000 | 0.083333 | "
+        "EVIDENCE_LOSS,CONSTRAINT_DRIFT,BLOCKER_DETACHMENT |"
+    ) in rendered
+
+
+def test_replay_degradation_comparison_tolerates_additive_schema_fields() -> None:
+    from tests.utils.iterative_replay_degradation_runner import build_comparative_replay_degradation_artifact
+
+    artifact = build_comparative_replay_degradation_artifact()
+    artifact["artifact_version"] = "future-compatible"
+    artifact["profiles"][0]["aggregate"]["future_metric"] = 1.0
+    artifact["profiles"][0]["runs"][0]["future_run_field"] = "ignored"
+
+    rendered = render_replay_degradation_summary(artifact)
+
+    assert "future_metric" not in rendered
+    assert "future_run_field" not in rendered
+    assert "| CONSERVATIVE | 0.000000 | 0.895833 |" in rendered

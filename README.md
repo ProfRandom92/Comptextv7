@@ -75,7 +75,7 @@ Sources: [`artifacts/paper_replay_results.json`](artifacts/paper_replay_results.
 - **Agent trace replay is currently near-lossless because traces are structured.** The checked-in traces expose explicit tasks, blockers, dependencies, tool order, and recovery actions.
 - **`1.000000` replay consistency does not mean solved memory.** It means exact preservation under the current structured trace fixtures and current deterministic validator.
 - **Operational drift is field loss, not subjective quality.** A non-zero drift rate would mean replay lost required operational fields.
-- **Iterative replay degradation is now a bounded prototype.** Repeated compact/replay cycles emit deterministic JSON and Markdown artifacts for reviewing drift curves, collapse points, and failure labels.
+- **Iterative replay degradation is now a bounded prototype.** Repeated compact/replay cycles emit deterministic JSON and Markdown artifacts for reviewing drift curves, collapse points, and failure labels. A small fixture-bound comparison mode now contrasts `CONSERVATIVE`, `BALANCED`, and `AGGRESSIVE` compression profiles with deterministic per-profile aggregates.
 
 ## What makes this different
 
@@ -118,6 +118,13 @@ Comptextv7 turns noisy context into compact operational state, then validates wh
 - **Current replay consistency:** `1.000000`.
 - **Operational drift:** `0.000000`.
 - **Interpretation:** current setup is near-lossless because the fixtures are structured; this is a useful baseline, not a universal memory claim.
+
+### Iterative Replay Degradation Prototype
+
+- **Validates:** how checked-in paper and agent-trace fixtures degrade across bounded repeated compact/replay cycles.
+- **Method:** [`docs/iterative_replay_degradation.md`](docs/iterative_replay_degradation.md).
+- **Profile comparison:** additive prototype mode compares `CONSERVATIVE`, `BALANCED`, and `AGGRESSIVE` compression profiles using fixture-bound aggregates only: collapse rate, replay consistency, operational drift, evidence survival, and deterministic failure labels.
+- **Interpretation:** profile comparison rows are deterministic replay-validation observations for the current fixtures, not general memory, production, or clinical-grade claims.
 
 ## Complementary adversarial replay stress suite
 
