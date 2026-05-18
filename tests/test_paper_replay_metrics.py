@@ -20,6 +20,10 @@ EXPECTED_PAPER_ORDER = [str(spec["paper"]) for spec in PAPER_SPECS]
 PUBLIC_ROW_FIELDS = {
     "paper",
     "entity_retention_rate",
+    "evidence_survival_rate",
+    "evidence_survived",
+    "evidence_total",
+    "has_evidence",
     "section_survival_rate",
     "limitation_survival_rate",
     "metric_survival_rate",
@@ -31,6 +35,7 @@ PUBLIC_ROW_FIELDS = {
 }
 AGGREGATE_FIELDS = {
     "avg_entity_retention_rate",
+    "avg_evidence_survival_rate",
     "avg_metric_survival_rate",
     "avg_limitation_survival_rate",
     "avg_section_survival_rate",
@@ -40,6 +45,7 @@ AGGREGATE_FIELDS = {
 }
 NORMALIZED_RATE_FIELDS = (
     "entity_retention_rate",
+    "evidence_survival_rate",
     "section_survival_rate",
     "limitation_survival_rate",
     "metric_survival_rate",
@@ -47,6 +53,7 @@ NORMALIZED_RATE_FIELDS = (
 )
 AGGREGATE_RATE_FIELDS = (
     "avg_entity_retention_rate",
+    "avg_evidence_survival_rate",
     "avg_metric_survival_rate",
     "avg_limitation_survival_rate",
     "avg_section_survival_rate",
@@ -95,6 +102,11 @@ def test_paper_replay_artifact_schema_is_valid() -> None:
         for field in ("original_token_count", "compact_token_count", "replay_token_count"):
             assert isinstance(row[field], int)
             assert row[field] > 0
+        assert isinstance(row["evidence_total"], int)
+        assert isinstance(row["evidence_survived"], int)
+        assert isinstance(row["has_evidence"], bool)
+        assert row["has_evidence"] == (row["evidence_total"] > 0)
+        assert 0 <= row["evidence_survived"] <= row["evidence_total"]
 
     for field in AGGREGATE_RATE_FIELDS + ("avg_compression_ratio",):
         assert isinstance(aggregate[field], float)
@@ -115,6 +127,7 @@ def test_paper_replay_aggregate_matches_recomputed_values() -> None:
     field_pairs = {
         "avg_compression_ratio": "compression_ratio",
         "avg_entity_retention_rate": "entity_retention_rate",
+        "avg_evidence_survival_rate": "evidence_survival_rate",
         "avg_limitation_survival_rate": "limitation_survival_rate",
         "avg_metric_survival_rate": "metric_survival_rate",
         "avg_replay_consistency": "replay_consistency",
