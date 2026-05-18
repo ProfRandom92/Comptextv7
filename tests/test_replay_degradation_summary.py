@@ -158,3 +158,73 @@ def test_replay_degradation_summary_aggregates_failure_counts() -> None:
         "| aggregated failure_mode_counts | "
         "EVIDENCE_LOSS=1, HIGH_CRITICAL_EVIDENCE_LOSS=1, CONSTRAINT_DRIFT=1, BLOCKER_DETACHMENT=0 |"
     ) in rendered
+
+
+def test_local_ci_entrypoint_default_output_paths_are_stable() -> None:
+    from scripts.generate_iterative_replay_degradation_artifacts import (
+        DEFAULT_ARTIFACT_PATH,
+        DEFAULT_SUMMARY_PATH,
+        stable_output_path,
+    )
+
+    assert (
+        stable_output_path(DEFAULT_ARTIFACT_PATH)
+        == "artifacts/iterative_replay_degradation_results.json"
+    )
+    assert (
+        stable_output_path(DEFAULT_SUMMARY_PATH)
+        == "artifacts/iterative_replay_degradation_results.summary.md"
+    )
+
+
+def test_local_ci_entrypoint_generates_artifact_and_summary(tmp_path) -> None:
+    import json
+
+    from scripts.generate_iterative_replay_degradation_artifacts import (
+        generate_replay_degradation_ci_artifacts,
+    )
+
+    artifact_path = tmp_path / "iterative_replay_degradation_results.json"
+    summary_path = tmp_path / "iterative_replay_degradation_results.summary.md"
+
+    paths = generate_replay_degradation_ci_artifacts(
+        artifact_path=artifact_path,
+        summary_path=summary_path,
+    )
+
+    assert paths.artifact_path == artifact_path
+    assert paths.summary_path == summary_path
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    summary = summary_path.read_text(encoding="utf-8")
+    assert artifact["benchmark"] == "iterative_replay_degradation_bench"
+    assert artifact["runs"]
+    assert summary.startswith("# Iterative Replay Degradation CI Summary\n")
+    assert "| total fixtures |" in summary
+
+
+def test_local_ci_entrypoint_exit_behavior_is_stable(tmp_path, capsys) -> None:
+    from scripts.generate_iterative_replay_degradation_artifacts import main
+
+    artifact_path = tmp_path / "degradation.json"
+    summary_path = tmp_path / "degradation.summary.md"
+
+    assert (
+        main(
+            [
+                "--artifact-path",
+                str(artifact_path),
+                "--summary-path",
+                str(summary_path),
+            ]
+        )
+        == 0
+    )
+    captured = capsys.readouterr()
+
+    assert captured.out == (
+        f"artifact_path={artifact_path.resolve().as_posix()}\n"
+        f"summary_path={summary_path.resolve().as_posix()}\n"
+    )
+    assert captured.err == ""
+    assert artifact_path.is_file()
+    assert summary_path.is_file()
