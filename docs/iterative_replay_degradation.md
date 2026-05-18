@@ -156,6 +156,31 @@ A future implementation could emit one JSON artifact per benchmark run. The shap
 }
 ```
 
+
+## CI summary generator
+
+The lightweight CI review surface is implemented as a deterministic Markdown renderer in `tests/utils/replay_degradation_summary.py`. It consumes the existing iterative replay degradation JSON artifact shape without redesigning that artifact schema and emits plain text/Markdown only.
+
+The summary includes:
+
+- total fixtures;
+- collapsed fixtures;
+- collapse rate;
+- average final replay consistency;
+- average final operational drift rate;
+- aggregated `failure_mode_counts`;
+- highest collapse cycle observed;
+- compact per-fixture final-cycle rows;
+- deterministic severity guidance: `INFO`, `WARNING`, or `CRITICAL`.
+
+Severity is intentionally conservative and schema-driven:
+
+- `INFO`: no fixtures collapsed, no failure labels were observed, average final replay consistency is perfect, and average final operational drift is zero;
+- `WARNING`: no fixtures collapsed, but deterministic failure labels, replay consistency loss, or operational drift were observed;
+- `CRITICAL`: at least one fixture collapsed under the configured deterministic criteria.
+
+The renderer does not call external APIs, use LLM judges, embeddings, vector databases, graph stores, dashboards, or web UI components. Empty artifacts render as a stable empty summary with `N/A` averages so CI artifact upload and pull request review remain deterministic.
+
 ## CI integration sketch
 
 A conservative CI integration should keep runtime bounded and artifacts reviewable:
